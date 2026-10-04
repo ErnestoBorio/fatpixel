@@ -45,11 +45,13 @@ src/
 ### Core data model (key decisions)
 
 - **Indexed color always.** Each pixel stores an index `0..colors` (u8), never RGBA. Rendering maps index → graphic's color slots → graphic's palette RGB.
-- **Logical pixels.** In *wide* mode a logical pixel is 2× wide on screen. Data stores logical pixels only, so a 24×21 C64 sprite in multicolor is stored as 12×21 indices. Tools work in logical pixel coordinates — no special-casing in brushes/fill. Wide mode is allowed with **any** depth (2/4/8/16).
-- **Palette per graphic.** Each graphic (sprite or charset) has its **own palette** (a built-in one like "C64" or a custom one) and its own depth N (2/4/8/16 → 1/2/3/4 bpp). Different graphics in the same project can use different palettes (e.g. a C64 sprite next to an NES charset).
-- **Color slots.** A graphic of depth N has N slots, each pointing to an entry of *its* palette (e.g. a 4-color graphic picks 4 of the 16 C64 colors). Changing a slot recolors the whole graphic instantly.
+- **Logical pixels & C64 Modes (Current Scope)**:
+  - **Sprites**: Either **1 bpp Hi-Res** (2 colors, square pixels) or **2 bpp Wide / Multicolor** (4 colors, 2× wide logical pixels; e.g. standard C64 24×21 sprite is stored as 12×21 logical indices). Tools work in logical pixel coordinates — no special-casing in brushes/fill.
+  - **Charsets**: **1 bpp Hi-Res always** (2 colors, square pixels; e.g. standard 8×8 characters).
+- **Palette per graphic.** Each graphic (sprite or charset) has its **own palette** (a built-in one like "C64" or a custom one) with slots for its colors (2 colors for 1 bpp, 4 colors for 2 bpp). Different graphics in the same project can use different palettes.
+- **Color slots.** A graphic of depth N has N slots, each pointing to an entry of *its* palette (e.g. a 4-color sprite picks 4 of the 16 C64 colors). Changing a slot recolors the graphic instantly.
 - **Palette library.** Built-in palettes are referenced by id; custom palettes are stored inside the project file so it's self-contained. Several graphics can share one custom palette (editing it updates them all).
-- **Charset = one buffer + char size.** Stored as a grid of characters (e.g. 8×8 each, 256 chars); all characters share the charset's palette, slots and bpp. Tools can operate on a single character or the whole sheet.
+- **Charset = one buffer + char size.** Stored as a grid of characters (e.g. 8×8 each, 256 chars); all characters share the charset's 1 bpp / 2-color slots. Tools can operate on a single character or the whole sheet.
 - **Undo/redo via snapshots.** Graphics are tiny (a 256-char 8×8 charset = 16 KB), so storing a snapshot of the affected graphic per operation is simple and bulletproof. Cap history (e.g. 200 steps).
 
 ## 3. Proposed File Format: `.pxp` (JSON)
@@ -137,11 +139,13 @@ Each phase ends with a runnable app you can try.
 
 ### Phase 3 — Projects, graphics & file format
 - Multiple graphics per project; graphics list panel (add / rename / duplicate / delete / reorder).
-- "New graphic" dialog: sprite or charset, size, depth (2/4/8/16), pixel mode (hires/wide).
-- Wide pixel mode rendering & input.
-- Charset support: char size, char count, char grid overlay, char selector, edit-single-char vs sheet view.
+- "New graphic" dialog:
+  - **Sprite**: choose 1 bpp Hi-Res (2 colors) or 2 bpp Wide / Multicolor (4 colors), width & height (defaults to C64 standard 24×21 hi-res or 12×21 wide).
+  - **Charset**: 1 bpp Hi-Res (2 colors), char dimensions (e.g. 8×8), char count (e.g. 256).
+- Wide pixel mode rendering & input (2:1 aspect ratio on screen for 2 bpp sprites).
+- Charset support: char grid overlay, char selector, edit single char vs full sheet view.
 - Save / Open `.pxp`, unsaved-changes prompt, recent files.
-- **Deliverable:** real projects saved to disk.
+- **Deliverable:** real projects with C64 sprites and charsets saved to disk.
 
 ### Phase 4 — Palettes
 - Built-in palettes: C64 (Pepto/Colodore), ZX Spectrum, Amstrad CPC, MSX/TMS9918, Atari 8-bit (subset), Apple II, CGA (all modes), EGA, NES, Game Boy (DMG), Commodore VIC-20, Commodore Plus/4 (subset), BBC Micro, Amiga OCS default, PICO-8.
@@ -208,9 +212,9 @@ Each phase ends with a runnable app you can try.
 
 | Topic | Decision |
 |---|---|
+| Graphic modes (C64 scope) | Sprites: 1 bpp Hi-Res (2 colors) or 2 bpp Wide (4 colors). Charsets: 1 bpp Hi-Res (2 colors) always |
 | Palettes | Each graphic has its own palette (built-in or custom); projects can mix palettes |
-| Charset colors | Each charset has one palette, one set of slots and one bpp shared by all its chars |
-| Wide pixels | Allowed with any depth (2/4/8/16 colors) |
+| Charset colors | Each charset has one palette, one set of 2 slots and 1 bpp shared by all its chars |
 | CSV export | One value per pixel (slot index), even for 2-color graphics |
 | Transform scope | Operations (flip, rotate, invert, copy, cut) apply to selection if active; otherwise to whole sprite or character |
 | Non-square rotate | Whole sprite swaps dimensions; selection uses floating buffer anchored at center and clips to bounds on commit |
