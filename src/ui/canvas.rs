@@ -13,14 +13,12 @@ use crate::tools::{self, Stroke, Tool};
 const ZOOM_LEVELS: &[f32] = &[
     1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 24.0, 32.0, 48.0, 64.0,
 ];
-/// Grid is hidden below this pixel size (screen points), it would be just noise.
-const MIN_GRID_ZOOM: f32 = 6.0;
+/// Grid is hidden below this pixel size (screen points).
+const MIN_GRID_ZOOM: f32 = 3.0;
 const SCROLL_STEP: f32 = 40.0;
 
 const BG: Color32 = Color32::from_gray(38);
-const CHECKER_LIGHT: Color32 = Color32::from_gray(190);
-const CHECKER_DARK: Color32 = Color32::from_gray(140);
-const GRID: Color32 = Color32::from_rgba_premultiplied(60, 60, 60, 90);
+const GRID: Color32 = Color32::from_rgba_premultiplied(56, 56, 63, 90);
 
 pub struct CanvasView {
     zoom_index: usize,
@@ -394,22 +392,11 @@ impl CanvasView {
             return;
         }
 
-        // Checkerboard behind transparent pixels
-        if let Some(t) = graphic.transparent_slot {
-            painter.rect_filled(img_rect, 0.0, CHECKER_LIGHT);
-            let (x0, y0, x1, y1) = visible_pixel_range(visible, origin, px_size, graphic);
-            let half = px_size * 0.5;
-            for y in y0..y1 {
-                for x in x0..x1 {
-                    if graphic.get(x, y) != Some(t) {
-                        continue;
-                    }
-                    let p = origin + vec2(x as f32, y as f32) * px_size;
-                    painter.rect_filled(Rect::from_min_size(p, half), 0.0, CHECKER_DARK);
-                    painter.rect_filled(Rect::from_min_size(p + half, half), 0.0, CHECKER_DARK);
-                }
-            }
-        }
+        // Canvas frame background: filled with the selected secondary (transparent) color
+        let palette = project.palette_of(graphic);
+        let sec_rgb = render::slot_color(graphic, palette, *secondary);
+        let sec_c32 = Color32::from_rgb(sec_rgb.r, sec_rgb.g, sec_rgb.b);
+        painter.rect_filled(img_rect, 0.0, sec_c32);
 
         if let Some(tex) = &self.texture {
             let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
@@ -432,14 +419,14 @@ impl CanvasView {
         if self.show_grid && zoom >= MIN_GRID_ZOOM {
             let (x0, y0, x1, y1) = visible_pixel_range(visible, origin, px_size, graphic);
             for x in x0..=x1 {
-                let sx = origin.x + x as f32 * px_size.x;
+                let sx = (origin.x + x as f32 * px_size.x).round();
                 painter.line_segment(
                     [pos2(sx, visible.top()), pos2(sx, visible.bottom())],
                     (1.0, GRID),
                 );
             }
             for y in y0..=y1 {
-                let sy = origin.y + y as f32 * px_size.y;
+                let sy = (origin.y + y as f32 * px_size.y).round();
                 painter.line_segment(
                     [pos2(visible.left(), sy), pos2(visible.right(), sy)],
                     (1.0, GRID),

@@ -182,6 +182,13 @@ impl eframe::App for PixelApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_shortcuts(ctx);
 
+        // Sync graphic's transparent_slot with the selected secondary color
+        let graphic = &mut self.project.graphics[self.active];
+        if graphic.transparent_slot != Some(self.secondary) {
+            graphic.transparent_slot = Some(self.secondary);
+            self.canvas.invalidate();
+        }
+
         egui::TopBottomPanel::top("menu").show(ctx, |ui| self.menu_bar(ui));
 
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
@@ -190,6 +197,8 @@ impl eframe::App for PixelApp {
                 ui.label(format!("{} × {}", g.width, g.height));
                 ui.separator();
                 ui.label(format!("zoom {}×", self.canvas.zoom()));
+                ui.separator();
+                ui.checkbox(&mut self.canvas.show_grid, "Grid (G)");
                 ui.separator();
                 match self.canvas.hover {
                     Some((x, y)) => {

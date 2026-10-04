@@ -85,7 +85,7 @@ pub fn show(
         );
         ui.vertical(|ui| {
             ui.label(format!("L: slot {primary}"));
-            ui.label(format!("R: slot {secondary}"));
+            ui.label(format!("R: slot {secondary} (bg)"));
             if ui.small_button("⇄ swap (X)").clicked() {
                 std::mem::swap(primary, secondary);
             }
@@ -118,7 +118,7 @@ pub fn show(
 
                 let pal_index = graphic.slots.get(value as usize).copied().unwrap_or(0);
                 let resp = resp.on_hover_text(format!(
-                    "Slot {value} → palette #{pal_index} (#{:02X}{:02X}{:02X}){}\nLeft-click: primary · Right-click: secondary",
+                    "Slot {value} → palette #{pal_index} (#{:02X}{:02X}{:02X}){}\nLeft-click: primary · Right-click: secondary (bg)",
                     color.r(),
                     color.g(),
                     color.b(),
