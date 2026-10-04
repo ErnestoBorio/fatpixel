@@ -140,8 +140,8 @@ Each phase ends with a runnable app you can try.
 ### Phase 3 — Projects, graphics & file format
 - Multiple graphics per project; graphics list panel (add / rename / duplicate / delete / reorder).
 - "New graphic" dialog:
-  - **Sprite**: choose 1 bpp Hi-Res (2 colors) or 2 bpp Wide / Multicolor (4 colors), width & height (defaults to C64 standard 24×21 hi-res or 12×21 wide).
-  - **Charset**: 1 bpp Hi-Res (2 colors), char dimensions (e.g. 8×8), char count (e.g. 256).
+  - **Sprite**: choose 1 bpp Hi-Res (2 colors) or 2 bpp Wide / Multicolor (4 colors). Fully customizable width & height with C64 preset buttons (defaults: 24×21 for hi-res, 12×21 for wide).
+  - **Charset**: 1 bpp Hi-Res (2 colors). Fully customizable char width/height and char count with C64 preset buttons (default: 8×8 chars, 256 characters).
 - Wide pixel mode rendering & input (2:1 aspect ratio on screen for 2 bpp sprites).
 - Charset support: char grid overlay, char selector, edit single char vs full sheet view.
 - Save / Open `.pxp`, unsaved-changes prompt, recent files.
@@ -213,6 +213,7 @@ Each phase ends with a runnable app you can try.
 | Topic | Decision |
 |---|---|
 | Graphic modes (C64 scope) | Sprites: 1 bpp Hi-Res (2 colors) or 2 bpp Wide (4 colors). Charsets: 1 bpp Hi-Res (2 colors) always |
+| Graphic dimensions | Fully customizable width/height and char count; C64 standard dimensions provided as default presets |
 | Palettes | Each graphic has its own palette (built-in or custom); projects can mix palettes |
 | Charset colors | Each charset has one palette, one set of 2 slots and 1 bpp shared by all its chars |
 | CSV export | One value per pixel (slot index), even for 2-color graphics |
