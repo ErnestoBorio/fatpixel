@@ -16,7 +16,11 @@ fn to_color32(graphic: &Graphic, palette: &Palette, value: u8) -> Color32 {
 /// Picks black or white text for readability on `bg`.
 fn contrast(bg: Color32) -> Color32 {
     let l = 0.299 * bg.r() as f32 + 0.587 * bg.g() as f32 + 0.114 * bg.b() as f32;
-    if l > 140.0 { Color32::BLACK } else { Color32::WHITE }
+    if l > 140.0 {
+        Color32::BLACK
+    } else {
+        Color32::WHITE
+    }
 }
 
 /// Paints a swatch; transparent slots get a small checker corner.
@@ -24,10 +28,21 @@ fn paint_swatch(painter: &egui::Painter, rect: Rect, color: Color32, transparent
     painter.rect_filled(rect, 0.0, color);
     if transparent {
         let q = rect.width() * 0.2;
-        let corner = Rect::from_min_size(rect.right_bottom() - Vec2::splat(2.0 * q), Vec2::splat(2.0 * q));
+        let corner = Rect::from_min_size(
+            rect.right_bottom() - Vec2::splat(2.0 * q),
+            Vec2::splat(2.0 * q),
+        );
         painter.rect_filled(corner, 0.0, Color32::from_gray(200));
-        painter.rect_filled(Rect::from_min_size(corner.min, Vec2::splat(q)), 0.0, Color32::from_gray(130));
-        painter.rect_filled(Rect::from_min_size(corner.min + Vec2::splat(q), Vec2::splat(q)), 0.0, Color32::from_gray(130));
+        painter.rect_filled(
+            Rect::from_min_size(corner.min, Vec2::splat(q)),
+            0.0,
+            Color32::from_gray(130),
+        );
+        painter.rect_filled(
+            Rect::from_min_size(corner.min + Vec2::splat(q), Vec2::splat(q)),
+            0.0,
+            Color32::from_gray(130),
+        );
     }
     outline(painter, rect, Color32::from_gray(20));
 }
@@ -56,8 +71,18 @@ pub fn show(
         let painter = ui.painter_at(rect);
         let sec = Rect::from_min_size(rect.min + vec2(22.0, 18.0), Vec2::splat(32.0));
         let pri = Rect::from_min_size(rect.min + vec2(2.0, 2.0), Vec2::splat(32.0));
-        paint_swatch(&painter, sec, to_color32(graphic, palette, *secondary), graphic.transparent_slot == Some(*secondary));
-        paint_swatch(&painter, pri, to_color32(graphic, palette, *primary), graphic.transparent_slot == Some(*primary));
+        paint_swatch(
+            &painter,
+            sec,
+            to_color32(graphic, palette, *secondary),
+            graphic.transparent_slot == Some(*secondary),
+        );
+        paint_swatch(
+            &painter,
+            pri,
+            to_color32(graphic, palette, *primary),
+            graphic.transparent_slot == Some(*primary),
+        );
         ui.vertical(|ui| {
             ui.label(format!("L: slot {primary}"));
             ui.label(format!("R: slot {secondary}"));
@@ -106,7 +131,7 @@ pub fn show(
                     *secondary = value;
                 }
 
-                if (value as usize + 1) % COLUMNS == 0 {
+                if (value as usize + 1).is_multiple_of(COLUMNS) {
                     ui.end_row();
                 }
             }

@@ -20,7 +20,11 @@ pub fn to_rgba(graphic: &Graphic, palette: &Palette) -> Vec<u8> {
     let lut: Vec<[u8; 4]> = (0..graphic.depth.colors() as u8)
         .map(|v| {
             let c = slot_color(graphic, palette, v);
-            let a = if graphic.transparent_slot == Some(v) { 0 } else { 255 };
+            let a = if graphic.transparent_slot == Some(v) {
+                0
+            } else {
+                255
+            };
             [c.r, c.g, c.b, a]
         })
         .collect();

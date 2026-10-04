@@ -1,12 +1,13 @@
-//! The editing canvas: renders the active graphic, handles zoom / pan / painting.
+//! The editing canvas: renders the active graphic, handles zoom / pan / painting and tool interactions.
 
 use eframe::egui::{
     self, Color32, ColorImage, CursorIcon, Key, PointerButton, Pos2, Rect, Sense, TextureHandle,
     TextureOptions, Vec2, pos2, vec2,
 };
 
-use crate::model::{Project, render};
-use crate::tools::{Stroke, Tool};
+use crate::model::{History, Project, render};
+use crate::raster::{self, BrushShape};
+use crate::tools::{self, Stroke, Tool};
 
 /// Screen pixels per (hi-res) pixel height.
 const ZOOM_LEVELS: &[f32] = &[
@@ -35,6 +36,10 @@ pub struct CanvasView {
     pinch_acc: f32,
     stroke: Stroke,
     stroke_value: u8,
+    active_undo_snapshot: Option<Vec<u8>>,
+    drag_shape_start: Option<(i32, i32)>,
+    drag_shape_value: u8,
+    preview_points: Option<(Vec<(i32, i32)>, u8)>,
     last_rect: Rect,
     shown_graphic: Option<usize>,
 }
@@ -53,6 +58,10 @@ impl Default for CanvasView {
             pinch_acc: 1.0,
             stroke: Stroke::default(),
             stroke_value: 0,
+            active_undo_snapshot: None,
+            drag_shape_start: None,
+            drag_shape_value: 0,
+            preview_points: None,
             last_rect: Rect::NOTHING,
             shown_graphic: None,
         }
@@ -87,7 +96,6 @@ impl CanvasView {
             self.zoom_index = new;
             return;
         }
-        // Keep the point under `anchor` fixed on screen.
         let ratio = ZOOM_LEVELS[new] / self.zoom();
         let origin = self.last_rect.min + self.offset;
         let new_origin = anchor - (anchor - origin) * ratio;
@@ -107,20 +115,28 @@ impl CanvasView {
         self.offset = vec2(self.offset.x.round(), self.offset.y.round());
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
         project: &mut Project,
         graphic_index: usize,
+        history: &mut History,
         tool: Tool,
-        primary: u8,
-        secondary: u8,
+        brush_shape: BrushShape,
+        brush_size: u32,
+        fill_mode: bool,
+        primary: &mut u8,
+        secondary: &mut u8,
     ) {
         if self.shown_graphic != Some(graphic_index) {
             self.shown_graphic = Some(graphic_index);
             self.dirty = true;
             self.needs_fit = true;
             self.stroke.end();
+            self.drag_shape_start = None;
+            self.preview_points = None;
+            self.active_undo_snapshot = None;
         }
 
         let (response, painter) = {
@@ -141,17 +157,20 @@ impl CanvasView {
         }
 
         // ---- Input -------------------------------------------------------------------
-        let (space, scroll, pinch, pointer_pos, prim_down, sec_down, mid_down) = ui.input(|i| {
-            (
-                i.key_down(Key::Space),
-                i.raw_scroll_delta.y,
-                i.zoom_delta(),
-                i.pointer.latest_pos(),
-                i.pointer.primary_down(),
-                i.pointer.secondary_down(),
-                i.pointer.middle_down(),
-            )
-        });
+        let (space, alt, shift, scroll, pinch, pointer_pos, prim_down, sec_down, mid_down) = ui
+            .input(|i| {
+                (
+                    i.key_down(Key::Space),
+                    i.modifiers.alt,
+                    i.modifiers.shift,
+                    i.raw_scroll_delta.y,
+                    i.zoom_delta(),
+                    i.pointer.latest_pos(),
+                    i.pointer.primary_down(),
+                    i.pointer.secondary_down(),
+                    i.pointer.middle_down(),
+                )
+            });
 
         // Zoom with wheel / trackpad pinch, anchored at the mouse.
         if response.hovered() {
@@ -199,27 +218,142 @@ impl CanvasView {
             .map(to_pixel)
             .filter(|&(x, y)| project.graphics[graphic_index].in_bounds(x, y));
 
-        // Painting.
-        let painting = response.is_pointer_button_down_on()
-            && !space
-            && !mid_down
-            && (prim_down || sec_down);
-        if painting {
-            if let Some(pos) = pointer_pos {
-                let graphic = &mut project.graphics[graphic_index];
-                if !self.stroke.is_active() {
-                    self.stroke_value = match tool {
-                        Tool::Pencil if prim_down => primary,
-                        Tool::Pencil => secondary,
-                        Tool::Eraser => graphic.transparent_slot.unwrap_or(0),
-                    };
-                }
-                if self.stroke.paint_to(graphic, to_pixel(pos), self.stroke_value) {
-                    self.dirty = true;
+        let effective_tool = if alt { Tool::Eyedropper } else { tool };
+
+        // ---- Tool Actions -------------------------------------------------------------
+        let can_interact = response.hovered() && !space && !mid_down;
+
+        match effective_tool {
+            Tool::Eyedropper => {
+                if can_interact
+                    && (prim_down || sec_down)
+                    && let Some(val) = self
+                        .hover
+                        .and_then(|(hx, hy)| project.graphics[graphic_index].get(hx, hy))
+                {
+                    if prim_down {
+                        *primary = val;
+                    } else {
+                        *secondary = val;
+                    }
                 }
             }
-        } else {
-            self.stroke.end();
+
+            Tool::BucketFill => {
+                if (response.clicked() || response.secondary_clicked())
+                    && !space
+                    && !mid_down
+                    && let Some((hx, hy)) = self.hover
+                {
+                    let fill_val = if response.secondary_clicked() {
+                        *secondary
+                    } else {
+                        *primary
+                    };
+                    let graphic = &mut project.graphics[graphic_index];
+                    let snapshot = graphic.clone_pixels();
+                    if raster::flood_fill(graphic, hx, hy, fill_val) {
+                        history.push_snapshot(snapshot);
+                        self.dirty = true;
+                    }
+                }
+            }
+
+            Tool::Pencil | Tool::Eraser => {
+                let painting = response.is_pointer_button_down_on()
+                    && !space
+                    && !mid_down
+                    && (prim_down || sec_down);
+                if painting {
+                    if let Some(pos) = pointer_pos {
+                        let graphic = &mut project.graphics[graphic_index];
+                        if !self.stroke.is_active() {
+                            self.active_undo_snapshot = Some(graphic.clone_pixels());
+                            self.stroke_value = match effective_tool {
+                                Tool::Pencil if prim_down => *primary,
+                                Tool::Pencil => *secondary,
+                                Tool::Eraser => graphic.transparent_slot.unwrap_or(0),
+                                _ => unreachable!(),
+                            };
+                        }
+                        if self.stroke.paint_to(
+                            graphic,
+                            to_pixel(pos),
+                            self.stroke_value,
+                            brush_shape,
+                            brush_size,
+                        ) {
+                            self.dirty = true;
+                        }
+                    }
+                } else if self.stroke.is_active() {
+                    self.stroke.end();
+                    if let Some(snapshot) = self.active_undo_snapshot.take() {
+                        let graphic = &project.graphics[graphic_index];
+                        if graphic.pixels() != snapshot.as_slice() {
+                            history.push_snapshot(snapshot);
+                        }
+                    }
+                }
+            }
+
+            Tool::Line | Tool::Rectangle | Tool::Ellipse => {
+                let button_down = response.is_pointer_button_down_on()
+                    && !space
+                    && !mid_down
+                    && (prim_down || sec_down);
+
+                if button_down {
+                    if let Some(pos) = pointer_pos {
+                        let pix = to_pixel(pos);
+                        let graphic = &project.graphics[graphic_index];
+                        if self.drag_shape_start.is_none() {
+                            self.drag_shape_start = Some(pix);
+                            self.active_undo_snapshot = Some(graphic.clone_pixels());
+                            self.drag_shape_value = if prim_down { *primary } else { *secondary };
+                        }
+                        if let Some(start) = self.drag_shape_start {
+                            let pts = tools::compute_shape_points(
+                                effective_tool,
+                                start,
+                                pix,
+                                shift,
+                                brush_shape,
+                                brush_size,
+                                fill_mode,
+                            );
+                            self.preview_points = Some((pts, self.drag_shape_value));
+                        }
+                    }
+                } else if let Some(start) = self.drag_shape_start.take() {
+                    if let Some(pos) = pointer_pos {
+                        let pix = to_pixel(pos);
+                        let pts = tools::compute_shape_points(
+                            effective_tool,
+                            start,
+                            pix,
+                            shift,
+                            brush_shape,
+                            brush_size,
+                            fill_mode,
+                        );
+                        let graphic = &mut project.graphics[graphic_index];
+                        let mut changed = false;
+                        for (px, py) in pts {
+                            changed |= graphic.set(px, py, self.drag_shape_value);
+                        }
+                        if changed {
+                            self.dirty = true;
+                            if let Some(snapshot) = self.active_undo_snapshot.take() {
+                                history.push_snapshot(snapshot);
+                            }
+                        } else {
+                            self.active_undo_snapshot = None;
+                        }
+                    }
+                    self.preview_points = None;
+                }
+            }
         }
 
         // Cursor.
@@ -227,7 +361,7 @@ impl CanvasView {
             ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
         } else if response.hovered() && space {
             ui.ctx().set_cursor_icon(CursorIcon::Grab);
-        } else if self.hover.is_some() {
+        } else if effective_tool == Tool::Eyedropper || self.hover.is_some() {
             ui.ctx().set_cursor_icon(CursorIcon::Crosshair);
         }
 
@@ -242,8 +376,11 @@ impl CanvasView {
             match &mut self.texture {
                 Some(t) => t.set(image, TextureOptions::NEAREST),
                 None => {
-                    self.texture =
-                        Some(ui.ctx().load_texture("canvas", image, TextureOptions::NEAREST))
+                    self.texture = Some(ui.ctx().load_texture(
+                        "canvas",
+                        image,
+                        TextureOptions::NEAREST,
+                    ))
                 }
             }
             self.dirty = false;
@@ -257,7 +394,7 @@ impl CanvasView {
             return;
         }
 
-        // Checkerboard behind transparent pixels: a light base + two dark quarters per pixel.
+        // Checkerboard behind transparent pixels
         if let Some(t) = graphic.transparent_slot {
             painter.rect_filled(img_rect, 0.0, CHECKER_LIGHT);
             let (x0, y0, x1, y1) = visible_pixel_range(visible, origin, px_size, graphic);
@@ -277,6 +414,18 @@ impl CanvasView {
         if let Some(tex) = &self.texture {
             let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
             painter.image(tex.id(), img_rect, uv, Color32::WHITE);
+        }
+
+        // Live geometry preview (Line, Rectangle, Ellipse)
+        if let Some((pts, val)) = &self.preview_points {
+            let color = render::slot_color(graphic, project.palette_of(graphic), *val);
+            let c32 = Color32::from_rgb(color.r, color.g, color.b);
+            for &(px, py) in pts {
+                if graphic.in_bounds(px, py) {
+                    let p = origin + vec2(px as f32, py as f32) * px_size;
+                    painter.rect_filled(Rect::from_min_size(p, px_size), 0.0, c32);
+                }
+            }
         }
 
         // Pixel grid.
@@ -300,13 +449,27 @@ impl CanvasView {
 
         outline(&painter, img_rect.expand(0.5), Color32::from_gray(90));
 
-        if let Some((x, y)) = self.hover {
-            let p = origin + vec2(x as f32, y as f32) * px_size;
-            outline(
-                &painter,
-                Rect::from_min_size(p, px_size),
-                Color32::from_white_alpha(200),
-            );
+        // Hover cursor highlight
+        if let Some((hx, hy)) = self.hover {
+            if effective_tool.uses_brush() && brush_size > 1 {
+                for (bx, by) in raster::brush_points(brush_shape, brush_size, hx, hy) {
+                    if graphic.in_bounds(bx, by) {
+                        let p = origin + vec2(bx as f32, by as f32) * px_size;
+                        outline(
+                            &painter,
+                            Rect::from_min_size(p, px_size),
+                            Color32::from_white_alpha(150),
+                        );
+                    }
+                }
+            } else {
+                let p = origin + vec2(hx as f32, hy as f32) * px_size;
+                outline(
+                    &painter,
+                    Rect::from_min_size(p, px_size),
+                    Color32::from_white_alpha(200),
+                );
+            }
         }
     }
 }

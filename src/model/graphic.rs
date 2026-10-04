@@ -118,6 +118,20 @@ impl Graphic {
     pub fn pixels(&self) -> &[u8] {
         &self.pixels
     }
+
+    pub fn clone_pixels(&self) -> Vec<u8> {
+        self.pixels.clone()
+    }
+
+    /// Replaces the pixel buffer with a new one of matching size.
+    pub fn replace_pixels(&mut self, new_pixels: Vec<u8>) {
+        assert_eq!(
+            new_pixels.len(),
+            self.width * self.height,
+            "new pixels size must match graphic dimensions"
+        );
+        self.pixels = new_pixels;
+    }
 }
 
 #[cfg(test)]
