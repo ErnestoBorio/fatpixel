@@ -16,9 +16,9 @@ impl Default for Project {
             name: "Untitled".to_owned(),
             graphics: vec![Graphic::new_sprite(
                 "sprite 1",
-                32,
-                32,
-                ColorDepth::Sixteen,
+                24,
+                21,
+                ColorDepth::Two,
                 PixelMode::HiRes,
             )],
             custom_palettes: Vec::new(),

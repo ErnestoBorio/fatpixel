@@ -182,13 +182,6 @@ impl eframe::App for PixelApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_shortcuts(ctx);
 
-        // Sync graphic's transparent_slot with the selected secondary color
-        let graphic = &mut self.project.graphics[self.active];
-        if graphic.transparent_slot != Some(self.secondary) {
-            graphic.transparent_slot = Some(self.secondary);
-            self.canvas.invalidate();
-        }
-
         egui::TopBottomPanel::top("menu").show(ctx, |ui| self.menu_bar(ui));
 
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
@@ -197,8 +190,6 @@ impl eframe::App for PixelApp {
                 ui.label(format!("{} × {}", g.width, g.height));
                 ui.separator();
                 ui.label(format!("zoom {}×", self.canvas.zoom()));
-                ui.separator();
-                ui.checkbox(&mut self.canvas.show_grid, "Grid (G)");
                 ui.separator();
                 match self.canvas.hover {
                     Some((x, y)) => {
@@ -256,9 +247,20 @@ impl eframe::App for PixelApp {
             .exact_width(180.0)
             .show(ctx, |ui| {
                 ui.heading("Palette");
-                let graphic = &self.project.graphics[self.active];
-                let palette = self.project.palette_of(graphic);
-                palette_panel::show(ui, graphic, palette, &mut self.primary, &mut self.secondary);
+                let palette = self
+                    .project
+                    .palette(&self.project.graphics[self.active].palette)
+                    .clone();
+                let graphic = &mut self.project.graphics[self.active];
+                if palette_panel::show(
+                    ui,
+                    graphic,
+                    &palette,
+                    &mut self.primary,
+                    &mut self.secondary,
+                ) {
+                    self.canvas.invalidate();
+                }
 
                 ui.add_space(12.0);
                 ui.separator();
