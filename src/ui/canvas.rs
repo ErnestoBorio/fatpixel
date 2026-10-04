@@ -1,0 +1,338 @@
+//! The editing canvas: renders the active graphic, handles zoom / pan / painting.
+
+use eframe::egui::{
+    self, Color32, ColorImage, CursorIcon, Key, PointerButton, Pos2, Rect, Sense, TextureHandle,
+    TextureOptions, Vec2, pos2, vec2,
+};
+
+use crate::model::{Project, render};
+use crate::tools::{Stroke, Tool};
+
+/// Screen pixels per (hi-res) pixel height.
+const ZOOM_LEVELS: &[f32] = &[
+    1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 24.0, 32.0, 48.0, 64.0,
+];
+/// Grid is hidden below this pixel size (screen points), it would be just noise.
+const MIN_GRID_ZOOM: f32 = 6.0;
+const SCROLL_STEP: f32 = 40.0;
+
+const BG: Color32 = Color32::from_gray(38);
+const CHECKER_LIGHT: Color32 = Color32::from_gray(190);
+const CHECKER_DARK: Color32 = Color32::from_gray(140);
+const GRID: Color32 = Color32::from_rgba_premultiplied(60, 60, 60, 90);
+
+pub struct CanvasView {
+    zoom_index: usize,
+    /// Image top-left, relative to the canvas rect's top-left.
+    offset: Vec2,
+    pub show_grid: bool,
+    /// Pixel under the mouse, if inside the graphic.
+    pub hover: Option<(i32, i32)>,
+    texture: Option<TextureHandle>,
+    dirty: bool,
+    needs_fit: bool,
+    scroll_acc: f32,
+    pinch_acc: f32,
+    stroke: Stroke,
+    stroke_value: u8,
+    last_rect: Rect,
+    shown_graphic: Option<usize>,
+}
+
+impl Default for CanvasView {
+    fn default() -> Self {
+        Self {
+            zoom_index: 7,
+            offset: Vec2::ZERO,
+            show_grid: true,
+            hover: None,
+            texture: None,
+            dirty: true,
+            needs_fit: true,
+            scroll_acc: 0.0,
+            pinch_acc: 1.0,
+            stroke: Stroke::default(),
+            stroke_value: 0,
+            last_rect: Rect::NOTHING,
+            shown_graphic: None,
+        }
+    }
+}
+
+impl CanvasView {
+    pub fn zoom(&self) -> f32 {
+        ZOOM_LEVELS[self.zoom_index]
+    }
+
+    /// Forces the texture to be rebuilt (call after changing the graphic outside the canvas).
+    pub fn invalidate(&mut self) {
+        self.dirty = true;
+    }
+
+    pub fn zoom_in(&mut self) {
+        self.step_zoom(1, self.last_rect.center());
+    }
+
+    pub fn zoom_out(&mut self) {
+        self.step_zoom(-1, self.last_rect.center());
+    }
+
+    pub fn fit(&mut self) {
+        self.needs_fit = true;
+    }
+
+    fn step_zoom(&mut self, dir: i32, anchor: Pos2) {
+        let new = (self.zoom_index as i32 + dir).clamp(0, ZOOM_LEVELS.len() as i32 - 1) as usize;
+        if new == self.zoom_index || !self.last_rect.is_positive() {
+            self.zoom_index = new;
+            return;
+        }
+        // Keep the point under `anchor` fixed on screen.
+        let ratio = ZOOM_LEVELS[new] / self.zoom();
+        let origin = self.last_rect.min + self.offset;
+        let new_origin = anchor - (anchor - origin) * ratio;
+        self.offset = new_origin - self.last_rect.min;
+        self.zoom_index = new;
+    }
+
+    fn do_fit(&mut self, rect: Rect, w: f32, h: f32) {
+        const MARGIN: f32 = 32.0;
+        let avail = (rect.size() - Vec2::splat(MARGIN)).max(Vec2::splat(1.0));
+        self.zoom_index = ZOOM_LEVELS
+            .iter()
+            .rposition(|&z| w * z <= avail.x && h * z <= avail.y)
+            .unwrap_or(0);
+        let size = vec2(w, h) * self.zoom();
+        self.offset = (rect.size() - size) * 0.5;
+        self.offset = vec2(self.offset.x.round(), self.offset.y.round());
+    }
+
+    pub fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+        project: &mut Project,
+        graphic_index: usize,
+        tool: Tool,
+        primary: u8,
+        secondary: u8,
+    ) {
+        if self.shown_graphic != Some(graphic_index) {
+            self.shown_graphic = Some(graphic_index);
+            self.dirty = true;
+            self.needs_fit = true;
+            self.stroke.end();
+        }
+
+        let (response, painter) = {
+            let resp = ui.allocate_response(ui.available_size(), Sense::click_and_drag());
+            let p = ui.painter_at(resp.rect);
+            (resp, p)
+        };
+        let rect = response.rect;
+        self.last_rect = rect;
+
+        let (gw, gh, aspect) = {
+            let g = &project.graphics[graphic_index];
+            (g.width as f32, g.height as f32, g.pixel_mode.aspect())
+        };
+        if self.needs_fit {
+            self.do_fit(rect, gw * aspect, gh);
+            self.needs_fit = false;
+        }
+
+        // ---- Input -------------------------------------------------------------------
+        let (space, scroll, pinch, pointer_pos, prim_down, sec_down, mid_down) = ui.input(|i| {
+            (
+                i.key_down(Key::Space),
+                i.raw_scroll_delta.y,
+                i.zoom_delta(),
+                i.pointer.latest_pos(),
+                i.pointer.primary_down(),
+                i.pointer.secondary_down(),
+                i.pointer.middle_down(),
+            )
+        });
+
+        // Zoom with wheel / trackpad pinch, anchored at the mouse.
+        if response.hovered() {
+            let anchor = pointer_pos.unwrap_or(rect.center());
+            self.scroll_acc += scroll;
+            while self.scroll_acc.abs() >= SCROLL_STEP {
+                let dir = self.scroll_acc.signum() as i32;
+                self.step_zoom(dir, anchor);
+                self.scroll_acc -= dir as f32 * SCROLL_STEP;
+            }
+            if pinch != 1.0 {
+                self.pinch_acc *= pinch;
+                if self.pinch_acc > 1.25 {
+                    self.step_zoom(1, anchor);
+                    self.pinch_acc = 1.0;
+                } else if self.pinch_acc < 0.8 {
+                    self.step_zoom(-1, anchor);
+                    self.pinch_acc = 1.0;
+                }
+            }
+        } else {
+            self.scroll_acc = 0.0;
+        }
+
+        // Pan with middle drag or Space + drag.
+        let panning = response.dragged_by(PointerButton::Middle)
+            || (space && response.dragged_by(PointerButton::Primary));
+        if panning {
+            self.offset += response.drag_delta();
+        }
+
+        let zoom = self.zoom();
+        let px_size = vec2(zoom * aspect, zoom);
+        let origin = rect.min + self.offset;
+        let to_pixel = |p: Pos2| -> (i32, i32) {
+            let local = p - origin;
+            (
+                (local.x / px_size.x).floor() as i32,
+                (local.y / px_size.y).floor() as i32,
+            )
+        };
+
+        self.hover = pointer_pos
+            .filter(|p| rect.contains(*p))
+            .map(to_pixel)
+            .filter(|&(x, y)| project.graphics[graphic_index].in_bounds(x, y));
+
+        // Painting.
+        let painting = response.is_pointer_button_down_on()
+            && !space
+            && !mid_down
+            && (prim_down || sec_down);
+        if painting {
+            if let Some(pos) = pointer_pos {
+                let graphic = &mut project.graphics[graphic_index];
+                if !self.stroke.is_active() {
+                    self.stroke_value = match tool {
+                        Tool::Pencil if prim_down => primary,
+                        Tool::Pencil => secondary,
+                        Tool::Eraser => graphic.transparent_slot.unwrap_or(0),
+                    };
+                }
+                if self.stroke.paint_to(graphic, to_pixel(pos), self.stroke_value) {
+                    self.dirty = true;
+                }
+            }
+        } else {
+            self.stroke.end();
+        }
+
+        // Cursor.
+        if panning {
+            ui.ctx().set_cursor_icon(CursorIcon::Grabbing);
+        } else if response.hovered() && space {
+            ui.ctx().set_cursor_icon(CursorIcon::Grab);
+        } else if self.hover.is_some() {
+            ui.ctx().set_cursor_icon(CursorIcon::Crosshair);
+        }
+
+        // ---- Texture -----------------------------------------------------------------
+        let graphic = &project.graphics[graphic_index];
+        if self.dirty || self.texture.is_none() {
+            let palette = project.palette_of(graphic);
+            let image = ColorImage::from_rgba_unmultiplied(
+                [graphic.width, graphic.height],
+                &render::to_rgba(graphic, palette),
+            );
+            match &mut self.texture {
+                Some(t) => t.set(image, TextureOptions::NEAREST),
+                None => {
+                    self.texture =
+                        Some(ui.ctx().load_texture("canvas", image, TextureOptions::NEAREST))
+                }
+            }
+            self.dirty = false;
+        }
+
+        // ---- Paint -------------------------------------------------------------------
+        painter.rect_filled(rect, 0.0, BG);
+        let img_rect = Rect::from_min_size(origin, vec2(gw, gh) * px_size);
+        let visible = img_rect.intersect(rect);
+        if !visible.is_positive() {
+            return;
+        }
+
+        // Checkerboard behind transparent pixels: a light base + two dark quarters per pixel.
+        if let Some(t) = graphic.transparent_slot {
+            painter.rect_filled(img_rect, 0.0, CHECKER_LIGHT);
+            let (x0, y0, x1, y1) = visible_pixel_range(visible, origin, px_size, graphic);
+            let half = px_size * 0.5;
+            for y in y0..y1 {
+                for x in x0..x1 {
+                    if graphic.get(x, y) != Some(t) {
+                        continue;
+                    }
+                    let p = origin + vec2(x as f32, y as f32) * px_size;
+                    painter.rect_filled(Rect::from_min_size(p, half), 0.0, CHECKER_DARK);
+                    painter.rect_filled(Rect::from_min_size(p + half, half), 0.0, CHECKER_DARK);
+                }
+            }
+        }
+
+        if let Some(tex) = &self.texture {
+            let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+            painter.image(tex.id(), img_rect, uv, Color32::WHITE);
+        }
+
+        // Pixel grid.
+        if self.show_grid && zoom >= MIN_GRID_ZOOM {
+            let (x0, y0, x1, y1) = visible_pixel_range(visible, origin, px_size, graphic);
+            for x in x0..=x1 {
+                let sx = origin.x + x as f32 * px_size.x;
+                painter.line_segment(
+                    [pos2(sx, visible.top()), pos2(sx, visible.bottom())],
+                    (1.0, GRID),
+                );
+            }
+            for y in y0..=y1 {
+                let sy = origin.y + y as f32 * px_size.y;
+                painter.line_segment(
+                    [pos2(visible.left(), sy), pos2(visible.right(), sy)],
+                    (1.0, GRID),
+                );
+            }
+        }
+
+        outline(&painter, img_rect.expand(0.5), Color32::from_gray(90));
+
+        if let Some((x, y)) = self.hover {
+            let p = origin + vec2(x as f32, y as f32) * px_size;
+            outline(
+                &painter,
+                Rect::from_min_size(p, px_size),
+                Color32::from_white_alpha(200),
+            );
+        }
+    }
+}
+
+/// Range of pixel coordinates `[x0, x1) × [y0, y1)` intersecting the visible screen rect.
+fn visible_pixel_range(
+    visible: Rect,
+    origin: Pos2,
+    px_size: Vec2,
+    graphic: &crate::model::Graphic,
+) -> (i32, i32, i32, i32) {
+    let a = (visible.min - origin) / px_size;
+    let b = (visible.max - origin) / px_size;
+    (
+        (a.x.floor() as i32).max(0),
+        (a.y.floor() as i32).max(0),
+        (b.x.ceil() as i32).min(graphic.width as i32),
+        (b.y.ceil() as i32).min(graphic.height as i32),
+    )
+}
+
+/// Draws a 1px rectangle outline.
+pub fn outline(painter: &egui::Painter, r: Rect, color: Color32) {
+    let s = (1.0, color);
+    painter.line_segment([r.left_top(), r.right_top()], s);
+    painter.line_segment([r.right_top(), r.right_bottom()], s);
+    painter.line_segment([r.right_bottom(), r.left_bottom()], s);
+    painter.line_segment([r.left_bottom(), r.left_top()], s);
+}
