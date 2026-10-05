@@ -56,6 +56,10 @@ impl History {
         !self.redo_stack.is_empty()
     }
 
+    pub fn undo_len(&self) -> usize {
+        self.undo_stack.len()
+    }
+
     pub fn clear(&mut self) {
         self.undo_stack.clear();
         self.redo_stack.clear();

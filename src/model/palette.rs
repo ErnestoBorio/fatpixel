@@ -1,5 +1,6 @@
 //! Palettes: lists of RGB colors. Graphics pick their color slots from a palette.
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::sync::LazyLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,7 +21,28 @@ impl Rgb {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl Serialize for Rgb {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b))
+    }
+}
+
+impl<'de> Deserialize<'de> for Rgb {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let hex_str = s.trim_start_matches('#');
+        let val = u32::from_str_radix(hex_str, 16).map_err(serde::de::Error::custom)?;
+        Ok(Rgb::hex(val))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Palette {
     pub id: String,
     pub name: String,
@@ -34,6 +56,34 @@ pub enum PaletteRef {
     Builtin(String),
     /// A palette stored in the project (`Project::custom_palettes`).
     Custom(String),
+}
+
+impl Serialize for PaletteRef {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Builtin(id) => serializer.serialize_str(&format!("builtin:{id}")),
+            Self::Custom(id) => serializer.serialize_str(&format!("custom:{id}")),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for PaletteRef {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        if let Some(id) = s.strip_prefix("builtin:") {
+            Ok(Self::Builtin(id.to_owned()))
+        } else if let Some(id) = s.strip_prefix("custom:") {
+            Ok(Self::Custom(id.to_owned()))
+        } else {
+            Ok(Self::Builtin(s))
+        }
+    }
 }
 
 fn make(id: &str, name: &str, colors: &[u32]) -> Palette {
@@ -85,5 +135,20 @@ mod tests {
     #[test]
     fn default_palette_has_16_colors() {
         assert_eq!(default_palette().colors.len(), 16);
+    }
+
+    #[test]
+    fn serde_rgb_and_palette_ref() {
+        let rgb = Rgb::hex(0x102030);
+        let s = serde_json::to_string(&rgb).unwrap();
+        assert_eq!(s, "\"#102030\"");
+        let parsed: Rgb = serde_json::from_str(&s).unwrap();
+        assert_eq!(parsed, rgb);
+
+        let pref = PaletteRef::Builtin("c64-pepto".into());
+        let s = serde_json::to_string(&pref).unwrap();
+        assert_eq!(s, "\"builtin:c64-pepto\"");
+        let parsed: PaletteRef = serde_json::from_str(&s).unwrap();
+        assert_eq!(parsed, pref);
     }
 }

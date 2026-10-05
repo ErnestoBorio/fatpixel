@@ -434,6 +434,36 @@ impl CanvasView {
             }
         }
 
+        // Charset character boundaries grid (if charset).
+        if self.show_grid
+            && let Some((cw, ch, _, _)) = graphic.charset_info()
+        {
+            let char_grid_color = Color32::from_rgba_premultiplied(90, 130, 230, 160);
+            let (x0, y0, x1, y1) = visible_pixel_range(visible, origin, px_size, graphic);
+            let cx0 = ((x0 as usize) / cw) * cw;
+            let cx1 = (x1 as usize).div_ceil(cw) * cw;
+            for x in (cx0..=cx1).step_by(cw) {
+                if x <= graphic.width {
+                    let sx = (origin.x + x as f32 * px_size.x).round();
+                    painter.line_segment(
+                        [pos2(sx, visible.top()), pos2(sx, visible.bottom())],
+                        (1.5, char_grid_color),
+                    );
+                }
+            }
+            let cy0 = ((y0 as usize) / ch) * ch;
+            let cy1 = (y1 as usize).div_ceil(ch) * ch;
+            for y in (cy0..=cy1).step_by(ch) {
+                if y <= graphic.height {
+                    let sy = (origin.y + y as f32 * px_size.y).round();
+                    painter.line_segment(
+                        [pos2(visible.left(), sy), pos2(visible.right(), sy)],
+                        (1.5, char_grid_color),
+                    );
+                }
+            }
+        }
+
         outline(&painter, img_rect.expand(0.5), Color32::from_gray(90));
 
         // Hover cursor highlight
