@@ -2,11 +2,11 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build & run Pixel",
+            "label": "Run Pixel (Web Dev)",
             "type": "shell",
-            "command": "cargo run",
+            "command": "npm run dev",
             "options": { "cwd": "${workspaceFolder}" },
-            "problemMatcher": ["$rustc"],
+            "problemMatcher": [],
             "group": { "kind": "build", "isDefault": true },
             "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
         }
