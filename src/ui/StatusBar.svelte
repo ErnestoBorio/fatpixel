@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Graphic } from '../model/graphic';
+  import { APP_VERSION } from '../version';
 
   let {
     graphic,
@@ -58,6 +59,8 @@
       <span class="sep">|</span>
     {/if}
     <span class="hints">Hold Alt: eyedropper · Hold Shift: snap</span>
+    <span class="sep">|</span>
+    <span class="version-tag" title="Pixel v{APP_VERSION}">v{APP_VERSION}</span>
   </div>
 </div>
 
@@ -95,5 +98,14 @@
   }
   .hints {
     color: #666;
+  }
+  .version-tag {
+    color: #778899;
+    font-family: monospace;
+    font-size: 10px;
+    padding: 1px 4px;
+    background: #202028;
+    border-radius: 3px;
+    border: 1px solid #2d2d3a;
   }
 </style>

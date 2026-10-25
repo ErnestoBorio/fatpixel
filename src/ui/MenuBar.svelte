@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { APP_VERSION } from '../version';
+
   let {
     canUndo = false,
     canRedo = false,
@@ -69,7 +71,8 @@
 }} />
 
 <div class="menu-bar" role="menubar" tabindex="0" onmouseleave={closeMenu}>
-  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'file')}>
+  <div class="menu-left">
+    <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'file')}>
     <button class="menu-btn {activeMenu === 'file' ? 'active' : ''}" onclick={() => toggleMenu('file')}>
       File
     </button>
@@ -201,12 +204,19 @@
       </div>
     {/if}
   </div>
+  </div>
+
+  <div class="menu-right">
+    <span class="app-title">Pixel</span>
+    <span class="version-badge" title="Pixel v{APP_VERSION}">v{APP_VERSION}</span>
+  </div>
 </div>
 
 <style>
   .menu-bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     background: #18181e;
     border-bottom: 1px solid #282832;
     padding: 2px 8px;
@@ -214,6 +224,33 @@
     font-size: 12px;
     position: relative;
     z-index: 100;
+  }
+  .menu-left {
+    display: flex;
+    align-items: center;
+  }
+  .menu-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 4px;
+    user-select: none;
+  }
+  .app-title {
+    font-weight: 600;
+    font-size: 11px;
+    color: #e0e0e8;
+    letter-spacing: 0.5px;
+  }
+  .version-badge {
+    background: #252532;
+    border: 1px solid #3d3d4e;
+    color: #88aacc;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-family: monospace;
+    font-weight: 500;
   }
   .menu-item {
     position: relative;
