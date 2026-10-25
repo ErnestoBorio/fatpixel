@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Graphic } from './graphic';
 import { Project } from './project';
 import { History } from './history';
@@ -220,3 +220,61 @@ describe('Graphic Transformations & Mode Conversion', () => {
     expect(g.wouldRotationLoseData(true)).toBe(true);
   });
 });
+
+describe('LocalStorage Persistence', () => {
+  const mockStorage: Record<string, string> = {};
+  const fakeStorage = {
+    getItem: (key: string) => mockStorage[key] ?? null,
+    setItem: (key: string, val: string) => {
+      mockStorage[key] = val;
+    },
+    removeItem: (key: string) => {
+      delete mockStorage[key];
+    },
+    clear: () => {
+      for (const k of Object.keys(mockStorage)) delete mockStorage[k];
+    },
+    length: 0,
+    key: () => null,
+  };
+
+  beforeEach(() => {
+    fakeStorage.clear();
+    // @ts-ignore
+    globalThis.localStorage = fakeStorage;
+  });
+
+  it('saves and restores project and settings', async () => {
+    const { saveAllToStorage, loadAllFromStorage, clearStorage } = await import('./storage');
+
+    const project = new Project('Test Game');
+    project.graphics[0].set(2, 3, 1);
+
+    const settings = {
+      activeGraphicIndex: 0,
+      activeCharIndex: 5,
+      tool: 'line' as const,
+      brushShape: 'round' as const,
+      brushSize: 3,
+      fillMode: true,
+      primary: 1,
+      secondary: 0,
+      showGrid: false,
+    };
+
+    expect(saveAllToStorage(project, settings)).toBe(true);
+
+    const loaded = loadAllFromStorage();
+    expect(loaded.project).not.toBeNull();
+    expect(loaded.project?.name).toBe('Test Game');
+    expect(loaded.project?.graphics[0].get(2, 3)).toBe(1);
+
+    expect(loaded.settings).toEqual(settings);
+
+    clearStorage();
+    const empty = loadAllFromStorage();
+    expect(empty.project).toBeNull();
+    expect(empty.settings).toBeNull();
+  });
+});
+

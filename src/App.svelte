@@ -4,30 +4,47 @@
   import { Graphic } from './model/graphic';
   import { History } from './model/history';
   import type { ToolType } from './tools';
-  import type { BrushShape, Point } from './raster';
+  import { ZOOM_LEVELS, type BrushShape, type Point } from './raster';
   import Canvas from './ui/Canvas.svelte';
   import PalettePanel from './ui/PalettePanel.svelte';
   import ToolsPanel from './ui/ToolsPanel.svelte';
   import GraphicsPanel from './ui/GraphicsPanel.svelte';
   import MenuBar from './ui/MenuBar.svelte';
   import StatusBar from './ui/StatusBar.svelte';
-
   import { defaultPalette } from './model/palette';
+  import {
+    saveAllToStorage,
+    loadAllFromStorage,
+    type EditorSettings,
+  } from './model/storage';
 
-  let project = $state(new Project());
-  let activeGraphicIndex = $state(0);
-  let activeCharIndex = $state(0);
+  const stored = loadAllFromStorage();
+  const initialProject = stored.project ?? new Project();
+  const initialSettings = stored.settings ?? {};
+
+  let project = $state(initialProject);
+  let activeGraphicIndex = $state(
+    Math.min(
+      Math.max(0, initialSettings.activeGraphicIndex ?? 0),
+      Math.max(0, initialProject.graphics.length - 1)
+    )
+  );
+  let activeCharIndex = $state(
+    Math.min(Math.max(0, initialSettings.activeCharIndex ?? 0), 255)
+  );
   let history = $state(new History());
   let stateVersion = $state(0);
 
-  let tool = $state<ToolType>('pencil');
-  let brushShape = $state<BrushShape>('square');
-  let brushSize = $state(1);
-  let fillMode = $state(false);
-  let primary = $state(1);
-  let secondary = $state(0);
-  let showGrid = $state(true);
+  let tool = $state<ToolType>(initialSettings.tool ?? 'pencil');
+  let brushShape = $state<BrushShape>(initialSettings.brushShape ?? 'square');
+  let brushSize = $state(initialSettings.brushSize ?? 1);
+  let fillMode = $state(initialSettings.fillMode ?? false);
+  let primary = $state(initialSettings.primary ?? 1);
+  let secondary = $state(initialSettings.secondary ?? 0);
+  let showGrid = $state(initialSettings.showGrid ?? true);
+  let zoomIndex = $state(initialSettings.zoomIndex ?? 7);
   let isDirty = $state(false);
+  let savedLocally = $state(true);
   let hoverPt = $state<Point | null>(null);
 
   let canvasRef: any = $state();
@@ -35,17 +52,54 @@
 
   let activeGraphic = $derived.by(() => {
     stateVersion;
-    return project.graphics[activeGraphicIndex];
+    return project.graphics[activeGraphicIndex] ?? project.graphics[0];
   });
 
   let activePalette = $derived.by(() => {
     stateVersion;
-    const g = project.graphics[activeGraphicIndex];
+    const g = project.graphics[activeGraphicIndex] ?? project.graphics[0];
     return g ? project.paletteOf(g) : defaultPalette();
   });
 
+  let currentZoom = $derived(ZOOM_LEVELS[zoomIndex] ?? 16);
+
+  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function getCurrentSettings(): EditorSettings {
+    return {
+      activeGraphicIndex,
+      activeCharIndex,
+      tool,
+      brushShape,
+      brushSize,
+      fillMode,
+      primary,
+      secondary,
+      showGrid,
+      zoomIndex,
+    };
+  }
+
+  function saveNow() {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+    saveAllToStorage(project, getCurrentSettings());
+    savedLocally = true;
+  }
+
+  function scheduleAutoSave() {
+    savedLocally = false;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      saveNow();
+    }, 250);
+  }
+
   function markDirty() {
     isDirty = true;
+    scheduleAutoSave();
   }
 
   function notifyGraphicChange() {
@@ -56,6 +110,7 @@
     project = new Project(project.name, project.graphics, project.customPalettes);
     stateVersion++;
     markDirty();
+    saveNow();
     canvasRef?.recalculateOffsets();
     canvasRef?.redraw();
   }
@@ -78,6 +133,23 @@
     }
   });
 
+  $effect(() => {
+    // Track reactive settings changes for localStorage
+    activeGraphicIndex;
+    activeCharIndex;
+    tool;
+    brushShape;
+    brushSize;
+    fillMode;
+    primary;
+    secondary;
+    showGrid;
+    zoomIndex;
+    stateVersion;
+
+    scheduleAutoSave();
+  });
+
   function handleUndo() {
     const prev = history.undo(activeGraphic.clonePixels());
     if (prev) {
@@ -97,12 +169,16 @@
   function newProject() {
     project = new Project();
     activeGraphicIndex = 0;
+    activeCharIndex = 0;
     history.clear();
     isDirty = false;
+    notifyGraphicChange();
+    saveNow();
     canvasRef?.fitToWindow();
   }
 
   function saveProject() {
+    saveNow();
     const json = project.toJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -127,8 +203,11 @@
         const text = event.target?.result as string;
         project = Project.fromJson(text);
         activeGraphicIndex = 0;
+        activeCharIndex = 0;
         history.clear();
         isDirty = false;
+        notifyGraphicChange();
+        saveNow();
         canvasRef?.fitToWindow();
       } catch (err) {
         alert(`Failed to load project: ${err}`);
@@ -382,7 +461,18 @@
 
   onMount(() => {
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const handleBeforeUnload = () => {
+      saveNow();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Initial save to make sure default state is persisted if fresh
+    saveNow();
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   });
 </script>
 
@@ -454,8 +544,10 @@
         bind:primary
         bind:secondary
         bind:activeCharIndex
+        bind:zoomIndex
         {showGrid}
         onPixelChange={markDirty}
+        onStrokeEnd={saveNow}
         onHoverChange={(pt) => (hoverPt = pt)}
       />
     </main>
@@ -486,7 +578,9 @@
   <StatusBar
     graphic={activeGraphic}
     {hoverPt}
+    zoom={currentZoom}
     {isDirty}
+    {savedLocally}
   />
 </div>
 

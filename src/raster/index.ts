@@ -5,6 +5,8 @@ export interface Point {
   y: number;
 }
 
+export const ZOOM_LEVELS = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 40, 48, 64];
+
 export function linePoints(x0: number, y0: number, x1: number, y1: number): Point[] {
   const points: Point[] = [];
   const dx = Math.abs(x1 - x0);

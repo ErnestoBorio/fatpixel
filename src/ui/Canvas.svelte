@@ -11,6 +11,7 @@
     ellipsePoints,
     brushPoints,
     floodFill,
+    ZOOM_LEVELS,
     type BrushShape,
     type Point,
   } from '../raster';
@@ -27,8 +28,10 @@
     primary = $bindable(1),
     secondary = $bindable(0),
     activeCharIndex = $bindable(0),
+    zoomIndex = $bindable(7),
     showGrid = true,
     onPixelChange,
+    onStrokeEnd,
     onHoverChange,
   } = $props<{
     graphic: Graphic;
@@ -41,8 +44,10 @@
     primary?: number;
     secondary?: number;
     activeCharIndex?: number;
+    zoomIndex?: number;
     showGrid?: boolean;
     onPixelChange?: () => void;
+    onStrokeEnd?: () => void;
     onHoverChange?: (hover: { x: number; y: number } | null) => void;
   }>();
 
@@ -55,8 +60,6 @@
   // Charset active character (0..255)
   let sheetHoverChar = $state<number | null>(null);
 
-  const ZOOM_LEVELS = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 40, 48, 64];
-  let zoomIndex = $state(7); // 16x zoom default
   let offsetX = $state(0);
   let offsetY = $state(0);
   let panOffsetX = $state(0);
@@ -569,6 +572,7 @@
     if (isPanning) {
       isPanning = false;
     }
+    const wasPainting = isPainting;
     if (isPainting && dragShapeStart && previewPoints.length > 0) {
       history.pushSnapshot(graphic.clonePixels());
       applyStrokePoints(previewPoints, paintValue);
@@ -580,6 +584,9 @@
     dragShapeStart = null;
     previewPoints = [];
     redraw();
+    if (wasPainting) {
+      onStrokeEnd?.();
+    }
   }
 
   function handleWheel(e: WheelEvent) {

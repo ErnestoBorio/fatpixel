@@ -6,11 +6,13 @@
     hoverPt = null,
     zoom = 16,
     isDirty = false,
+    savedLocally = true,
   } = $props<{
     graphic: Graphic;
     hoverPt?: { x: number; y: number } | null;
     zoom?: number;
     isDirty?: boolean;
+    savedLocally?: boolean;
   }>();
 
   let modeStr = $derived.by(() => {
@@ -45,8 +47,14 @@
   </div>
 
   <div class="right-section">
+    {#if savedLocally}
+      <span class="saved-badge" title="All edits are stored in your browser's localStorage">✓ Saved in localStorage</span>
+    {:else}
+      <span class="saving-badge">Saving...</span>
+    {/if}
+    <span class="sep">|</span>
     {#if isDirty}
-      <span class="dirty-badge">● Unsaved</span>
+      <span class="dirty-badge" title="Changes not yet downloaded to a .pxp file">● Unexported</span>
       <span class="sep">|</span>
     {/if}
     <span class="hints">Hold Alt: eyedropper · Hold Shift: snap</span>
@@ -73,6 +81,13 @@
   }
   .sep {
     color: #333;
+  }
+  .saved-badge {
+    color: #4ade80;
+    font-weight: 500;
+  }
+  .saving-badge {
+    color: #60a5fa;
   }
   .dirty-badge {
     color: #ffaa55;
