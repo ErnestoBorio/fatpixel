@@ -1,334 +1,513 @@
 <script lang="ts">
   import type { Project } from '../model/project';
+  import type { Palette } from '../model/palette';
+  import type { Graphic } from '../model/graphic';
+  import { slotColor } from '../model/render';
 
   let {
     project,
+    palette,
     active = $bindable(0),
+    projectRevision = 0,
+    onBeforeChange,
     onGraphicChange,
     onAddSprite,
     onAddCharset,
     onDuplicateGraphic,
     onDeleteGraphic,
+    onReorderGraphics,
   } = $props<{
     project: Project;
+    palette: Palette;
     active: number;
+    projectRevision?: number;
+    onBeforeChange?: () => void;
     onGraphicChange?: () => void;
     onAddSprite?: () => void;
     onAddCharset?: () => void;
     onDuplicateGraphic?: (idx: number) => void;
     onDeleteGraphic?: (idx: number) => void;
+    onReorderGraphics?: (fromIdx: number, toIdx: number) => void;
   }>();
 
   let activeGraphic = $derived(project.graphics[active]);
+
+  let draggedIdx = $state<number | null>(null);
+  let dragOverIdx = $state<number | null>(null);
+
+  function handleDragStart(e: DragEvent, idx: number) {
+    draggedIdx = idx;
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', String(idx));
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  function handleDragOver(e: DragEvent, idx: number) {
+    e.preventDefault();
+    if (draggedIdx !== null && draggedIdx !== idx) {
+      dragOverIdx = idx;
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'move';
+      }
+    }
+  }
+
+  function handleDragLeave(idx: number) {
+    if (dragOverIdx === idx) {
+      dragOverIdx = null;
+    }
+  }
+
+  function handleDrop(e: DragEvent, targetIdx: number) {
+    e.preventDefault();
+    if (draggedIdx !== null && draggedIdx !== targetIdx) {
+      onReorderGraphics?.(draggedIdx, targetIdx);
+    }
+    draggedIdx = null;
+    dragOverIdx = null;
+  }
+
+  function handleDragEnd() {
+    draggedIdx = null;
+    dragOverIdx = null;
+  }
+
+  function drawThumbnail(
+    canvas: HTMLCanvasElement,
+    params: { graphic: Graphic; pal: Palette; rev: number }
+  ) {
+    function render(p: { graphic: Graphic; pal: Palette; rev: number }) {
+      const { graphic, pal } = p;
+      const w = graphic.width;
+      const h = graphic.height;
+      const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
+      const targetW = Math.round(w * aspect);
+      const targetH = h;
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      const bg = slotColor(graphic, pal, 0);
+      ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
+      ctx.fillRect(0, 0, targetW, targetH);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const val = graphic.get(x, y);
+          if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+          const col = slotColor(graphic, pal, val);
+          ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+          ctx.fillRect(x * aspect, y, aspect, 1);
+        }
+      }
+    }
+    render(params);
+    return {
+      update(newParams: { graphic: Graphic; pal: Palette; rev: number }) {
+        render(newParams);
+      },
+    };
+  }
 </script>
 
 <div class="graphics-panel">
-  <div class="header">
-    <span class="title">Graphics</span>
-  </div>
+  <!-- Active graphic properties (top of panel) -->
+  {#if activeGraphic}
+    <div class="properties-section">
+      <div class="section-label">Graphic Properties</div>
+      <div class="field-row">
+        <span class="label">Name:</span>
+        <input
+          type="text"
+          bind:value={activeGraphic.name}
+          class="text-input"
+          onchange={onGraphicChange}
+        />
+      </div>
 
-  <!-- 2 buttons for sprite and charset -->
-  <div class="add-buttons">
-    <button class="add-btn" onclick={() => onAddSprite?.()} title="Add new C64 Sprite (24×21, 1 bpp)">
-      + Sprite
-    </button>
-    <button class="add-btn" onclick={() => onAddCharset?.()} title="Add new C64 Charset (8×8, 256 chars)">
-      + Charset
-    </button>
-  </div>
+      {#if activeGraphic.isSprite()}
+        <div class="field-row">
+          <span class="label">Mode:</span>
+          <div class="button-group">
+            <button
+              class="toggle-btn {activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires' ? 'active' : ''}"
+              onclick={() => {
+                if (activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires') return;
+                onBeforeChange?.();
+                activeGraphic.setDepthAndMode(2, 'hires');
+                onGraphicChange?.();
+              }}
+            >
+              Hi-Res (1bpp)
+            </button>
+            <button
+              class="toggle-btn {activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide' ? 'active' : ''}"
+              onclick={() => {
+                if (activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide') return;
+                onBeforeChange?.();
+                activeGraphic.setDepthAndMode(4, 'wide');
+                onGraphicChange?.();
+              }}
+            >
+              Multi (2bpp)
+            </button>
+          </div>
+        </div>
 
-  <!-- Graphics List -->
-  <div class="graphics-list">
-    {#each project.graphics as g, idx}
-      {@const isActive = active === idx}
-      <div class="graphic-item {isActive ? 'active' : ''}">
-        <button class="select-btn" onclick={() => (active = idx)}>
-          <span class="badge {g.isSprite() ? 'sprite-badge' : 'charset-badge'}">
-            {g.isSprite() ? 'S' : 'C'}
-          </span>
-          <span class="name">{g.name}</span>
+        <div class="field-row">
+          <span class="label">Size:</span>
+          <div class="dim-inputs">
+            <span>W:</span>
+            <input
+              type="number"
+              min="1"
+              max="256"
+              value={activeGraphic.width}
+              class="num-input"
+              onchange={(e) => {
+                const input = e.target as HTMLInputElement;
+                const val = parseInt(input.value, 10);
+                if (val > 0 && val !== activeGraphic.width) {
+                  onBeforeChange?.();
+                  activeGraphic.resize(val, activeGraphic.height);
+                  onGraphicChange?.();
+                }
+              }}
+            />
+            <span>H:</span>
+            <input
+              type="number"
+              min="1"
+              max="256"
+              value={activeGraphic.height}
+              class="num-input"
+              onchange={(e) => {
+                const input = e.target as HTMLInputElement;
+                const val = parseInt(input.value, 10);
+                if (val > 0 && val !== activeGraphic.height) {
+                  onBeforeChange?.();
+                  activeGraphic.resize(activeGraphic.width, val);
+                  onGraphicChange?.();
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <div class="presets-row">
+          <button
+            class="preset-btn"
+            onclick={() => {
+              onBeforeChange?.();
+              activeGraphic.resize(24, 21);
+              activeGraphic.setDepthAndMode(2, 'hires');
+              onGraphicChange?.();
+            }}
+            title="C64 Hi-Res 24×21"
+          >
+            24×21
+          </button>
+          <button
+            class="preset-btn"
+            onclick={() => {
+              onBeforeChange?.();
+              activeGraphic.resize(12, 21);
+              activeGraphic.setDepthAndMode(4, 'wide');
+              onGraphicChange?.();
+            }}
+            title="C64 Multicolor Wide 12×21"
+          >
+            12×21 Wide
+          </button>
+        </div>
+      {:else if activeGraphic.isCharset()}
+        {@const info = activeGraphic.charsetInfo()}
+        {#if info}
+          <div class="info-text">{info.charWidth}×{info.charHeight} px · {info.charCount} chars</div>
+          <div class="info-text">Grid: {info.columns} cols · {activeGraphic.width}×{activeGraphic.height} px</div>
+        {/if}
+      {/if}
+    </div>
+  {/if}
+
+  <div class="divider"></div>
+
+  <!-- Graphics View (bottom of panel, taking all remaining space) -->
+  <div class="graphics-view-section">
+    <div class="header">
+      <span class="title">Graphics ({project.graphics.length})</span>
+      <div class="add-buttons">
+        <button class="add-btn" onclick={() => onAddSprite?.()} title="Add new C64 Sprite (24×21, 1 bpp)">
+          + Sprite
         </button>
-        {#if isActive}
+        <button class="add-btn" onclick={() => onAddCharset?.()} title="Add new C64 Charset (8×8, 256 chars)">
+          + Charset
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Graphics List -->
+    <div class="graphics-list" role="list">
+      {#each project.graphics as g, idx (g)}
+        {@const isActive = active === idx}
+        {@const hasPixels = g.hasDrawnPixels()}
+        <div
+          class="graphic-item {isActive ? 'active' : ''} {draggedIdx === idx ? 'dragging' : ''} {dragOverIdx === idx ? 'drag-over' : ''}"
+          draggable="true"
+          ondragstart={(e) => handleDragStart(e, idx)}
+          ondragover={(e) => handleDragOver(e, idx)}
+          ondragleave={() => handleDragLeave(idx)}
+          ondrop={(e) => handleDrop(e, idx)}
+          ondragend={handleDragEnd}
+          role="listitem"
+        >
+          <button class="select-btn" onclick={() => (active = idx)} title={g.name}>
+            <div class="thumb-container">
+              {#if hasPixels}
+                <canvas
+                  class="thumb-canvas"
+                  use:drawThumbnail={{ graphic: g, pal: palette, rev: projectRevision }}
+                ></canvas>
+              {:else}
+                <span class="badge {g.isSprite() ? 'sprite-badge' : 'charset-badge'}">
+                  {g.isSprite() ? 'S' : 'C'}
+                </span>
+              {/if}
+            </div>
+            <div class="graphic-meta">
+              <span class="name">{g.name}</span>
+              <span class="subtext">
+                {g.isSprite()
+                  ? `${g.width}×${g.height} · ${g.pixelMode === 'wide' ? 'Multi' : 'Hi-Res'}`
+                  : `${g.charsetInfo()?.charCount ?? 256} chars`}
+              </span>
+            </div>
+          </button>
+
           <div class="actions">
             <button
               class="icon-btn"
-              title="Duplicate"
+              title="Duplicate (Undoable)"
               onclick={() => onDuplicateGraphic?.(idx)}
             >
               ⧉
             </button>
             {#if project.graphics.length > 1}
               <button
-                class="icon-btn"
-                title="Delete"
+                class="icon-btn delete-btn"
+                title="Delete (Undoable)"
                 onclick={() => onDeleteGraphic?.(idx)}
               >
                 ×
               </button>
             {/if}
           </div>
-        {/if}
-      </div>
-    {/each}
-  </div>
-
-  <div class="divider"></div>
-
-  <!-- Active graphic properties -->
-  {#if activeGraphic}
-    <div class="section-label">Properties</div>
-    <div class="field-row">
-      <span class="label">Name:</span>
-      <input
-        type="text"
-        bind:value={activeGraphic.name}
-        class="text-input"
-        onchange={onGraphicChange}
-      />
+        </div>
+      {/each}
     </div>
-
-    {#if activeGraphic.isSprite()}
-      <div class="field-row">
-        <span class="label">Mode:</span>
-        <div class="button-group">
-          <button
-            class="toggle-btn {activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires' ? 'active' : ''}"
-            onclick={() => {
-              if (activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires') return;
-              if (activeGraphic.hasDrawnPixels()) {
-                if (!confirm('Changing to Hi-Res mode will combine all multicolor pixel slots into foreground slot 01 and adjust pixel aspect ratio. Do you want to continue?')) {
-                  return;
-                }
-              }
-              activeGraphic.setDepthAndMode(2, 'hires');
-              onGraphicChange?.();
-            }}
-          >
-            Hi-Res (1bpp)
-          </button>
-          <button
-            class="toggle-btn {activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide' ? 'active' : ''}"
-            onclick={() => {
-              if (activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide') return;
-              if (activeGraphic.hasDrawnPixels()) {
-                if (!confirm('Changing to Multicolor mode will change pixel aspect ratio to 2:1 wide. Do you want to continue?')) {
-                  return;
-                }
-              }
-              activeGraphic.setDepthAndMode(4, 'wide');
-              onGraphicChange?.();
-            }}
-          >
-            Multi (2bpp)
-          </button>
-        </div>
-      </div>
-
-      <div class="field-row">
-        <span class="label">Size:</span>
-        <div class="dim-inputs">
-          <span>W:</span>
-          <input
-            type="number"
-            min="1"
-            max="256"
-            value={activeGraphic.width}
-            class="num-input"
-            onchange={(e) => {
-              const input = e.target as HTMLInputElement;
-              const val = parseInt(input.value, 10);
-              if (val > 0) {
-                if (activeGraphic.hasDrawnPixelsOutside(val, activeGraphic.height)) {
-                  const ok = confirm(`Resizing width from ${activeGraphic.width} to ${val} will discard drawn pixels. Do you want to continue?`);
-                  if (!ok) {
-                    input.value = String(activeGraphic.width);
-                    return;
-                  }
-                }
-                activeGraphic.resize(val, activeGraphic.height);
-                onGraphicChange?.();
-              }
-            }}
-          />
-          <span>H:</span>
-          <input
-            type="number"
-            min="1"
-            max="256"
-            value={activeGraphic.height}
-            class="num-input"
-            onchange={(e) => {
-              const input = e.target as HTMLInputElement;
-              const val = parseInt(input.value, 10);
-              if (val > 0) {
-                if (activeGraphic.hasDrawnPixelsOutside(activeGraphic.width, val)) {
-                  const ok = confirm(`Resizing height from ${activeGraphic.height} to ${val} will discard drawn pixels. Do you want to continue?`);
-                  if (!ok) {
-                    input.value = String(activeGraphic.height);
-                    return;
-                  }
-                }
-                activeGraphic.resize(activeGraphic.width, val);
-                onGraphicChange?.();
-              }
-            }}
-          />
-        </div>
-      </div>
-
-      <div class="presets-row">
-        <button
-          class="preset-btn"
-          onclick={() => {
-            if (activeGraphic.hasDrawnPixelsOutside(24, 21)) {
-              if (!confirm('Applying 24×21 preset will discard pixels outside this size. Do you want to continue?')) return;
-            }
-            activeGraphic.resize(24, 21);
-            activeGraphic.setDepthAndMode(2, 'hires');
-            onGraphicChange?.();
-          }}
-          title="C64 Hi-Res 24×21"
-        >
-          24×21
-        </button>
-        <button
-          class="preset-btn"
-          onclick={() => {
-            if (activeGraphic.hasDrawnPixelsOutside(12, 21)) {
-              if (!confirm('Applying 12×21 Wide preset will discard pixels outside this size. Do you want to continue?')) return;
-            }
-            activeGraphic.resize(12, 21);
-            activeGraphic.setDepthAndMode(4, 'wide');
-            onGraphicChange?.();
-          }}
-          title="C64 Multicolor Wide 12×21"
-        >
-          12×21 Wide
-        </button>
-      </div>
-    {:else if activeGraphic.isCharset()}
-      {@const info = activeGraphic.charsetInfo()}
-      {#if info}
-        <div class="info-text">{info.charWidth}×{info.charHeight} px · {info.charCount} chars</div>
-        <div class="info-text">Grid: {info.columns} cols · {activeGraphic.width}×{activeGraphic.height} px</div>
-      {/if}
-    {/if}
-  {/if}
+  </div>
 </div>
 
 <style>
   .graphics-panel {
-    padding: 10px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     gap: 8px;
     color: #ccc;
     font-size: 12px;
   }
+  .properties-section {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex-shrink: 0;
+  }
+  .divider {
+    height: 1px;
+    background: #2b2b36;
+    margin: 2px 0;
+    flex-shrink: 0;
+  }
+  .graphics-view-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 6px;
+    overflow: hidden;
+  }
   .header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
   }
   .title {
     font-weight: bold;
-    font-size: 14px;
-    color: #fff;
+    font-size: 12px;
+    color: #eee;
   }
   .add-buttons {
     display: flex;
     gap: 4px;
   }
   .add-btn {
-    flex: 1;
-    padding: 5px;
-    background: #2a2a34;
-    border: 1px solid #3d3d4a;
-    color: #eee;
+    padding: 3px 6px;
+    background: #282834;
+    border: 1px solid #3d3d4e;
+    color: #60a5fa;
     border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
+    cursor: pointer;
   }
   .add-btn:hover {
-    background: #393946;
+    background: #343444;
+    color: #93c5fd;
+    border-color: #60a5fa;
   }
   .graphics-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    max-height: 140px;
-    overflow-y: auto;
-    border: 1px solid #282830;
-    border-radius: 4px;
-    background: #1b1b22;
-    padding: 2px;
+    gap: 4px;
+    padding-right: 2px;
   }
   .graphic-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 3px 6px;
-    border-radius: 3px;
+    background: #1b1b22;
+    border: 1px solid #2b2b36;
+    border-radius: 5px;
+    padding: 4px 6px;
+    cursor: grab;
+    transition: background 0.12s, border-color 0.12s;
+    user-select: none;
+  }
+  .graphic-item:hover {
+    background: #24242e;
+    border-color: #3b3b4a;
   }
   .graphic-item.active {
-    background: #2f3b4e;
+    background: #242c3c;
+    border-color: #00d2ff;
+  }
+  .graphic-item.dragging {
+    opacity: 0.35;
+    cursor: grabbing;
+  }
+  .graphic-item.drag-over {
+    border-top: 2px solid #00d2ff;
+    background: #283042;
   }
   .select-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     background: none;
     border: none;
     color: inherit;
-    cursor: pointer;
     font-size: 11px;
-    flex: 1;
+    cursor: pointer;
     text-align: left;
+    padding: 0;
+    flex: 1;
+    min-width: 0;
   }
-  .badge {
-    font-size: 9px;
-    font-weight: bold;
-    padding: 1px 4px;
-    border-radius: 2px;
+  .thumb-container {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    background: #121218;
+    border: 1px solid #282834;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
-  .sprite-badge {
-    background: #295577;
-    color: #9cd5ff;
+  .thumb-canvas {
+    max-width: 28px;
+    max-height: 28px;
+    image-rendering: pixelated;
   }
-  .charset-badge {
-    background: #665022;
-    color: #ffdf88;
+  .graphic-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
   }
   .name {
+    font-weight: 500;
+    color: #e0e0ea;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .subtext {
+    font-size: 9px;
+    color: #778899;
+    font-family: monospace;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .actions {
     display: flex;
     gap: 2px;
+    flex-shrink: 0;
   }
   .icon-btn {
     background: none;
     border: none;
     color: #888;
     cursor: pointer;
-    font-size: 11px;
-    padding: 0 4px;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 3px;
   }
   .icon-btn:hover {
     color: #fff;
+    background: #333342;
   }
-  .divider {
-    height: 1px;
-    background: #333;
-    margin: 4px 0;
+  .delete-btn:hover {
+    color: #f87171;
+    background: #3e2222;
+  }
+  .badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+  }
+  .sprite-badge {
+    background: #2a3a52;
+    color: #60a5fa;
+  }
+  .charset-badge {
+    background: #3a2a52;
+    color: #c084fc;
   }
   .section-label {
     font-weight: 600;
-    font-size: 11px;
-    color: #bbb;
+    font-size: 10px;
+    color: #aaa;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   .field-row {
     display: flex;

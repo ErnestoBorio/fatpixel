@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Project } from './model/project';
   import { Graphic } from './model/graphic';
-  import { History } from './model/history';
+  import { History, type ProjectSnapshot, cloneProjectSnapshot } from './model/history';
   import type { ToolType } from './tools';
   import { ZOOM_LEVELS, type BrushShape, type Point } from './raster';
   import Canvas from './ui/Canvas.svelte';
@@ -32,7 +32,7 @@
   let activeCharIndex = $state(
     Math.min(Math.max(0, initialSettings.activeCharIndex ?? 0), 255)
   );
-  let history = $state(new History());
+  let history = $state(new History<ProjectSnapshot>(100, cloneProjectSnapshot));
   let stateVersion = $state(0);
 
   let tool = $state<ToolType>(initialSettings.tool ?? 'pencil');
@@ -136,18 +136,33 @@
     saveNow();
   });
 
+  function createProjectSnapshot(): ProjectSnapshot {
+    return {
+      graphics: project.graphics.map((g) => g.clone()),
+      activeGraphicIndex,
+    };
+  }
+
+  function pushHistorySnapshot() {
+    history.pushSnapshot(createProjectSnapshot());
+  }
+
   function handleUndo() {
-    const prev = history.undo(activeGraphic.clonePixels());
+    const current = createProjectSnapshot();
+    const prev = history.undo(current);
     if (prev) {
-      activeGraphic.replacePixels(prev);
+      project.graphics = prev.graphics;
+      activeGraphicIndex = Math.min(prev.activeGraphicIndex, project.graphics.length - 1);
       notifyGraphicChange();
     }
   }
 
   function handleRedo() {
-    const next = history.redo(activeGraphic.clonePixels());
+    const current = createProjectSnapshot();
+    const next = history.redo(current);
     if (next) {
-      activeGraphic.replacePixels(next);
+      project.graphics = next.graphics;
+      activeGraphicIndex = Math.min(next.activeGraphicIndex, project.graphics.length - 1);
       notifyGraphicChange();
     }
   }
@@ -245,19 +260,19 @@
   }
 
   function addSprite() {
+    pushHistorySnapshot();
     const name = `sprite ${project.graphics.length + 1}`;
     project.graphics = [...project.graphics, Graphic.newSprite(name, 24, 21, 2, 'hires')];
     activeGraphicIndex = project.graphics.length - 1;
-    history.clear();
     notifyGraphicChange();
     canvasRef?.fitToWindow();
   }
 
   function addCharset() {
+    pushHistorySnapshot();
     const name = `charset ${project.graphics.length + 1}`;
     project.graphics = [...project.graphics, Graphic.newCharset(name, 8, 8, 256, 16)];
     activeGraphicIndex = project.graphics.length - 1;
-    history.clear();
     notifyGraphicChange();
     canvasRef?.fitToWindow();
   }
@@ -265,6 +280,7 @@
   function duplicateGraphic(idx: number) {
     const src = project.graphics[idx];
     if (!src) return;
+    pushHistorySnapshot();
     const dup = src.clone();
     dup.name = `${src.name} copy`;
     dup.pixels = src.clonePixels();
@@ -274,39 +290,67 @@
       ...project.graphics.slice(idx + 1),
     ];
     activeGraphicIndex = idx + 1;
-    history.clear();
     notifyGraphicChange();
     canvasRef?.fitToWindow();
   }
 
   function deleteGraphic(idx: number) {
     if (project.graphics.length <= 1) return;
+    pushHistorySnapshot();
     project.graphics = project.graphics.filter((_, i) => i !== idx);
     if (activeGraphicIndex >= project.graphics.length) {
       activeGraphicIndex = project.graphics.length - 1;
     }
-    history.clear();
     notifyGraphicChange();
     canvasRef?.fitToWindow();
   }
 
-  function handleClear() {
-    history.pushSnapshot(activeGraphic.clonePixels());
-    if (activeGraphic.clear()) {
-      notifyGraphicChange();
+  function reorderGraphics(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
+    if (fromIdx >= project.graphics.length || toIdx >= project.graphics.length) return;
+
+    pushHistorySnapshot();
+
+    const list = [...project.graphics];
+    const [moved] = list.splice(fromIdx, 1);
+    list.splice(toIdx, 0, moved);
+    project.graphics = list;
+
+    if (activeGraphicIndex === fromIdx) {
+      activeGraphicIndex = toIdx;
+    } else if (fromIdx < activeGraphicIndex && toIdx >= activeGraphicIndex) {
+      activeGraphicIndex--;
+    } else if (fromIdx > activeGraphicIndex && toIdx <= activeGraphicIndex) {
+      activeGraphicIndex++;
     }
+
+    notifyGraphicChange();
+    saveNow();
+  }
+
+  function handleClear() {
+    pushHistorySnapshot();
+    if (activeGraphic.isCharset()) {
+      activeGraphic.clearChar(activeCharIndex);
+    } else {
+      activeGraphic.clear();
+    }
+    notifyGraphicChange();
   }
 
   function handleInvert() {
     if (activeGraphic.depth !== 2) return;
-    history.pushSnapshot(activeGraphic.clonePixels());
-    if (activeGraphic.invert()) {
-      notifyGraphicChange();
+    pushHistorySnapshot();
+    if (activeGraphic.isCharset()) {
+      activeGraphic.invertChar(activeCharIndex);
+    } else {
+      activeGraphic.invert();
     }
+    notifyGraphicChange();
   }
 
   function handleShift(dx: number, dy: number) {
-    history.pushSnapshot(activeGraphic.clonePixels());
+    pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
     if (activeGraphic.shiftPixels(dx, dy, charIdx)) {
       notifyGraphicChange();
@@ -314,20 +358,15 @@
   }
 
   function handleRotate(clockwise: boolean) {
+    pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
-    if (activeGraphic.wouldRotationLoseData(clockwise, charIdx)) {
-      if (!confirm(`Rotating 90° with dimensions ${activeGraphic.width}×${activeGraphic.height} will discard pixels outside the bounds. Do you want to continue?`)) {
-        return;
-      }
-    }
-    history.pushSnapshot(activeGraphic.clonePixels());
     if (activeGraphic.rotate(clockwise, charIdx)) {
       notifyGraphicChange();
     }
   }
 
   function handleMirrorH() {
-    history.pushSnapshot(activeGraphic.clonePixels());
+    pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
     if (activeGraphic.mirrorH(charIdx)) {
       notifyGraphicChange();
@@ -335,7 +374,7 @@
   }
 
   function handleMirrorV() {
-    history.pushSnapshot(activeGraphic.clonePixels());
+    pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
     if (activeGraphic.mirrorV(charIdx)) {
       notifyGraphicChange();
@@ -592,6 +631,7 @@
         bind:activeCharIndex
         bind:zoomIndex
         {showGrid}
+        onSnapshot={pushHistorySnapshot}
         onPixelChange={markDirty}
         onStrokeEnd={saveNow}
         onHoverChange={(pt) => (hoverPt = pt)}
@@ -611,12 +651,16 @@
       <div class="panel-divider"></div>
       <GraphicsPanel
         {project}
+        palette={activePalette}
+        projectRevision={stateVersion}
         bind:active={activeGraphicIndex}
+        onBeforeChange={pushHistorySnapshot}
         onGraphicChange={notifyGraphicChange}
         onAddSprite={addSprite}
         onAddCharset={addCharset}
         onDuplicateGraphic={duplicateGraphic}
         onDeleteGraphic={deleteGraphic}
+        onReorderGraphics={reorderGraphics}
       />
     </aside>
   </div>
@@ -657,15 +701,17 @@
     border-right: 1px solid #2b2b36;
   }
   .right-panel {
-    width: 195px;
+    width: 205px;
     border-left: 1px solid #2b2b36;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
   .panel-divider {
     height: 1px;
     background: #2b2b36;
-    margin: 4px 0;
+    margin: 2px 0;
+    flex-shrink: 0;
   }
   .canvas-area {
     flex: 1;

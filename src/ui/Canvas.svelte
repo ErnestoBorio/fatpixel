@@ -30,13 +30,14 @@
     activeCharIndex = $bindable(0),
     zoomIndex = $bindable(7),
     showGrid = true,
+    onSnapshot,
     onPixelChange,
     onStrokeEnd,
     onHoverChange,
   } = $props<{
     graphic: Graphic;
     palette: Palette;
-    history: History;
+    history?: History;
     tool: ToolType;
     brushShape: BrushShape;
     brushSize: number;
@@ -46,6 +47,7 @@
     activeCharIndex?: number;
     zoomIndex?: number;
     showGrid?: boolean;
+    onSnapshot?: () => void;
     onPixelChange?: () => void;
     onStrokeEnd?: () => void;
     onHoverChange?: (hover: { x: number; y: number } | null) => void;
@@ -56,6 +58,7 @@
   let sheetCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview1xCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview2xCanvasElem: HTMLCanvasElement | null = $state(null);
+  let preview4xCanvasElem: HTMLCanvasElement | null = $state(null);
 
   // Charset active character (0..255)
   let sheetHoverChar = $state<number | null>(null);
@@ -433,6 +436,30 @@
         }
       }
     }
+
+    // 4x Preview (4x zoom)
+    if (preview4xCanvasElem) {
+      const targetW = Math.round(w * aspect * 4);
+      const targetH = h * 4;
+      if (preview4xCanvasElem.width !== targetW || preview4xCanvasElem.height !== targetH) {
+        preview4xCanvasElem.width = targetW;
+        preview4xCanvasElem.height = targetH;
+      }
+      const ctx4 = preview4xCanvasElem.getContext('2d');
+      if (ctx4) {
+        ctx4.fillStyle = bgCss;
+        ctx4.fillRect(0, 0, targetW, targetH);
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const val = graphic.get(x, y);
+            if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+            const col = slotColor(graphic, palette, val);
+            ctx4.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+            ctx4.fillRect(x * aspect * 4, y * 4, aspect * 4, 4);
+          }
+        }
+      }
+    }
   }
 
   function applyStrokePoints(points: Point[], value: number) {
@@ -446,6 +473,11 @@
       onPixelChange?.();
       redraw();
     }
+  }
+
+  function pushHistory() {
+    onSnapshot?.();
+    history?.pushSnapshot(graphic.clonePixels());
   }
 
   function handleMouseDown(e: MouseEvent) {
@@ -484,7 +516,7 @@
     paintValue = getEffectivePaintValue(e.button);
 
     if (effectiveTool === 'fill') {
-      history.pushSnapshot(graphic.clonePixels());
+      pushHistory();
       const pts = floodFill(
         drawWidth,
         drawHeight,
@@ -504,7 +536,7 @@
     }
 
     // Brush painting
-    history.pushSnapshot(graphic.clonePixels());
+    pushHistory();
     isPainting = true;
     lastPaintPt = pt;
     const pts = brushPoints(brushShape, brushSize, pt.x, pt.y);
@@ -580,7 +612,7 @@
     }
     const wasPainting = isPainting;
     if (isPainting && dragShapeStart && previewPoints.length > 0) {
-      history.pushSnapshot(graphic.clonePixels());
+      pushHistory();
       applyStrokePoints(previewPoints, paintValue);
       previewPoints = [];
       dragShapeStart = null;
@@ -693,7 +725,7 @@
   }
 
   function clearActiveChar() {
-    history.pushSnapshot(graphic.clonePixels());
+    pushHistory();
     if (graphic.clearChar(activeCharIndex)) {
       onPixelChange?.();
       redraw();
@@ -702,7 +734,7 @@
 
   function invertActiveChar() {
     if (graphic.depth !== 2) return;
-    history.pushSnapshot(graphic.clonePixels());
+    pushHistory();
     if (graphic.invertChar(activeCharIndex)) {
       onPixelChange?.();
       redraw();
@@ -719,6 +751,7 @@
     activeCharIndex;
     preview1xCanvasElem;
     preview2xCanvasElem;
+    preview4xCanvasElem;
     recalculateOffsets();
     redraw();
   });
@@ -804,7 +837,7 @@
         <!-- 1x Preview (1:1 pixels) -->
         <div class="preview-box">
           <div class="preview-label">
-            <span>1× Actual</span>
+            <span>1×</span>
             <span class="preview-dim">{Math.round(graphic.width * drawAspect)}×{graphic.height}</span>
           </div>
           <div class="preview-viewport">
@@ -815,11 +848,20 @@
         <!-- 2x Preview (2x zoom) -->
         <div class="preview-box">
           <div class="preview-label">
-            <span>2× Zoom</span>
-            <span class="preview-dim">{Math.round(graphic.width * drawAspect * 2)}×{graphic.height * 2}</span>
+            <span>2×</span>
           </div>
           <div class="preview-viewport">
             <canvas bind:this={preview2xCanvasElem}></canvas>
+          </div>
+        </div>
+
+        <!-- 4x Preview (4x zoom) -->
+        <div class="preview-box">
+          <div class="preview-label">
+            <span>4×</span>
+          </div>
+          <div class="preview-viewport">
+            <canvas bind:this={preview4xCanvasElem}></canvas>
           </div>
         </div>
       </div>
@@ -1001,7 +1043,8 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    width: 165px;
+    width: 175px;
+    max-height: calc(100vh - 80px);
     background: rgba(26, 26, 36, 0.92);
     backdrop-filter: blur(6px);
     border: 1px solid #36364a;
@@ -1017,6 +1060,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    overflow-y: auto;
   }
   .preview-box {
     display: flex;

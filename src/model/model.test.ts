@@ -278,3 +278,86 @@ describe('LocalStorage Persistence', () => {
   });
 });
 
+describe('ProjectSnapshot History & Undoable Operations', () => {
+  it('undoes and redoes graphic deletion', async () => {
+    const { History, cloneProjectSnapshot } = await import('./history');
+    const history = new History(50, cloneProjectSnapshot);
+
+    const g1 = Graphic.newSprite('Spr 1', 24, 21);
+    const g2 = Graphic.newSprite('Spr 2', 24, 21);
+    let graphics = [g1, g2];
+    let activeIdx = 1;
+
+    // Snapshot before deleting g2
+    history.pushSnapshot({
+      graphics: graphics.map((g) => g.clone()),
+      activeGraphicIndex: activeIdx,
+    });
+
+    graphics = [g1];
+    activeIdx = 0;
+
+    // Undo delete
+    const current = {
+      graphics: graphics.map((g) => g.clone()),
+      activeGraphicIndex: activeIdx,
+    };
+    const prev = history.undo(current);
+    expect(prev).not.toBeNull();
+    expect(prev!.graphics.length).toBe(2);
+    expect(prev!.graphics[1].name).toBe('Spr 2');
+    expect(prev!.activeGraphicIndex).toBe(1);
+
+    // Redo delete
+    const redone = history.redo(prev!);
+    expect(redone).not.toBeNull();
+    expect(redone!.graphics.length).toBe(1);
+    expect(redone!.graphics[0].name).toBe('Spr 1');
+  });
+
+  it('undoes and redoes graphic mode and resize changes', async () => {
+    const { History, cloneProjectSnapshot } = await import('./history');
+    const history = new History(50, cloneProjectSnapshot);
+
+    const g = Graphic.newSprite('Player', 24, 21, 2, 'hires');
+    g.set(5, 5, 1);
+    let graphics = [g];
+
+    // Snapshot before resize
+    history.pushSnapshot({
+      graphics: graphics.map((item) => item.clone()),
+      activeGraphicIndex: 0,
+    });
+
+    g.resize(12, 21);
+    g.setDepthAndMode(4, 'wide');
+
+    expect(g.width).toBe(12);
+    expect(g.depth).toBe(4);
+    expect(g.pixelMode).toBe('wide');
+
+    // Undo resize & mode
+    const current = {
+      graphics: graphics.map((item) => item.clone()),
+      activeGraphicIndex: 0,
+    };
+    const restored = history.undo(current);
+    expect(restored).not.toBeNull();
+    expect(restored!.graphics[0].width).toBe(24);
+    expect(restored!.graphics[0].depth).toBe(2);
+    expect(restored!.graphics[0].pixelMode).toBe('hires');
+    expect(restored!.graphics[0].get(5, 5)).toBe(1);
+  });
+
+  it('accurately identifies empty vs drawn graphics for thumbnail display', () => {
+    const g = Graphic.newSprite('IconTest', 24, 21);
+    expect(g.hasDrawnPixels()).toBe(false);
+
+    g.set(0, 0, 1);
+    expect(g.hasDrawnPixels()).toBe(true);
+
+    g.set(0, 0, 0);
+    expect(g.hasDrawnPixels()).toBe(false);
+  });
+});
+

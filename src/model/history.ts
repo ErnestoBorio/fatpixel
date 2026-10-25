@@ -1,31 +1,53 @@
-export class History {
-  private undoStack: Uint8Array[] = [];
-  private redoStack: Uint8Array[] = [];
-  private maxSteps: number;
+import type { Graphic } from './graphic';
 
-  constructor(maxSteps = 100) {
+export interface ProjectSnapshot {
+  graphics: Graphic[];
+  activeGraphicIndex: number;
+}
+
+export function cloneProjectSnapshot(s: ProjectSnapshot): ProjectSnapshot {
+  return {
+    graphics: s.graphics.map((g) => g.clone()),
+    activeGraphicIndex: s.activeGraphicIndex,
+  };
+}
+
+export class History<T = any> {
+  private undoStack: T[] = [];
+  private redoStack: T[] = [];
+  private maxSteps: number;
+  private cloneFn?: (item: T) => T;
+
+  constructor(maxSteps = 100, cloneFn?: (item: T) => T) {
     this.maxSteps = Math.max(1, maxSteps);
+    this.cloneFn = cloneFn;
   }
 
-  pushSnapshot(snapshot: Uint8Array): void {
+  private clone(item: T): T {
+    if (this.cloneFn) return this.cloneFn(item);
+    if (item instanceof Uint8Array) return new Uint8Array(item) as unknown as T;
+    return item;
+  }
+
+  pushSnapshot(snapshot: T): void {
     if (this.undoStack.length >= this.maxSteps) {
       this.undoStack.shift();
     }
-    this.undoStack.push(new Uint8Array(snapshot));
+    this.undoStack.push(this.clone(snapshot));
     this.redoStack = [];
   }
 
-  undo(currentState: Uint8Array): Uint8Array | null {
+  undo(currentState: T): T | null {
     const prev = this.undoStack.pop();
     if (!prev) return null;
-    this.redoStack.push(new Uint8Array(currentState));
+    this.redoStack.push(this.clone(currentState));
     return prev;
   }
 
-  redo(currentState: Uint8Array): Uint8Array | null {
+  redo(currentState: T): T | null {
     const next = this.redoStack.pop();
     if (!next) return null;
-    this.undoStack.push(new Uint8Array(currentState));
+    this.undoStack.push(this.clone(currentState));
     return next;
   }
 
