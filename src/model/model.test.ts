@@ -88,12 +88,29 @@ describe('Graphic Model', () => {
 describe('Project Serialization', () => {
   it('serializes and deserializes project correctly', () => {
     const p = new Project('Test Game');
-    p.graphics.push(Graphic.newCharset('test font'));
+    const sprite = p.graphics[0];
+    sprite.set(1, 1, 1);
+
+    const charset = Graphic.newCharset('test font');
+    charset.setCharPixel(0, 3, 3, 1);
+    p.graphics.push(charset);
+
     const json = p.toJson();
+    const data = JSON.parse(json);
+
+    // Sprite pixels should be a single string
+    expect(typeof data.graphics[0].pixels).toBe('string');
+    // Charset pixels should be an array of strings, one per character
+    expect(Array.isArray(data.graphics[1].pixels)).toBe(true);
+    expect(data.graphics[1].pixels.length).toBe(256);
+    expect(typeof data.graphics[1].pixels[0]).toBe('string');
+
     const loaded = Project.fromJson(json);
     expect(loaded.name).toBe('Test Game');
     expect(loaded.graphics.length).toBe(2);
+    expect(loaded.graphics[0].get(1, 1)).toBe(1);
     expect(loaded.graphics[1].isCharset()).toBe(true);
+    expect(loaded.graphics[1].getCharPixel(0, 3, 3)).toBe(1);
   });
 });
 

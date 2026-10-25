@@ -1,55 +1,25 @@
 <script lang="ts">
-  import { Graphic } from '../model/graphic';
   import type { Project } from '../model/project';
 
   let {
     project,
     active = $bindable(0),
     onGraphicChange,
+    onAddSprite,
+    onAddCharset,
+    onDuplicateGraphic,
+    onDeleteGraphic,
   } = $props<{
     project: Project;
     active: number;
     onGraphicChange?: () => void;
+    onAddSprite?: () => void;
+    onAddCharset?: () => void;
+    onDuplicateGraphic?: (idx: number) => void;
+    onDeleteGraphic?: (idx: number) => void;
   }>();
 
   let activeGraphic = $derived(project.graphics[active]);
-
-  function addSprite() {
-    const name = `sprite ${project.graphics.length + 1}`;
-    project.graphics = [...project.graphics, Graphic.newSprite(name, 24, 21, 2, 'hires')];
-    active = project.graphics.length - 1;
-    onGraphicChange?.();
-  }
-
-  function addCharset() {
-    const name = `charset ${project.graphics.length + 1}`;
-    project.graphics = [...project.graphics, Graphic.newCharset(name, 8, 8, 256, 16)];
-    active = project.graphics.length - 1;
-    onGraphicChange?.();
-  }
-
-  function duplicateGraphic(idx: number) {
-    const orig = project.graphics[idx];
-    const json = orig.toJson();
-    json.name = `${orig.name} copy`;
-    const dup = Graphic.fromJson(json);
-    const next = [...project.graphics];
-    next.splice(idx + 1, 0, dup);
-    project.graphics = next;
-    active = idx + 1;
-    onGraphicChange?.();
-  }
-
-  function deleteGraphic(idx: number) {
-    if (project.graphics.length <= 1) return;
-    const next = [...project.graphics];
-    next.splice(idx, 1);
-    project.graphics = next;
-    if (active >= project.graphics.length) {
-      active = project.graphics.length - 1;
-    }
-    onGraphicChange?.();
-  }
 </script>
 
 <div class="graphics-panel">
@@ -59,10 +29,10 @@
 
   <!-- 2 buttons for sprite and charset -->
   <div class="add-buttons">
-    <button class="add-btn" onclick={addSprite} title="Add new C64 Sprite (24×21, 1 bpp)">
+    <button class="add-btn" onclick={() => onAddSprite?.()} title="Add new C64 Sprite (24×21, 1 bpp)">
       + Sprite
     </button>
-    <button class="add-btn" onclick={addCharset} title="Add new C64 Charset (8×8, 256 chars)">
+    <button class="add-btn" onclick={() => onAddCharset?.()} title="Add new C64 Charset (8×8, 256 chars)">
       + Charset
     </button>
   </div>
@@ -83,7 +53,7 @@
             <button
               class="icon-btn"
               title="Duplicate"
-              onclick={() => duplicateGraphic(idx)}
+              onclick={() => onDuplicateGraphic?.(idx)}
             >
               ⧉
             </button>
@@ -91,7 +61,7 @@
               <button
                 class="icon-btn"
                 title="Delete"
-                onclick={() => deleteGraphic(idx)}
+                onclick={() => onDeleteGraphic?.(idx)}
               >
                 ×
               </button>

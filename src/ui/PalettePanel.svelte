@@ -14,35 +14,39 @@
     primary = $bindable(1),
     secondary = $bindable(0),
     onColorChange,
-    onPaletteChange,
+    onPaletteSelect,
   } = $props<{
     graphic: Graphic;
     palette: Palette;
     primary: number;
     secondary: number;
     onColorChange?: () => void;
-    onPaletteChange?: () => void;
+    onPaletteSelect?: (paletteId: string) => void;
   }>();
 
   function getHex(rgb: { r: number; g: number; b: number }) {
     return rgbToHexStr(rgb);
   }
 
+  $effect(() => {
+    // In hi-res mode (depth 2), slot 0 is strictly for right-button, primary must be slot 1
+    if (graphic.depth === 2 && primary === 0) {
+      primary = 1;
+    }
+  });
+
   let priRgb = $derived(slotColor(graphic, palette, primary));
-  let secRgb = $derived(slotColor(graphic, palette, secondary));
+  let secRgb = $derived(slotColor(graphic, palette, 0));
 
   function setSlotColor(slotIdx: number, paletteIndex: number) {
-    if (graphic.slots[slotIdx] !== paletteIndex) {
-      graphic.slots[slotIdx] = paletteIndex;
-      onColorChange?.();
-    }
+    graphic.slots[slotIdx] = paletteIndex;
+    graphic.slots = [...graphic.slots];
+    onColorChange?.();
   }
 
   function handlePaletteSelect(e: Event) {
     const id = (e.target as HTMLSelectElement).value;
-    graphic.palette = { kind: 'builtin', id };
-    onPaletteChange?.();
-    onColorChange?.();
+    onPaletteSelect?.(id);
   }
 
   const slotLabels4 = [
@@ -53,8 +57,8 @@
   ];
 
   const slotLabels2 = [
-    { idx: 0, bin: '0', name: 'Background (R-click)' },
-    { idx: 1, bin: '1', name: 'Foreground (L-click)' },
+    { idx: 0, bin: '00', name: 'Background (R-click only)' },
+    { idx: 1, bin: '01', name: 'Foreground (L-click)' },
   ];
 
   let currentSlotDefs = $derived(graphic.depth === 4 ? slotLabels4 : slotLabels2);
@@ -80,7 +84,7 @@
       <div
         class="swatch sec-swatch"
         style="background-color: {getHex(secRgb)};"
-        title="Right click color: Background (Slot {secondary})"
+        title="Right click color: Background (Slot 0)"
       ></div>
       <div
         class="swatch pri-swatch"
@@ -104,16 +108,24 @@
     {#each currentSlotDefs as def}
       {@const sRgb = slotColor(graphic, palette, def.idx)}
       {@const isSelectedPri = primary === def.idx}
+      {@const isFixedBg = graphic.depth === 2 && def.idx === 0}
       <button
-        class="slot-card {isSelectedPri ? 'active-slot' : ''}"
-        onclick={() => (primary = def.idx)}
-        title="Slot {def.idx} ({def.bin}): {def.name} - Click to select for Left Click draw"
+        class="slot-card {isSelectedPri ? 'active-slot' : ''} {isFixedBg ? 'fixed-bg' : ''}"
+        onclick={() => {
+          if (isFixedBg) return;
+          primary = def.idx;
+        }}
+        title={isFixedBg
+          ? 'Slot 0 (00): Background (fixed to Right Click in Hi-Res mode)'
+          : `Slot ${def.idx} (${def.bin}): ${def.name} - Click to select for Left Click draw`}
       >
         <span class="slot-bin">{def.bin}</span>
         <div class="slot-color-preview" style="background-color: {getHex(sRgb)};"></div>
         <span class="slot-name">{def.idx === 0 ? 'BG (R)' : `Slot ${def.idx}`}</span>
         {#if isSelectedPri}
           <span class="slot-badge">L</span>
+        {:else if isFixedBg}
+          <span class="slot-badge-fixed">R</span>
         {/if}
       </button>
     {/each}
@@ -141,7 +153,7 @@
         }}
       >
         {#if isPri && isSec}
-          <span class="badge pri-sec">L/0</span>
+          <span class="badge pri-sec">L/00</span>
         {:else if isPri}
           <span class="badge pri">L</span>
         {:else if isSec}
@@ -290,6 +302,22 @@
     padding: 0 3px;
     border-radius: 2px;
   }
+  .slot-card.fixed-bg {
+    opacity: 0.85;
+    cursor: default;
+    border-style: dashed;
+  }
+  .slot-badge-fixed {
+    position: absolute;
+    right: 3px;
+    top: 3px;
+    background: #444455;
+    color: #bbb;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 0 3px;
+    border-radius: 2px;
+  }
   .palette-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -306,9 +334,26 @@
     border-radius: 2px;
   }
   .badge {
-    font-size: 9px;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 3px #000, 0 0 1px #000;
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 1px 4px;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    letter-spacing: 0.5px;
+  }
+  .badge.pri {
+    border: 1px solid #4a90e2;
+    color: #90c2ff;
+  }
+  .badge.sec {
+    border: 1px solid #e0e0e0;
+    color: #ffffff;
+  }
+  .badge.pri-sec {
+    border: 1px solid #f5a623;
+    color: #ffd070;
   }
 </style>

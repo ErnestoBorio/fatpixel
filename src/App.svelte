@@ -36,12 +36,35 @@
     isDirty = true;
   }
 
+  function notifyGraphicChange() {
+    if (project.graphics[activeGraphicIndex]) {
+      project.graphics[activeGraphicIndex] = project.graphics[activeGraphicIndex].clone();
+      project.graphics = [...project.graphics];
+    }
+    markDirty();
+    canvasRef?.redraw();
+  }
+
+  function handlePaletteSelect(paletteId: string) {
+    activeGraphic.palette = { kind: 'builtin', id: paletteId };
+    notifyGraphicChange();
+  }
+
+  $effect(() => {
+    // In hi-res mode (depth 2), slot 0 is strictly for right-button, primary must be slot 1
+    if (activeGraphic.depth === 2 && primary === 0) {
+      primary = 1;
+    }
+    if (primary >= activeGraphic.depth) {
+      primary = Math.max(1, activeGraphic.depth - 1);
+    }
+  });
+
   function handleUndo() {
     const prev = history.undo(activeGraphic.clonePixels());
     if (prev) {
       activeGraphic.replacePixels(prev);
-      markDirty();
-      canvasRef?.redraw();
+      notifyGraphicChange();
     }
   }
 
@@ -49,8 +72,7 @@
     const next = history.redo(activeGraphic.clonePixels());
     if (next) {
       activeGraphic.replacePixels(next);
-      markDirty();
-      canvasRef?.redraw();
+      notifyGraphicChange();
     }
   }
 
@@ -144,7 +166,7 @@
     project.graphics = [...project.graphics, Graphic.newSprite(name, 24, 21, 2, 'hires')];
     activeGraphicIndex = project.graphics.length - 1;
     history.clear();
-    markDirty();
+    notifyGraphicChange();
     canvasRef?.fitToWindow();
   }
 
@@ -153,15 +175,42 @@
     project.graphics = [...project.graphics, Graphic.newCharset(name, 8, 8, 256, 16)];
     activeGraphicIndex = project.graphics.length - 1;
     history.clear();
-    markDirty();
+    notifyGraphicChange();
+    canvasRef?.fitToWindow();
+  }
+
+  function duplicateGraphic(idx: number) {
+    const src = project.graphics[idx];
+    if (!src) return;
+    const dup = src.clone();
+    dup.name = `${src.name} copy`;
+    dup.pixels = src.clonePixels();
+    project.graphics = [
+      ...project.graphics.slice(0, idx + 1),
+      dup,
+      ...project.graphics.slice(idx + 1),
+    ];
+    activeGraphicIndex = idx + 1;
+    history.clear();
+    notifyGraphicChange();
+    canvasRef?.fitToWindow();
+  }
+
+  function deleteGraphic(idx: number) {
+    if (project.graphics.length <= 1) return;
+    project.graphics = project.graphics.filter((_, i) => i !== idx);
+    if (activeGraphicIndex >= project.graphics.length) {
+      activeGraphicIndex = project.graphics.length - 1;
+    }
+    history.clear();
+    notifyGraphicChange();
     canvasRef?.fitToWindow();
   }
 
   function handleClear() {
     history.pushSnapshot(activeGraphic.clonePixels());
     if (activeGraphic.clear()) {
-      markDirty();
-      canvasRef?.redraw();
+      notifyGraphicChange();
     }
   }
 
@@ -169,8 +218,7 @@
     if (activeGraphic.depth !== 2) return;
     history.pushSnapshot(activeGraphic.clonePixels());
     if (activeGraphic.invert()) {
-      markDirty();
-      canvasRef?.redraw();
+      notifyGraphicChange();
     }
   }
 
@@ -213,6 +261,10 @@
         case 'i': tool = 'eyedropper'; break;
         case 'g': showGrid = !showGrid; break;
         case 'x': {
+          if (activeGraphic.depth === 2) {
+            // In hi-res mode, slot 0 cannot be selected as primary draw slot
+            break;
+          }
           const temp = primary;
           primary = secondary;
           secondary = temp;
@@ -306,23 +358,18 @@
         palette={activePalette}
         bind:primary
         bind:secondary
-        onColorChange={() => {
-          markDirty();
-          canvasRef?.redraw();
-        }}
-        onPaletteChange={() => {
-          markDirty();
-          canvasRef?.redraw();
-        }}
+        onColorChange={notifyGraphicChange}
+        onPaletteSelect={handlePaletteSelect}
       />
       <div class="panel-divider"></div>
       <GraphicsPanel
         {project}
         bind:active={activeGraphicIndex}
-        onGraphicChange={() => {
-          markDirty();
-          canvasRef?.redraw();
-        }}
+        onGraphicChange={notifyGraphicChange}
+        onAddSprite={addSprite}
+        onAddCharset={addCharset}
+        onDuplicateGraphic={duplicateGraphic}
+        onDeleteGraphic={deleteGraphic}
       />
     </aside>
   </div>

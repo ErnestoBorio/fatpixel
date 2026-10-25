@@ -32,7 +32,7 @@ export interface GraphicJson {
   palette: string;
   slots: number[];
   transparent_slot: number | null;
-  pixels: number[];
+  pixels: string | string[] | number[];
 }
 
 export class Graphic {
@@ -287,6 +287,21 @@ export class Graphic {
     }
   }
 
+  clone(): Graphic {
+    return new Graphic(
+      this.name,
+      this.kind.kind === 'charset' ? { ...this.kind } : { kind: 'sprite' },
+      this.width,
+      this.height,
+      this.depth,
+      this.pixelMode,
+      { ...this.palette },
+      [...this.slots],
+      this.transparentSlot,
+      this.pixels
+    );
+  }
+
   toJson(): GraphicJson {
     const base: GraphicJson = {
       name: this.name,
@@ -298,14 +313,33 @@ export class Graphic {
       palette: `${this.palette.kind}:${this.palette.id}`,
       slots: [...this.slots],
       transparent_slot: this.transparentSlot,
-      pixels: Array.from(this.pixels),
+      pixels: '',
     };
+
     if (this.kind.kind === 'charset') {
       base.char_width = this.kind.charWidth;
       base.char_height = this.kind.charHeight;
       base.char_count = this.kind.charCount;
       base.columns = this.kind.columns;
+
+      const charStrings: string[] = [];
+      for (let c = 0; c < this.kind.charCount; c++) {
+        let str = '';
+        for (let ly = 0; ly < this.kind.charHeight; ly++) {
+          for (let lx = 0; lx < this.kind.charWidth; lx++) {
+            str += (this.getCharPixel(c, lx, ly) ?? 0).toString(16);
+          }
+        }
+        charStrings.push(str);
+      }
+      base.pixels = charStrings;
+    } else {
+      // Sprites: entire sprite in a single line
+      base.pixels = Array.from(this.pixels)
+        .map((p) => p.toString(16))
+        .join('');
     }
+
     return base;
   }
 
@@ -327,7 +361,7 @@ export class Graphic {
         ? { kind: paletteParts[0] as 'builtin' | 'custom', id: paletteParts[1] }
         : { kind: 'builtin', id: json.palette };
 
-    return new Graphic(
+    const graphic = new Graphic(
       json.name,
       kind,
       json.width,
@@ -336,8 +370,45 @@ export class Graphic {
       json.pixel_mode,
       paletteRef,
       [...json.slots],
-      json.transparent_slot,
-      new Uint8Array(json.pixels)
+      json.transparent_slot
     );
+
+    if (typeof json.pixels === 'string') {
+      for (let i = 0; i < json.pixels.length && i < graphic.pixels.length; i++) {
+        graphic.pixels[i] = parseInt(json.pixels[i], 16) || 0;
+      }
+    } else if (Array.isArray(json.pixels)) {
+      if (json.pixels.length > 0 && typeof json.pixels[0] === 'string') {
+        const charStrs = json.pixels as string[];
+        if (graphic.isCharset()) {
+          const info = graphic.charsetInfo()!;
+          for (let c = 0; c < charStrs.length && c < info.charCount; c++) {
+            const str = charStrs[c];
+            for (let ly = 0; ly < info.charHeight; ly++) {
+              for (let lx = 0; lx < info.charWidth; lx++) {
+                const idx = ly * info.charWidth + lx;
+                if (idx < str.length) {
+                  graphic.setCharPixel(c, lx, ly, parseInt(str[idx], 16) || 0);
+                }
+              }
+            }
+          }
+        } else {
+          // If a sprite was stored as an array of strings
+          const flatStr = charStrs.join('');
+          for (let i = 0; i < flatStr.length && i < graphic.pixels.length; i++) {
+            graphic.pixels[i] = parseInt(flatStr[i], 16) || 0;
+          }
+        }
+      } else {
+        // Flat number array (backward compatibility)
+        const numArr = json.pixels as number[];
+        for (let i = 0; i < numArr.length && i < graphic.pixels.length; i++) {
+          graphic.pixels[i] = numArr[i];
+        }
+      }
+    }
+
+    return graphic;
   }
 }

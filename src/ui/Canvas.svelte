@@ -129,7 +129,7 @@
     redraw();
   }
 
-  function recalculateOffsets() {
+  export function recalculateOffsets() {
     if (!containerElem) return;
     const zoom = ZOOM_LEVELS[zoomIndex];
     const pxW = zoom * drawAspect;
@@ -188,6 +188,10 @@
     if (button === 2) return 0;
 
     // Left button:
+    if (graphic.depth === 2) {
+      // In hi-res mode, slot 0 is strictly for right-button, primary must be slot 1
+      return 1;
+    }
     if (graphic.depth === 4) {
       if (isShiftDown) return 2; // Slot 2 (Main)
       if (isAltDown) return 3;   // Slot 3 (Multicolor 2)
@@ -389,8 +393,15 @@
     if (effectiveTool === 'eyedropper') {
       const val = getPixelVal(pt.x, pt.y);
       if (val !== null) {
-        if (e.button === 0) primary = val;
-        else if (e.button === 2) secondary = val;
+        if (e.button === 0) {
+          if (graphic.depth === 2 && val === 0) {
+            // In hi-res mode, slot 0 cannot be selected as primary draw slot
+          } else {
+            primary = val;
+          }
+        } else if (e.button === 2) {
+          secondary = val;
+        }
       }
       return;
     }
@@ -627,6 +638,7 @@
     secondary;
     primary;
     activeCharIndex;
+    recalculateOffsets();
     redraw();
   });
 

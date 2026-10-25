@@ -60,8 +60,8 @@
   }
 }} />
 
-<div class="menu-bar">
-  <div class="menu-item">
+<div class="menu-bar" role="menubar" tabindex="0" onmouseleave={closeMenu}>
+  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'file')}>
     <button class="menu-btn {activeMenu === 'file' ? 'active' : ''}" onclick={() => toggleMenu('file')}>
       File
     </button>
@@ -90,7 +90,7 @@
     {/if}
   </div>
 
-  <div class="menu-item">
+  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'edit')}>
     <button class="menu-btn {activeMenu === 'edit' ? 'active' : ''}" onclick={() => toggleMenu('edit')}>
       Edit
     </button>
@@ -128,7 +128,7 @@
     {/if}
   </div>
 
-  <div class="menu-item">
+  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'graphic')}>
     <button class="menu-btn {activeMenu === 'graphic' ? 'active' : ''}" onclick={() => toggleMenu('graphic')}>
       Graphic
     </button>
@@ -144,7 +144,7 @@
     {/if}
   </div>
 
-  <div class="menu-item">
+  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'view')}>
     <button class="menu-btn {activeMenu === 'view' ? 'active' : ''}" onclick={() => toggleMenu('view')}>
       View
     </button>
