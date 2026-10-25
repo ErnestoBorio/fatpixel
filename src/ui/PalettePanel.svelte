@@ -11,15 +11,19 @@
   let {
     graphic,
     palette,
+    projectRevision = 0,
     primary = $bindable(1),
     secondary = $bindable(0),
+    onBeforeChange,
     onColorChange,
     onPaletteSelect,
   } = $props<{
     graphic: Graphic;
     palette: Palette;
+    projectRevision?: number;
     primary: number;
     secondary: number;
+    onBeforeChange?: () => void;
     onColorChange?: () => void;
     onPaletteSelect?: (paletteId: string) => void;
   }>();
@@ -35,13 +39,36 @@
     }
   });
 
-  let priRgb = $derived(slotColor(graphic, palette, primary));
-  let secRgb = $derived(slotColor(graphic, palette, 0));
+  let graphicDepth = $derived.by(() => {
+    projectRevision;
+    return graphic.depth;
+  });
+
+  let graphicSlots = $derived.by(() => {
+    projectRevision;
+    return [...graphic.slots];
+  });
+
+  let priRgb = $derived.by(() => {
+    projectRevision;
+    graphicSlots;
+    return slotColor(graphic, palette, primary);
+  });
+  let secRgb = $derived.by(() => {
+    projectRevision;
+    graphicSlots;
+    return slotColor(graphic, palette, 0);
+  });
 
   function setSlotColor(slotIdx: number, paletteIndex: number) {
+    onBeforeChange?.();
     graphic.slots[slotIdx] = paletteIndex;
     graphic.slots = [...graphic.slots];
     onColorChange?.();
+  }
+
+  function getSlotColor(idx: number, _slots: number[]) {
+    return slotColor(graphic, palette, idx);
   }
 
   function handlePaletteSelect(e: Event) {
@@ -98,10 +125,10 @@
   <div class="section-label">Color Slots</div>
   <div class="slots-container">
     {#each ALL_SLOTS as def}
-      {@const isDisabled = def.idx >= graphic.depth}
-      {@const sRgb = !isDisabled ? slotColor(graphic, palette, def.idx) : null}
+      {@const isDisabled = def.idx >= graphicDepth}
+      {@const sRgb = !isDisabled ? getSlotColor(def.idx, graphicSlots) : null}
       {@const isSelectedPri = primary === def.idx && !isDisabled}
-      {@const isFixedBg = graphic.depth === 2 && def.idx === 0}
+      {@const isFixedBg = graphicDepth === 2 && def.idx === 0}
       <button
         class="slot-card {isSelectedPri ? 'active-slot' : ''} {isFixedBg ? 'fixed-bg' : ''} {isDisabled ? 'disabled-slot' : ''}"
         disabled={isDisabled}
@@ -143,8 +170,8 @@
   <!-- 16-color palette grid -->
   <div class="palette-grid">
     {#each palette.colors as col, idx}
-      {@const isPri = graphic.slots[primary] === idx}
-      {@const isSec = graphic.slots[0] === idx}
+      {@const isPri = graphicSlots[primary] === idx}
+      {@const isSec = graphicSlots[0] === idx}
       {@const colorName = getColorName(palette.id, idx)}
       <button
         class="color-btn"

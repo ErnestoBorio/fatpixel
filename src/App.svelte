@@ -89,6 +89,7 @@
   }
 
   function notifyGraphicChange() {
+    project = new Project(project.name, [...project.graphics], project.customPalettes);
     stateVersion++;
     markDirty();
     saveNow();
@@ -99,6 +100,7 @@
   function handlePaletteSelect(paletteId: string) {
     const g = project.graphics[activeGraphicIndex];
     if (g) {
+      pushHistorySnapshot();
       g.palette = { kind: 'builtin', id: paletteId };
     }
     notifyGraphicChange();
@@ -616,6 +618,7 @@
         bind:this={canvasRef}
         graphic={activeGraphic}
         palette={activePalette}
+        projectRevision={stateVersion}
         {tool}
         {brushShape}
         {brushSize}
@@ -640,8 +643,10 @@
       <PalettePanel
         graphic={activeGraphic}
         palette={activePalette}
+        projectRevision={stateVersion}
         bind:primary
         bind:secondary
+        onBeforeChange={pushHistorySnapshot}
         onColorChange={notifyGraphicChange}
         onPaletteSelect={handlePaletteSelect}
       />

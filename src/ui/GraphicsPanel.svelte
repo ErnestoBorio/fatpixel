@@ -28,7 +28,31 @@
     onReorderGraphics?: (fromIdx: number, toIdx: number) => void;
   }>();
 
-  let activeGraphic = $derived(project.graphics[active]);
+  let activeGraphic = $derived.by(() => {
+    projectRevision;
+    return project.graphics[active];
+  });
+
+  let activeDepth = $derived.by(() => {
+    projectRevision;
+    return activeGraphic?.depth;
+  });
+  let activePixelMode = $derived.by(() => {
+    projectRevision;
+    return activeGraphic?.pixelMode;
+  });
+  let activeWidth = $derived.by(() => {
+    projectRevision;
+    return activeGraphic?.width;
+  });
+  let activeHeight = $derived.by(() => {
+    projectRevision;
+    return activeGraphic?.height;
+  });
+  let activeName = $derived.by(() => {
+    projectRevision;
+    return activeGraphic?.name;
+  });
 
   let draggedIdx = $state<number | null>(null);
   let dragOverIdx = $state<number | null>(null);
@@ -108,6 +132,16 @@
       },
     };
   }
+
+  function graphicHasPixels(g: Graphic, _rev: number): boolean {
+    return g.hasDrawnPixels();
+  }
+
+  function graphicSubtext(g: Graphic, _rev: number): string {
+    return g.isSprite()
+      ? `${g.width}×${g.height} · ${g.pixelMode === 'wide' ? 'Multi' : 'Hi-Res'}`
+      : `${g.charsetInfo()?.charCount ?? 256} chars`;
+  }
 </script>
 
 <div class="graphics-panel">
@@ -119,9 +153,17 @@
         <span class="label">Name:</span>
         <input
           type="text"
-          bind:value={activeGraphic.name}
+          value={activeName}
           class="text-input"
-          onchange={onGraphicChange}
+          oninput={(e) => {
+            const val = (e.target as HTMLInputElement).value;
+            if (activeGraphic) {
+              activeGraphic.name = val;
+            }
+          }}
+          onchange={() => {
+            onGraphicChange?.();
+          }}
         />
       </div>
 
@@ -130,7 +172,7 @@
           <span class="label">Mode:</span>
           <div class="button-group">
             <button
-              class="toggle-btn {activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires' ? 'active' : ''}"
+              class="toggle-btn {activeDepth === 2 && activePixelMode === 'hires' ? 'active' : ''}"
               onclick={() => {
                 if (activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires') return;
                 onBeforeChange?.();
@@ -141,7 +183,7 @@
               Hi-Res (1bpp)
             </button>
             <button
-              class="toggle-btn {activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide' ? 'active' : ''}"
+              class="toggle-btn {activeDepth === 4 && activePixelMode === 'wide' ? 'active' : ''}"
               onclick={() => {
                 if (activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide') return;
                 onBeforeChange?.();
@@ -162,7 +204,7 @@
               type="number"
               min="1"
               max="256"
-              value={activeGraphic.width}
+              value={activeWidth}
               class="num-input"
               onchange={(e) => {
                 const input = e.target as HTMLInputElement;
@@ -179,7 +221,7 @@
               type="number"
               min="1"
               max="256"
-              value={activeGraphic.height}
+              value={activeHeight}
               class="num-input"
               onchange={(e) => {
                 const input = e.target as HTMLInputElement;
@@ -250,7 +292,7 @@
     <div class="graphics-list" role="list">
       {#each project.graphics as g, idx (g)}
         {@const isActive = active === idx}
-        {@const hasPixels = g.hasDrawnPixels()}
+        {@const hasPixels = graphicHasPixels(g, projectRevision)}
         <div
           class="graphic-item {isActive ? 'active' : ''} {draggedIdx === idx ? 'dragging' : ''} {dragOverIdx === idx ? 'drag-over' : ''}"
           draggable="true"
@@ -277,9 +319,7 @@
             <div class="graphic-meta">
               <span class="name">{g.name}</span>
               <span class="subtext">
-                {g.isSprite()
-                  ? `${g.width}×${g.height} · ${g.pixelMode === 'wide' ? 'Multi' : 'Hi-Res'}`
-                  : `${g.charsetInfo()?.charCount ?? 256} chars`}
+                {graphicSubtext(g, projectRevision)}
               </span>
             </div>
           </button>

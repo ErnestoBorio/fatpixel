@@ -19,6 +19,7 @@
   let {
     graphic,
     palette,
+    projectRevision = 0,
     tool,
     brushShape,
     brushSize,
@@ -35,6 +36,7 @@
   } = $props<{
     graphic: Graphic;
     palette: Palette;
+    projectRevision?: number;
     tool: ToolType;
     brushShape: BrushShape;
     brushSize: number;
@@ -83,13 +85,26 @@
 
   let wheelAccumulator = 0;
 
+  let graphicWidth = $derived.by(() => {
+    projectRevision;
+    return graphic.width;
+  });
+  let graphicHeight = $derived.by(() => {
+    projectRevision;
+    return graphic.height;
+  });
+  let graphicPixelMode = $derived.by(() => {
+    projectRevision;
+    return graphic.pixelMode;
+  });
+
   let isCharset = $derived(graphic.isCharset());
   let charsetInfo = $derived(graphic.charsetInfo());
 
   // Active draw bounds: 8x8 for character editing, graphic.width x graphic.height for sprite
-  let drawWidth = $derived(isCharset ? (charsetInfo?.charWidth ?? 8) : graphic.width);
-  let drawHeight = $derived(isCharset ? (charsetInfo?.charHeight ?? 8) : graphic.height);
-  let drawAspect = $derived(isCharset ? 1.0 : (graphic.pixelMode === 'wide' ? 2.0 : 1.0));
+  let drawWidth = $derived(isCharset ? (charsetInfo?.charWidth ?? 8) : graphicWidth);
+  let drawHeight = $derived(isCharset ? (charsetInfo?.charHeight ?? 8) : graphicHeight);
+  let drawAspect = $derived(isCharset ? 1.0 : (graphicPixelMode === 'wide' ? 2.0 : 1.0));
 
   export function zoomIn() {
     if (zoomIndex < ZOOM_LEVELS.length - 1) {
@@ -739,6 +754,7 @@
 
   $effect(() => {
     // Redraw whenever graphic, palette, activeCharIndex or tool settings update
+    projectRevision;
     graphic;
     palette;
     showGrid;
@@ -827,14 +843,13 @@
     <div class="sprite-preview-panel">
       <div class="sheet-header">
         <span class="sheet-title">Preview</span>
-        <span class="sheet-meta">{graphic.width}×{graphic.height} {graphic.pixelMode === 'wide' ? 'Multi' : 'Hi-Res'}</span>
+        <span class="sheet-meta">{graphicWidth}×{graphicHeight}</span>
       </div>
       <div class="sprite-previews-container">
         <!-- 1x Preview (1:1 pixels) -->
         <div class="preview-box">
           <div class="preview-label">
             <span>1×</span>
-            <span class="preview-dim">{Math.round(graphic.width * drawAspect)}×{graphic.height}</span>
           </div>
           <div class="preview-viewport">
             <canvas bind:this={preview1xCanvasElem}></canvas>
@@ -1068,11 +1083,6 @@
     font-size: 11px;
     font-weight: 600;
     color: #aaa;
-  }
-  .preview-dim {
-    font-family: monospace;
-    font-size: 10px;
-    color: #6688aa;
   }
   .preview-viewport {
     display: flex;
