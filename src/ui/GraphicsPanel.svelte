@@ -37,10 +37,6 @@
     projectRevision;
     return activeGraphic?.depth;
   });
-  let activePixelMode = $derived.by(() => {
-    projectRevision;
-    return activeGraphic?.pixelMode;
-  });
   let activeWidth = $derived.by(() => {
     projectRevision;
     return activeGraphic?.width;
@@ -172,7 +168,7 @@
           <span class="label">Mode:</span>
           <div class="button-group">
             <button
-              class="toggle-btn {activeDepth === 2 && activePixelMode === 'hires' ? 'active' : ''}"
+              class="toggle-btn {activeDepth === 2 ? 'active' : ''}"
               onclick={() => {
                 if (activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires') return;
                 onBeforeChange?.();
@@ -183,7 +179,7 @@
               Hi-Res (1bpp)
             </button>
             <button
-              class="toggle-btn {activeDepth === 4 && activePixelMode === 'wide' ? 'active' : ''}"
+              class="toggle-btn {activeDepth === 4 ? 'active' : ''}"
               onclick={() => {
                 if (activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide') return;
                 onBeforeChange?.();

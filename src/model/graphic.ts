@@ -560,13 +560,15 @@ export class Graphic {
         ? { kind: paletteParts[0] as 'builtin' | 'custom', id: paletteParts[1] }
         : { kind: 'builtin', id: json.palette };
 
+    const parsedDepth = (Number(json.depth) || 2) as ColorDepth;
+    const pixelMode = json.pixel_mode ?? (parsedDepth === 4 ? 'wide' : 'hires');
     const graphic = new Graphic(
       json.name,
       kind,
       json.width,
       json.height,
-      json.depth as ColorDepth,
-      json.pixel_mode,
+      parsedDepth,
+      pixelMode,
       paletteRef,
       [...json.slots],
       json.transparent_slot

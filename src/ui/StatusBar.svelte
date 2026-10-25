@@ -4,12 +4,14 @@
 
   let {
     graphic,
+    projectRevision = 0,
     hoverPt = null,
     zoom = 16,
     isDirty = false,
     savedLocally = true,
   } = $props<{
     graphic: Graphic;
+    projectRevision?: number;
     hoverPt?: { x: number; y: number } | null;
     zoom?: number;
     isDirty?: boolean;
@@ -17,6 +19,7 @@
   }>();
 
   let modeStr = $derived.by(() => {
+    projectRevision;
     if (graphic.depth === 2) return '1 bpp (Hi-Res)';
     if (graphic.depth === 4 && graphic.pixelMode === 'wide') return '2 bpp (Wide)';
     if (graphic.depth === 4) return '2 bpp';

@@ -89,7 +89,7 @@
   }
 
   function notifyGraphicChange() {
-    project = new Project(project.name, [...project.graphics], project.customPalettes);
+    project = new Project(project.name, project.graphics.map((g) => g.clone()), project.customPalettes);
     stateVersion++;
     markDirty();
     saveNow();
@@ -107,6 +107,7 @@
   }
 
   $effect(() => {
+    stateVersion;
     // In hi-res mode (depth 2), slot 0 is strictly for right-button, primary must be slot 1
     if (activeGraphic.depth === 2 && primary === 0) {
       primary = 1;
@@ -668,6 +669,7 @@
 
   <StatusBar
     graphic={activeGraphic}
+    projectRevision={stateVersion}
     {hoverPt}
     zoom={currentZoom}
     {isDirty}
