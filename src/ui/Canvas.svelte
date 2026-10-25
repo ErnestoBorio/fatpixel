@@ -270,21 +270,22 @@
       }
     }
 
-    // Pixel Grid
+    // Pixel Grid: Subtle, faded difference mixing so grid lines are discernible
+    // across all background/pixel colors without distracting from the artwork
     if (showGrid && zoom >= 2) {
       ctx.save();
-      // Difference blend mode ensures grid lines are always clearly visible with high contrast
-      // through any background color (black, white, cyan, etc.) and through drawn pixels
       ctx.globalCompositeOperation = 'difference';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      const gridAlpha = zoom <= 3 ? 0.06 : (zoom <= 6 ? 0.09 : 0.12);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${gridAlpha})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let x = 0; x <= drawWidth; x++) {
+      // Only draw internal pixel dividers so outer frame border remains crisp
+      for (let x = 1; x < drawWidth; x++) {
         const sx = Math.floor(offsetX + x * pxW) + 0.5;
         ctx.moveTo(sx, offsetY);
         ctx.lineTo(sx, offsetY + imgH);
       }
-      for (let y = 0; y <= drawHeight; y++) {
+      for (let y = 1; y < drawHeight; y++) {
         const sy = Math.floor(offsetY + y * pxH) + 0.5;
         ctx.moveTo(offsetX, sy);
         ctx.lineTo(offsetX + imgW, sy);
