@@ -94,7 +94,7 @@
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => {
       saveNow();
-    }, 250);
+    }, 5000);
   }
 
   function markDirty() {
@@ -110,7 +110,6 @@
     project = new Project(project.name, project.graphics, project.customPalettes);
     stateVersion++;
     markDirty();
-    saveNow();
     canvasRef?.recalculateOffsets();
     canvasRef?.redraw();
   }
@@ -356,6 +355,32 @@
     }
   }
 
+  function navigateCharset(dCol: number, dRow: number) {
+    if (!activeGraphic.isCharset()) return;
+    const info = activeGraphic.charsetInfo();
+    if (!info) return;
+    const { columns, charCount } = info;
+    const numRows = Math.ceil(charCount / columns);
+    const col = activeCharIndex % columns;
+    const row = Math.floor(activeCharIndex / columns);
+
+    if (dCol !== 0) {
+      let newIdx = activeCharIndex + dCol;
+      if (newIdx < 0) newIdx = charCount - 1;
+      if (newIdx >= charCount) newIdx = 0;
+      activeCharIndex = newIdx;
+    } else if (dRow !== 0) {
+      let newRow = row + dRow;
+      if (newRow < 0) newRow = numRows - 1;
+      if (newRow >= numRows) newRow = 0;
+      let newIdx = newRow * columns + col;
+      if (newIdx >= charCount) {
+        newIdx = charCount - 1;
+      }
+      activeCharIndex = newIdx;
+    }
+  }
+
   function handleKeyDown(e: KeyboardEvent) {
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
@@ -387,20 +412,48 @@
     } else {
       switch (e.key) {
         case 'ArrowLeft':
-          e.preventDefault();
-          handleShift(-1, 0);
+          if (activeGraphic.isCharset()) {
+            e.preventDefault();
+            navigateCharset(-1, 0);
+          }
           break;
         case 'ArrowRight':
-          e.preventDefault();
-          handleShift(1, 0);
+          if (activeGraphic.isCharset()) {
+            e.preventDefault();
+            navigateCharset(1, 0);
+          }
           break;
         case 'ArrowUp':
+          if (activeGraphic.isCharset()) {
+            e.preventDefault();
+            navigateCharset(0, -1);
+          }
+          break;
+        case 'ArrowDown':
+          if (activeGraphic.isCharset()) {
+            e.preventDefault();
+            navigateCharset(0, 1);
+          }
+          break;
+        case 'w':
+        case 'W':
           e.preventDefault();
           handleShift(0, -1);
           break;
-        case 'ArrowDown':
+        case 'a':
+        case 'A':
+          e.preventDefault();
+          handleShift(-1, 0);
+          break;
+        case 's':
+        case 'S':
           e.preventDefault();
           handleShift(0, 1);
+          break;
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          handleShift(1, 0);
           break;
         case '<':
         case ',':
@@ -547,7 +600,7 @@
         bind:zoomIndex
         {showGrid}
         onPixelChange={markDirty}
-        onStrokeEnd={saveNow}
+        onStrokeEnd={scheduleAutoSave}
         onHoverChange={(pt) => (hoverPt = pt)}
       />
     </main>

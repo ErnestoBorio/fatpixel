@@ -48,14 +48,14 @@
   </div>
 
   <div class="divider"></div>
-  <div class="section-label">Shift (Wrap)</div>
+  <div class="section-label">Shift (WASD)</div>
   <div class="shift-grid">
     <div></div>
-    <button class="shift-btn" onclick={() => onShift?.(0, -1)} title="Shift Up (↑)">▲</button>
+    <button class="shift-btn" onclick={() => onShift?.(0, -1)} title="Shift Up (W)">▲</button>
     <div></div>
-    <button class="shift-btn" onclick={() => onShift?.(-1, 0)} title="Shift Left (←)">◀</button>
-    <button class="shift-btn" onclick={() => onShift?.(0, 1)} title="Shift Down (↓)">▼</button>
-    <button class="shift-btn" onclick={() => onShift?.(1, 0)} title="Shift Right (→)">▶</button>
+    <button class="shift-btn" onclick={() => onShift?.(-1, 0)} title="Shift Left (A)">◀</button>
+    <button class="shift-btn" onclick={() => onShift?.(0, 1)} title="Shift Down (S)">▼</button>
+    <button class="shift-btn" onclick={() => onShift?.(1, 0)} title="Shift Right (D)">▶</button>
   </div>
 
   <div class="divider"></div>

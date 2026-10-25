@@ -48,7 +48,7 @@
 
   <div class="right-section">
     {#if savedLocally}
-      <span class="saved-badge" title="All edits are stored in your browser's localStorage">✓ Saved in localStorage</span>
+      <span class="saved-badge" title="All edits are stored in your browser">✓ Saved in browser</span>
     {:else}
       <span class="saving-badge">Saving...</span>
     {/if}

@@ -134,16 +134,16 @@
         </button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onShift?.(-1, 0); closeMenu(); }}>
-          <span>Shift Left</span> <span class="shortcut">←</span>
+          <span>Shift Left</span> <span class="shortcut">A</span>
         </button>
         <button class="dropdown-item" onclick={() => { onShift?.(1, 0); closeMenu(); }}>
-          <span>Shift Right</span> <span class="shortcut">→</span>
+          <span>Shift Right</span> <span class="shortcut">D</span>
         </button>
         <button class="dropdown-item" onclick={() => { onShift?.(0, -1); closeMenu(); }}>
-          <span>Shift Up</span> <span class="shortcut">↑</span>
+          <span>Shift Up</span> <span class="shortcut">W</span>
         </button>
         <button class="dropdown-item" onclick={() => { onShift?.(0, 1); closeMenu(); }}>
-          <span>Shift Down</span> <span class="shortcut">↓</span>
+          <span>Shift Down</span> <span class="shortcut">S</span>
         </button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onRotate?.(true); closeMenu(); }}>
