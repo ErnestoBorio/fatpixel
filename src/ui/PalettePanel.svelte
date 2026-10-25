@@ -49,19 +49,12 @@
     onPaletteSelect?.(id);
   }
 
-  const slotLabels4 = [
+  const ALL_SLOTS = [
     { idx: 0, bin: '00', name: 'Background (R-click)' },
-    { idx: 1, bin: '01', name: 'Multicolor 1' },
-    { idx: 2, bin: '10', name: 'Main Color' },
-    { idx: 3, bin: '11', name: 'Multicolor 2' },
+    { idx: 1, bin: '01', name: 'Color 1' },
+    { idx: 2, bin: '10', name: 'Color 2' },
+    { idx: 3, bin: '11', name: 'Color 3' },
   ];
-
-  const slotLabels2 = [
-    { idx: 0, bin: '00', name: 'Background (R-click only)' },
-    { idx: 1, bin: '01', name: 'Foreground (L-click)' },
-  ];
-
-  let currentSlotDefs = $derived(graphic.depth === 4 ? slotLabels4 : slotLabels2);
 </script>
 
 <div class="palette-panel">
@@ -101,33 +94,43 @@
 
   <div class="divider"></div>
 
-  <!-- Color Slots (2 or 4) -->
-  <div class="section-label">
-    {graphic.depth === 4 ? 'Multicolor Slots (4 Colors)' : 'Color Slots (2 Colors)'}
-  </div>
+  <!-- Color Slots (Fixed 4-slot single row, no layout shift) -->
+  <div class="section-label">Color Slots</div>
   <div class="slots-container">
-    {#each currentSlotDefs as def}
-      {@const sRgb = slotColor(graphic, palette, def.idx)}
-      {@const isSelectedPri = primary === def.idx}
+    {#each ALL_SLOTS as def}
+      {@const isDisabled = def.idx >= graphic.depth}
+      {@const sRgb = !isDisabled ? slotColor(graphic, palette, def.idx) : null}
+      {@const isSelectedPri = primary === def.idx && !isDisabled}
       {@const isFixedBg = graphic.depth === 2 && def.idx === 0}
       <button
-        class="slot-card {isSelectedPri ? 'active-slot' : ''} {isFixedBg ? 'fixed-bg' : ''}"
+        class="slot-card {isSelectedPri ? 'active-slot' : ''} {isFixedBg ? 'fixed-bg' : ''} {isDisabled ? 'disabled-slot' : ''}"
+        disabled={isDisabled}
         onclick={() => {
-          if (isFixedBg) return;
+          if (isDisabled || isFixedBg) return;
           primary = def.idx;
         }}
-        title={isFixedBg
+        title={isDisabled
+          ? `Slot ${def.bin}: Only available in Multicolor (2bpp) mode`
+          : isFixedBg
           ? 'Slot 0 (00): Background (fixed to Right Click in Hi-Res mode)'
-          : `Slot ${def.idx} (${def.bin}): ${def.name} - Click to select for Left Click draw`}
+          : `Slot ${def.idx} (${def.bin}): Click to select for Left Click draw`}
       >
         <span class="slot-bin">{def.bin}</span>
-        <div class="slot-color-preview" style="background-color: {getHex(sRgb)};"></div>
-        <span class="slot-name">{def.idx === 0 ? 'BG (R)' : `Slot ${def.idx}`}</span>
-        {#if isSelectedPri}
-          <span class="slot-badge">L</span>
-        {:else if isFixedBg}
-          <span class="slot-badge-fixed">R</span>
-        {/if}
+        <div
+          class="slot-color-preview"
+          style={sRgb ? `background-color: ${getHex(sRgb)};` : 'background: #1a1a22; border-style: dashed;'}
+        ></div>
+        <div class="slot-badge-label">
+          {#if isSelectedPri}
+            <span class="slot-badge pri">L</span>
+          {:else if isFixedBg}
+            <span class="slot-badge sec">R</span>
+          {:else if !isDisabled}
+            <span class="slot-idx-num">{def.idx === 0 ? 'BG' : def.idx}</span>
+          {:else}
+            <span class="slot-idx-num dim">—</span>
+          {/if}
+        </div>
       </button>
     {/each}
   </div>
@@ -240,6 +243,9 @@
     color: #bbb;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .help-text {
     font-size: 10px;
@@ -248,76 +254,85 @@
   }
   .slots-container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 4px;
+    height: 56px;
+    box-sizing: border-box;
   }
   .slot-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 4px;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px 2px;
     background: #252530;
     border: 1px solid #383848;
     border-radius: 4px;
     color: #eee;
     cursor: pointer;
-    font-size: 10px;
     position: relative;
-    text-align: left;
+    text-align: center;
+    transition: background 0.15s, border-color 0.15s;
   }
-  .slot-card:hover {
+  .slot-card:hover:not(:disabled) {
     background: #2d2d3a;
   }
   .slot-card.active-slot {
     border-color: #5882c4;
     background: #2d3b50;
   }
+  .slot-card.disabled-slot {
+    opacity: 0.28;
+    cursor: not-allowed;
+    border-style: dashed;
+  }
+  .slot-card.fixed-bg {
+    border-style: dashed;
+    border-color: #4a4a58;
+  }
   .slot-bin {
     font-family: monospace;
     font-weight: bold;
     color: #aaa;
     font-size: 10px;
-    min-width: 14px;
+    line-height: 1;
   }
   .slot-color-preview {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border: 1px solid #111;
-    border-radius: 2px;
+    border-radius: 3px;
     flex-shrink: 0;
   }
-  .slot-name {
-    font-size: 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .slot-badge-label {
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .slot-badge {
-    position: absolute;
-    right: 3px;
-    top: 3px;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 0 4px;
+    border-radius: 2px;
+    line-height: 12px;
+  }
+  .slot-badge.pri {
     background: #5882c4;
     color: #fff;
-    font-size: 9px;
-    font-weight: bold;
-    padding: 0 3px;
-    border-radius: 2px;
   }
-  .slot-card.fixed-bg {
-    opacity: 0.85;
-    cursor: default;
-    border-style: dashed;
-  }
-  .slot-badge-fixed {
-    position: absolute;
-    right: 3px;
-    top: 3px;
+  .slot-badge.sec {
     background: #444455;
     color: #bbb;
+  }
+  .slot-idx-num {
     font-size: 9px;
-    font-weight: bold;
-    padding: 0 3px;
-    border-radius: 2px;
+    color: #888;
+    line-height: 12px;
+  }
+  .slot-idx-num.dim {
+    color: #555;
   }
   .palette-grid {
     display: grid;

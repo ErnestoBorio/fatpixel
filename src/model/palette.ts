@@ -132,7 +132,7 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'drean-16',
-    name: 'Drean Commodore (16 colors)',
+    name: 'Drean',
     colors: DREAN_16_COLORS,
   },
 ];

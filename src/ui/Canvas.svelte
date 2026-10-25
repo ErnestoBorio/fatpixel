@@ -271,8 +271,12 @@
     }
 
     // Pixel Grid
-    if (showGrid && zoom >= 3) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    if (showGrid && zoom >= 2) {
+      ctx.save();
+      // Difference blend mode ensures grid lines are always clearly visible with high contrast
+      // through any background color (black, white, cyan, etc.) and through drawn pixels
+      ctx.globalCompositeOperation = 'difference';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let x = 0; x <= drawWidth; x++) {
@@ -286,6 +290,7 @@
         ctx.lineTo(offsetX + imgW, sy);
       }
       ctx.stroke();
+      ctx.restore();
     }
 
     // Border around graphic/character frame
