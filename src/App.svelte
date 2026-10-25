@@ -12,9 +12,12 @@
   import MenuBar from './ui/MenuBar.svelte';
   import StatusBar from './ui/StatusBar.svelte';
 
+  import { defaultPalette } from './model/palette';
+
   let project = $state(new Project());
   let activeGraphicIndex = $state(0);
   let history = $state(new History());
+  let stateVersion = $state(0);
 
   let tool = $state<ToolType>('pencil');
   let brushShape = $state<BrushShape>('square');
@@ -29,8 +32,16 @@
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
 
-  let activeGraphic = $derived(project.graphics[activeGraphicIndex]);
-  let activePalette = $derived(project.paletteOf(activeGraphic));
+  let activeGraphic = $derived.by(() => {
+    stateVersion;
+    return project.graphics[activeGraphicIndex];
+  });
+
+  let activePalette = $derived.by(() => {
+    stateVersion;
+    const g = project.graphics[activeGraphicIndex];
+    return g ? project.paletteOf(g) : defaultPalette();
+  });
 
   function markDirty() {
     isDirty = true;
@@ -41,12 +52,18 @@
       project.graphics[activeGraphicIndex] = project.graphics[activeGraphicIndex].clone();
       project.graphics = [...project.graphics];
     }
+    project = new Project(project.name, project.graphics, project.customPalettes);
+    stateVersion++;
     markDirty();
+    canvasRef?.recalculateOffsets();
     canvasRef?.redraw();
   }
 
   function handlePaletteSelect(paletteId: string) {
-    activeGraphic.palette = { kind: 'builtin', id: paletteId };
+    const g = project.graphics[activeGraphicIndex];
+    if (g) {
+      g.palette = { kind: 'builtin', id: paletteId };
+    }
     notifyGraphicChange();
   }
 

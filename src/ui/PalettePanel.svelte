@@ -71,6 +71,7 @@
       class="palette-select"
       value={palette.id}
       onchange={handlePaletteSelect}
+      oninput={handlePaletteSelect}
     >
       {#each BUILTIN_PALETTES as p}
         <option value={p.id}>{p.name}</option>
