@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Graphic } from '../model/graphic';
   import {
-    C64_COLOR_NAMES,
+    BUILTIN_PALETTES,
+    getColorName,
     rgbToHexStr,
     type Palette,
   } from '../model/palette';
@@ -13,12 +14,14 @@
     primary = $bindable(1),
     secondary = $bindable(0),
     onColorChange,
+    onPaletteChange,
   } = $props<{
     graphic: Graphic;
     palette: Palette;
     primary: number;
     secondary: number;
     onColorChange?: () => void;
+    onPaletteChange?: () => void;
   }>();
 
   function getHex(rgb: { r: number; g: number; b: number }) {
@@ -28,28 +31,50 @@
   let priRgb = $derived(slotColor(graphic, palette, primary));
   let secRgb = $derived(slotColor(graphic, palette, secondary));
 
-  function setPrimaryColor(paletteIndex: number) {
-    if (graphic.slots[primary] !== paletteIndex) {
-      graphic.slots[primary] = paletteIndex;
+  function setSlotColor(slotIdx: number, paletteIndex: number) {
+    if (graphic.slots[slotIdx] !== paletteIndex) {
+      graphic.slots[slotIdx] = paletteIndex;
       onColorChange?.();
     }
   }
 
-  function setSecondaryColor(paletteIndex: number) {
-    if (graphic.slots[secondary] !== paletteIndex) {
-      graphic.slots[secondary] = paletteIndex;
-      onColorChange?.();
-    }
+  function handlePaletteSelect(e: Event) {
+    const id = (e.target as HTMLSelectElement).value;
+    graphic.palette = { kind: 'builtin', id };
+    onPaletteChange?.();
+    onColorChange?.();
   }
+
+  const slotLabels4 = [
+    { idx: 0, bin: '00', name: 'Background (R-click)' },
+    { idx: 1, bin: '01', name: 'Multicolor 1' },
+    { idx: 2, bin: '10', name: 'Main Color' },
+    { idx: 3, bin: '11', name: 'Multicolor 2' },
+  ];
+
+  const slotLabels2 = [
+    { idx: 0, bin: '0', name: 'Background (R-click)' },
+    { idx: 1, bin: '1', name: 'Foreground (L-click)' },
+  ];
+
+  let currentSlotDefs = $derived(graphic.depth === 4 ? slotLabels4 : slotLabels2);
 </script>
 
 <div class="palette-panel">
   <div class="header">
     <span class="title">Palette</span>
-    <span class="palette-name">{palette.name}</span>
+    <select
+      class="palette-select"
+      value={palette.id}
+      onchange={handlePaletteSelect}
+    >
+      {#each BUILTIN_PALETTES as p}
+        <option value={p.id}>{p.name}</option>
+      {/each}
+    </select>
   </div>
 
-  <!-- Primary and Secondary Swatches -->
+  <!-- Active Draw Swatches -->
   <div class="active-swatches">
     <div class="swatch-container">
       <div
@@ -60,59 +85,67 @@
       <div
         class="swatch pri-swatch"
         style="background-color: {getHex(priRgb)};"
-        title="Left click color: Foreground (Slot {primary})"
+        title="Left click color: Active slot (Slot {primary})"
       ></div>
     </div>
     <div class="swatch-labels">
-      <div>L: Slot {primary}</div>
-      <div>R: Slot {secondary} (bg)</div>
+      <div><strong>L:</strong> Slot {primary} (Draw)</div>
+      <div><strong>R:</strong> Slot 0 (00 BG)</div>
     </div>
   </div>
 
   <div class="divider"></div>
 
-  <!-- In 4-color mode, allow selecting active slot -->
-  {#if graphic.depth > 2}
-    <div class="section-label">Graphic Slots</div>
-    <div class="slots-row">
-      {#each Array.from({ length: graphic.depth }, (_, i) => i) as slotIdx}
-        {@const sRgb = slotColor(graphic, palette, slotIdx)}
-        <button
-          class="slot-btn {primary === slotIdx ? 'selected' : ''}"
-          style="background-color: {getHex(sRgb)};"
-          onclick={() => (primary = slotIdx)}
-        >
-          {slotIdx}
-        </button>
-      {/each}
-    </div>
-    <div class="divider"></div>
-  {/if}
+  <!-- Color Slots (2 or 4) -->
+  <div class="section-label">
+    {graphic.depth === 4 ? 'Multicolor Slots (4 Colors)' : 'Color Slots (2 Colors)'}
+  </div>
+  <div class="slots-container">
+    {#each currentSlotDefs as def}
+      {@const sRgb = slotColor(graphic, palette, def.idx)}
+      {@const isSelectedPri = primary === def.idx}
+      <button
+        class="slot-card {isSelectedPri ? 'active-slot' : ''}"
+        onclick={() => (primary = def.idx)}
+        title="Slot {def.idx} ({def.bin}): {def.name} - Click to select for Left Click draw"
+      >
+        <span class="slot-bin">{def.bin}</span>
+        <div class="slot-color-preview" style="background-color: {getHex(sRgb)};"></div>
+        <span class="slot-name">{def.idx === 0 ? 'BG (R)' : `Slot ${def.idx}`}</span>
+        {#if isSelectedPri}
+          <span class="slot-badge">L</span>
+        {/if}
+      </button>
+    {/each}
+  </div>
 
-  <div class="section-label">C64 Palette (16 Colors)</div>
-  <div class="help-text">Left-click: draw (L) · Right-click: bg (R)</div>
+  <div class="divider"></div>
+
+  <div class="section-label">{palette.name}</div>
+  <div class="help-text">Left-click: assign to Slot {primary} · Right-click: assign to Slot 0 (00 BG)</div>
 
   <!-- 16-color palette grid -->
   <div class="palette-grid">
     {#each palette.colors as col, idx}
       {@const isPri = graphic.slots[primary] === idx}
-      {@const isSec = graphic.slots[secondary] === idx}
+      {@const isSec = graphic.slots[0] === idx}
+      {@const colorName = getColorName(palette.id, idx)}
       <button
         class="color-btn"
         style="background-color: {getHex(col)};"
-        title="#{idx}: {C64_COLOR_NAMES[idx] ?? 'Color'} ({getHex(col)})\nLeft-click: set draw (L)\nRight-click: set bg (R)"
-        onclick={() => setPrimaryColor(idx)}
+        title="#{idx}: {colorName} ({getHex(col)})\nLeft-click: assign to Slot {primary}\nRight-click: assign to Slot 0 (00)"
+        onclick={() => setSlotColor(primary, idx)}
         oncontextmenu={(e) => {
           e.preventDefault();
-          setSecondaryColor(idx);
+          setSlotColor(0, idx);
         }}
       >
         {#if isPri && isSec}
-          <span class="badge pri-sec">L/R</span>
+          <span class="badge pri-sec">L/0</span>
         {:else if isPri}
           <span class="badge pri">L</span>
         {:else if isSec}
-          <span class="badge sec">R</span>
+          <span class="badge sec">00</span>
         {/if}
       </button>
     {/each}
@@ -131,15 +164,26 @@
   .header {
     display: flex;
     flex-direction: column;
+    gap: 4px;
   }
   .title {
     font-weight: bold;
     font-size: 14px;
     color: #fff;
   }
-  .palette-name {
+  .palette-select {
+    width: 100%;
+    background: #181820;
+    color: #eee;
+    border: 1px solid #3d3d4e;
+    border-radius: 4px;
+    padding: 4px 6px;
     font-size: 11px;
-    color: #888;
+    cursor: pointer;
+  }
+  .palette-select:focus {
+    outline: none;
+    border-color: #5588cc;
   }
   .active-swatches {
     display: flex;
@@ -157,6 +201,7 @@
     height: 28px;
     border: 1px solid #111;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
   }
   .sec-swatch {
     right: 0;
@@ -165,6 +210,7 @@
   .pri-swatch {
     left: 0;
     top: 0;
+    z-index: 2;
   }
   .swatch-labels {
     font-size: 11px;
@@ -184,23 +230,65 @@
   }
   .help-text {
     font-size: 10px;
-    color: #777;
+    color: #888;
+    line-height: 1.3;
   }
-  .slots-row {
-    display: flex;
+  .slots-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 4px;
   }
-  .slot-btn {
-    width: 24px;
-    height: 24px;
-    border: 1px solid #222;
-    color: #fff;
-    text-shadow: 0 0 2px #000;
-    font-size: 10px;
+  .slot-card {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    background: #252530;
+    border: 1px solid #383848;
+    border-radius: 4px;
+    color: #eee;
     cursor: pointer;
+    font-size: 10px;
+    position: relative;
+    text-align: left;
   }
-  .slot-btn.selected {
-    border: 2px solid #fff;
+  .slot-card:hover {
+    background: #2d2d3a;
+  }
+  .slot-card.active-slot {
+    border-color: #5882c4;
+    background: #2d3b50;
+  }
+  .slot-bin {
+    font-family: monospace;
+    font-weight: bold;
+    color: #aaa;
+    font-size: 10px;
+    min-width: 14px;
+  }
+  .slot-color-preview {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #111;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .slot-name {
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slot-badge {
+    position: absolute;
+    right: 3px;
+    top: 3px;
+    background: #5882c4;
+    color: #fff;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 0 3px;
+    border-radius: 2px;
   }
   .palette-grid {
     display: grid;

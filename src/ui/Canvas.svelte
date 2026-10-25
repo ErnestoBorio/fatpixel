@@ -46,11 +46,19 @@
 
   let canvasElem: HTMLCanvasElement;
   let containerElem: HTMLDivElement;
+  let sheetCanvasElem: HTMLCanvasElement | null = $state(null);
 
-  const ZOOM_LEVELS = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64];
+  // Charset active character (0..255)
+  let activeCharIndex = $state(0);
+  let sheetHoverChar = $state<number | null>(null);
+
+  const ZOOM_LEVELS = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 40, 48, 64];
   let zoomIndex = $state(7); // 16x zoom default
   let offsetX = $state(0);
   let offsetY = $state(0);
+  let panOffsetX = $state(0);
+  let panOffsetY = $state(0);
+
   let isPanning = $state(false);
   let panStartX = 0;
   let panStartY = 0;
@@ -67,25 +75,46 @@
   let isShiftDown = $state(false);
   let isSpaceDown = $state(false);
 
+  let wheelAccumulator = 0;
+
+  let isCharset = $derived(graphic.isCharset());
+  let charsetInfo = $derived(graphic.charsetInfo());
+
+  // Active draw bounds: 8x8 for character editing, graphic.width x graphic.height for sprite
+  let drawWidth = $derived(isCharset ? (charsetInfo?.charWidth ?? 8) : graphic.width);
+  let drawHeight = $derived(isCharset ? (charsetInfo?.charHeight ?? 8) : graphic.height);
+  let drawAspect = $derived(isCharset ? 1.0 : (graphic.pixelMode === 'wide' ? 2.0 : 1.0));
+
   export function zoomIn() {
     if (zoomIndex < ZOOM_LEVELS.length - 1) {
-      stepZoom(1, containerElem.clientWidth / 2, containerElem.clientHeight / 2);
+      zoomIndex++;
+      centerGraphic();
     }
   }
 
   export function zoomOut() {
     if (zoomIndex > 0) {
-      stepZoom(-1, containerElem.clientWidth / 2, containerElem.clientHeight / 2);
+      zoomIndex--;
+      centerGraphic();
     }
+  }
+
+  export function centerGraphic() {
+    if (!containerElem) return;
+    panOffsetX = 0;
+    panOffsetY = 0;
+    recalculateOffsets();
+    redraw();
   }
 
   export function fitToWindow() {
     if (!containerElem) return;
-    const cw = containerElem.clientWidth - 40;
-    const ch = containerElem.clientHeight - 40;
-    const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
-    const gw = graphic.width * aspect;
-    const gh = graphic.height;
+    panOffsetX = 0;
+    panOffsetY = 0;
+    const cw = containerElem.clientWidth - (isCharset ? 340 : 40);
+    const ch = containerElem.clientHeight - 80;
+    const gw = drawWidth * drawAspect;
+    const gh = drawHeight;
 
     let bestIdx = 0;
     for (let i = ZOOM_LEVELS.length - 1; i >= 0; i--) {
@@ -96,30 +125,36 @@
       }
     }
     zoomIndex = bestIdx;
-    const currentZoom = ZOOM_LEVELS[zoomIndex];
-    offsetX = Math.round((containerElem.clientWidth - gw * currentZoom) / 2);
-    offsetY = Math.round((containerElem.clientHeight - gh * currentZoom) / 2);
+    recalculateOffsets();
     redraw();
   }
 
-  function stepZoom(delta: number, anchorX: number, anchorY: number) {
+  function recalculateOffsets() {
+    if (!containerElem) return;
+    const zoom = ZOOM_LEVELS[zoomIndex];
+    const pxW = zoom * drawAspect;
+    const pxH = zoom;
+    const imgW = drawWidth * pxW;
+    const imgH = drawHeight * pxH;
+
+    // In charset mode, account for the sheet panel on the right
+    const availableW = isCharset ? (containerElem.clientWidth - 310) : containerElem.clientWidth;
+    offsetX = Math.round((availableW - imgW) / 2) + panOffsetX;
+    offsetY = Math.round((containerElem.clientHeight - imgH) / 2) + panOffsetY;
+  }
+
+  function stepZoom(delta: number) {
     const newIdx = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, zoomIndex + delta));
-    if (newIdx === zoomIndex) return;
-
-    const oldZoom = ZOOM_LEVELS[zoomIndex];
-    const newZoom = ZOOM_LEVELS[newIdx];
-    const ratio = newZoom / oldZoom;
-
-    offsetX = Math.round(anchorX - (anchorX - offsetX) * ratio);
-    offsetY = Math.round(anchorY - (anchorY - offsetY) * ratio);
-    zoomIndex = newIdx;
-    redraw();
+    if (newIdx !== zoomIndex) {
+      zoomIndex = newIdx;
+      recalculateOffsets();
+      redraw();
+    }
   }
 
   function screenToPixel(sx: number, sy: number): Point {
     const zoom = ZOOM_LEVELS[zoomIndex];
-    const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
-    const pxW = zoom * aspect;
+    const pxW = zoom * drawAspect;
     const pxH = zoom;
     return {
       x: Math.floor((sx - offsetX) / pxW),
@@ -127,7 +162,48 @@
     };
   }
 
+  function inDrawBounds(x: number, y: number): boolean {
+    return x >= 0 && y >= 0 && x < drawWidth && y < drawHeight;
+  }
+
+  function getPixelVal(x: number, y: number): number | null {
+    if (!inDrawBounds(x, y)) return null;
+    if (isCharset) {
+      return graphic.getCharPixel(activeCharIndex, x, y);
+    }
+    return graphic.get(x, y);
+  }
+
+  function setPixelVal(x: number, y: number, val: number): boolean {
+    if (!inDrawBounds(x, y)) return false;
+    if (isCharset) {
+      return graphic.setCharPixel(activeCharIndex, x, y, val);
+    }
+    return graphic.set(x, y, val);
+  }
+
+  function getEffectivePaintValue(button: number): number {
+    if (tool === 'eraser') return 0;
+    // Right button ALWAYS paints Slot 0 (00 Background)
+    if (button === 2) return 0;
+
+    // Left button:
+    if (graphic.depth === 4) {
+      if (isShiftDown) return 2; // Slot 2 (Main)
+      if (isAltDown) return 3;   // Slot 3 (Multicolor 2)
+      return primary;
+    }
+    return primary;
+  }
+
   export function redraw() {
+    redrawMainCanvas();
+    if (isCharset) {
+      redrawSheetCanvas();
+    }
+  }
+
+  function redrawMainCanvas() {
     if (!canvasElem || !containerElem) return;
     const ctx = canvasElem.getContext('2d');
     if (!ctx) return;
@@ -139,28 +215,29 @@
       canvasElem.height = height;
     }
 
+    recalculateOffsets();
+
     // Background of viewport
-    ctx.fillStyle = '#1e1e24';
+    ctx.fillStyle = '#18181e';
     ctx.fillRect(0, 0, width, height);
 
     const zoom = ZOOM_LEVELS[zoomIndex];
-    const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
-    const pxW = zoom * aspect;
+    const pxW = zoom * drawAspect;
     const pxH = zoom;
 
-    const imgW = graphic.width * pxW;
-    const imgH = graphic.height * pxH;
+    const imgW = drawWidth * pxW;
+    const imgH = drawHeight * pxH;
 
-    // Canvas graphic solid background (matching secondary slot)
-    const bg = slotColor(graphic, palette, secondary);
+    // Drawing background matching slot 0 (00 BG)
+    const bg = slotColor(graphic, palette, 0);
     ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
     ctx.fillRect(offsetX, offsetY, imgW, imgH);
 
-    // Render graphic pixels
-    for (let y = 0; y < graphic.height; y++) {
-      for (let x = 0; x < graphic.width; x++) {
-        const val = graphic.pixels[y * graphic.width + x];
-        if (graphic.transparentSlot === val) continue;
+    // Render pixels
+    for (let y = 0; y < drawHeight; y++) {
+      for (let x = 0; x < drawWidth; x++) {
+        const val = getPixelVal(x, y);
+        if (val === null || graphic.transparentSlot === val) continue;
         const col = slotColor(graphic, palette, val);
         ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
         ctx.fillRect(offsetX + x * pxW, offsetY + y * pxH, pxW, pxH);
@@ -172,7 +249,7 @@
       const col = slotColor(graphic, palette, paintValue);
       ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
       for (const pt of previewPoints) {
-        if (graphic.inBounds(pt.x, pt.y)) {
+        if (inDrawBounds(pt.x, pt.y)) {
           ctx.fillRect(offsetX + pt.x * pxW, offsetY + pt.y * pxH, pxW, pxH);
         }
       }
@@ -180,15 +257,15 @@
 
     // Pixel Grid
     if (showGrid && zoom >= 3) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let x = 0; x <= graphic.width; x++) {
+      for (let x = 0; x <= drawWidth; x++) {
         const sx = Math.floor(offsetX + x * pxW) + 0.5;
         ctx.moveTo(sx, offsetY);
         ctx.lineTo(sx, offsetY + imgH);
       }
-      for (let y = 0; y <= graphic.height; y++) {
+      for (let y = 0; y <= drawHeight; y++) {
         const sy = Math.floor(offsetY + y * pxH) + 0.5;
         ctx.moveTo(offsetX, sy);
         ctx.lineTo(offsetX + imgW, sy);
@@ -196,40 +273,20 @@
       ctx.stroke();
     }
 
-    // Charset Character Grid (if graphic is charset)
-    const charsetInfo = graphic.charsetInfo();
-    if (showGrid && charsetInfo) {
-      const { charWidth, charHeight } = charsetInfo;
-      ctx.strokeStyle = 'rgba(100, 160, 255, 0.45)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let x = 0; x <= graphic.width; x += charWidth) {
-        const sx = Math.floor(offsetX + x * pxW) + 0.5;
-        ctx.moveTo(sx, offsetY);
-        ctx.lineTo(sx, offsetY + imgH);
-      }
-      for (let y = 0; y <= graphic.height; y += charHeight) {
-        const sy = Math.floor(offsetY + y * pxH) + 0.5;
-        ctx.moveTo(offsetX, sy);
-        ctx.lineTo(offsetX + imgW, sy);
-      }
-      ctx.stroke();
-    }
-
-    // Border around graphic frame
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 1;
+    // Border around graphic/character frame
+    ctx.strokeStyle = isCharset ? 'rgba(80, 160, 255, 0.6)' : 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(offsetX - 0.5, offsetY - 0.5, imgW + 1, imgH + 1);
 
     // Hover footprint cursor
-    if (hoverPt && graphic.inBounds(hoverPt.x, hoverPt.y) && !isPanning) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    if (hoverPt && inDrawBounds(hoverPt.x, hoverPt.y) && !isPanning) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.lineWidth = 1.5;
       const effectiveTool = isAltDown ? 'eyedropper' : tool;
       if (effectiveTool === 'pencil' || effectiveTool === 'eraser') {
         const pts = brushPoints(brushShape, brushSize, hoverPt.x, hoverPt.y);
         for (const pt of pts) {
-          if (graphic.inBounds(pt.x, pt.y)) {
+          if (inDrawBounds(pt.x, pt.y)) {
             ctx.strokeRect(offsetX + pt.x * pxW, offsetY + pt.y * pxH, pxW, pxH);
           }
         }
@@ -239,10 +296,70 @@
     }
   }
 
+  function redrawSheetCanvas() {
+    if (!sheetCanvasElem || !isCharset || !charsetInfo) return;
+    const ctx = sheetCanvasElem.getContext('2d');
+    if (!ctx) return;
+
+    const { charWidth, charHeight, charCount, columns } = charsetInfo;
+    const rows = Math.ceil(charCount / columns);
+    const scale = 2; // 2x scale for clear display
+    const cellW = charWidth * scale;
+    const cellH = charHeight * scale;
+    const gap = 1; // 1 virtual pixel separation
+
+    const totalW = columns * (cellW + gap) + gap;
+    const totalH = rows * (cellH + gap) + gap;
+
+    if (sheetCanvasElem.width !== totalW || sheetCanvasElem.height !== totalH) {
+      sheetCanvasElem.width = totalW;
+      sheetCanvasElem.height = totalH;
+    }
+
+    // Grid separator background
+    ctx.fillStyle = '#262833';
+    ctx.fillRect(0, 0, totalW, totalH);
+
+    const bgRgb = slotColor(graphic, palette, 0);
+
+    for (let c = 0; c < charCount; c++) {
+      const col = c % columns;
+      const row = Math.floor(c / columns);
+      const cx = gap + col * (cellW + gap);
+      const cy = gap + row * (cellH + gap);
+
+      // Character cell background
+      ctx.fillStyle = `rgb(${bgRgb.r},${bgRgb.g},${bgRgb.b})`;
+      ctx.fillRect(cx, cy, cellW, cellH);
+
+      // Render character pixels
+      for (let ly = 0; ly < charHeight; ly++) {
+        for (let lx = 0; lx < charWidth; lx++) {
+          const val = graphic.getCharPixel(c, lx, ly);
+          if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+          const colRgb = slotColor(graphic, palette, val);
+          ctx.fillStyle = `rgb(${colRgb.r},${colRgb.g},${colRgb.b})`;
+          ctx.fillRect(cx + lx * scale, cy + ly * scale, scale, scale);
+        }
+      }
+
+      // Active character highlight
+      if (c === activeCharIndex) {
+        ctx.strokeStyle = '#00d2ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - 1, cy - 1, cellW + 2, cellH + 2);
+      } else if (c === sheetHoverChar) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx - 0.5, cy - 0.5, cellW + 1, cellH + 1);
+      }
+    }
+  }
+
   function applyStrokePoints(points: Point[], value: number) {
     let changed = false;
     for (const pt of points) {
-      if (graphic.set(pt.x, pt.y, value)) {
+      if (setPixelVal(pt.x, pt.y, value)) {
         changed = true;
       }
     }
@@ -258,19 +375,19 @@
       isPanning = true;
       panStartX = e.clientX;
       panStartY = e.clientY;
-      panStartOffsetX = offsetX;
-      panStartOffsetY = offsetY;
+      panStartOffsetX = panOffsetX;
+      panStartOffsetY = panOffsetY;
       return;
     }
 
     const rect = canvasElem.getBoundingClientRect();
     const pt = screenToPixel(e.clientX - rect.left, e.clientY - rect.top);
-    if (!graphic.inBounds(pt.x, pt.y)) return;
+    if (!inDrawBounds(pt.x, pt.y)) return;
 
     const effectiveTool = isAltDown ? 'eyedropper' : tool;
 
     if (effectiveTool === 'eyedropper') {
-      const val = graphic.get(pt.x, pt.y);
+      const val = getPixelVal(pt.x, pt.y);
       if (val !== null) {
         if (e.button === 0) primary = val;
         else if (e.button === 2) secondary = val;
@@ -278,11 +395,18 @@
       return;
     }
 
-    paintValue = effectiveTool === 'eraser' ? 0 : e.button === 2 ? secondary : primary;
+    paintValue = getEffectivePaintValue(e.button);
 
     if (effectiveTool === 'fill') {
       history.pushSnapshot(graphic.clonePixels());
-      const pts = floodFill(graphic.width, graphic.height, (x, y) => graphic.get(x, y), pt.x, pt.y, paintValue);
+      const pts = floodFill(
+        drawWidth,
+        drawHeight,
+        (x, y) => getPixelVal(x, y),
+        pt.x,
+        pt.y,
+        paintValue
+      );
       applyStrokePoints(pts, paintValue);
       return;
     }
@@ -307,14 +431,14 @@
     const sy = e.clientY - rect.top;
 
     if (isPanning) {
-      offsetX = panStartOffsetX + (e.clientX - panStartX);
-      offsetY = panStartOffsetY + (e.clientY - panStartY);
+      panOffsetX = panStartOffsetX + (e.clientX - panStartX);
+      panOffsetY = panStartOffsetY + (e.clientY - panStartY);
       redraw();
       return;
     }
 
     const pt = screenToPixel(sx, sy);
-    if (graphic.inBounds(pt.x, pt.y)) {
+    if (inDrawBounds(pt.x, pt.y)) {
       hoverPt = pt;
       onHoverChange?.(pt);
     } else {
@@ -383,17 +507,79 @@
 
   function handleWheel(e: WheelEvent) {
     e.preventDefault();
-    const rect = canvasElem.getBoundingClientRect();
-    const anchorX = e.clientX - rect.left;
-    const anchorY = e.clientY - rect.top;
-    const delta = e.deltaY < 0 ? 1 : -1;
-    stepZoom(delta, anchorX, anchorY);
+    wheelAccumulator += e.deltaY;
+    if (Math.abs(wheelAccumulator) >= 30) {
+      const delta = wheelAccumulator < 0 ? 1 : -1;
+      wheelAccumulator = 0;
+      stepZoom(delta);
+    }
+  }
+
+  function handleSheetMouseDown(e: MouseEvent) {
+    if (!sheetCanvasElem || !charsetInfo) return;
+    const rect = sheetCanvasElem.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const { charWidth, charHeight, columns, charCount } = charsetInfo;
+    const scale = 2;
+    const cellW = charWidth * scale;
+    const cellH = charHeight * scale;
+    const gap = 1;
+
+    const col = Math.floor((mx - gap) / (cellW + gap));
+    const row = Math.floor((my - gap) / (cellH + gap));
+
+    if (col >= 0 && col < columns) {
+      const idx = row * columns + col;
+      if (idx >= 0 && idx < charCount) {
+        activeCharIndex = idx;
+        redraw();
+      }
+    }
+  }
+
+  function handleSheetMouseMove(e: MouseEvent) {
+    if (!sheetCanvasElem || !charsetInfo) return;
+    const rect = sheetCanvasElem.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const { charWidth, charHeight, columns, charCount } = charsetInfo;
+    const scale = 2;
+    const cellW = charWidth * scale;
+    const cellH = charHeight * scale;
+    const gap = 1;
+
+    const col = Math.floor((mx - gap) / (cellW + gap));
+    const row = Math.floor((my - gap) / (cellH + gap));
+
+    if (col >= 0 && col < columns) {
+      const idx = row * columns + col;
+      if (idx >= 0 && idx < charCount) {
+        sheetHoverChar = idx;
+        redrawSheetCanvas();
+        return;
+      }
+    }
+    sheetHoverChar = null;
+    redrawSheetCanvas();
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+
     if (e.key === 'Alt') isAltDown = true;
     if (e.key === 'Shift') isShiftDown = true;
     if (e.code === 'Space') isSpaceDown = true;
+
+    // Slot selection hotkeys: 0, 1, 2, 3
+    if (!e.metaKey && !e.ctrlKey) {
+      if (e.key === '0') primary = 0;
+      if (e.key === '1') primary = 1;
+      if (e.key === '2' && graphic.depth >= 4) primary = 2;
+      if (e.key === '3' && graphic.depth >= 4) primary = 3;
+    }
   }
 
   function handleKeyUp(e: KeyboardEvent) {
@@ -402,19 +588,56 @@
     if (e.code === 'Space') isSpaceDown = false;
   }
 
+  function prevChar() {
+    if (activeCharIndex > 0) {
+      activeCharIndex--;
+      redraw();
+    }
+  }
+
+  function nextChar() {
+    if (activeCharIndex < (charsetInfo?.charCount ?? 256) - 1) {
+      activeCharIndex++;
+      redraw();
+    }
+  }
+
+  function clearActiveChar() {
+    history.pushSnapshot(graphic.clonePixels());
+    if (graphic.clearChar(activeCharIndex)) {
+      onPixelChange?.();
+      redraw();
+    }
+  }
+
+  function invertActiveChar() {
+    if (graphic.depth !== 2) return;
+    history.pushSnapshot(graphic.clonePixels());
+    if (graphic.invertChar(activeCharIndex)) {
+      onPixelChange?.();
+      redraw();
+    }
+  }
+
   $effect(() => {
-    // Redraw whenever graphic, palette, or tool settings update
+    // Redraw whenever graphic, palette, activeCharIndex or tool settings update
     graphic;
     palette;
     showGrid;
     secondary;
+    primary;
+    activeCharIndex;
     redraw();
   });
 
   onMount(() => {
     fitToWindow();
-    const observer = new ResizeObserver(() => redraw());
+    const observer = new ResizeObserver(() => {
+      recalculateOffsets();
+      redraw();
+    });
     observer.observe(containerElem);
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('mouseup', handleMouseUp);
@@ -435,12 +658,57 @@
   aria-label="Pixel Drawing Canvas"
   oncontextmenu={(e) => e.preventDefault()}
 >
+  <!-- Main Drawing Canvas (Sprite or Single Char) -->
   <canvas
     bind:this={canvasElem}
     onmousedown={handleMouseDown}
     onmousemove={handleMouseMove}
     onwheel={handleWheel}
   ></canvas>
+
+  <!-- Charset Navigation Bar (when editing charset) -->
+  {#if isCharset}
+    <div class="char-nav-bar">
+      <button class="nav-btn" onclick={prevChar} disabled={activeCharIndex === 0} title="Previous Character">◀</button>
+      <div class="char-info">
+        <span class="char-title">Char #{activeCharIndex}</span>
+        <span class="char-hex">(0x{activeCharIndex.toString(16).toUpperCase().padStart(2, '0')})</span>
+      </div>
+      <button class="nav-btn" onclick={nextChar} disabled={activeCharIndex >= (charsetInfo?.charCount ?? 256) - 1} title="Next Character">▶</button>
+      <div class="char-actions">
+        <button class="char-act-btn" onclick={clearActiveChar} title="Clear this character only">Clear</button>
+        <button class="char-act-btn" onclick={invertActiveChar} title="Invert this character only">Invert</button>
+      </div>
+    </div>
+
+    <!-- 256 Character Sheet View (docked on right) -->
+    <div class="charset-sheet-panel">
+      <div class="sheet-header">
+        <span class="sheet-title">256-Char Sheet</span>
+        <span class="sheet-meta">
+          {sheetHoverChar !== null ? `Char #${sheetHoverChar} (0x${sheetHoverChar.toString(16).toUpperCase().padStart(2, '0')})` : '1px grid'}
+        </span>
+      </div>
+      <div class="sheet-canvas-wrapper">
+        <canvas
+          bind:this={sheetCanvasElem}
+          onmousedown={handleSheetMouseDown}
+          onmousemove={handleSheetMouseMove}
+          onmouseleave={() => { sheetHoverChar = null; redrawSheetCanvas(); }}
+        ></canvas>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Floating Zoom Toolbar -->
+  <div class="zoom-toolbar">
+    <button class="zoom-btn" onclick={zoomOut} title="Zoom Out (-)">−</button>
+    <button class="zoom-btn zoom-level" onclick={fitToWindow} title="Click to fit and center (0)">
+      {ZOOM_LEVELS[zoomIndex]}×
+    </button>
+    <button class="zoom-btn" onclick={zoomIn} title="Zoom In (+)">+</button>
+    <button class="zoom-btn fit-btn" onclick={fitToWindow} title="Center & Fit (0)">⛶ Center</button>
+  </div>
 </div>
 
 <style>
@@ -450,9 +718,157 @@
     overflow: hidden;
     position: relative;
     cursor: crosshair;
+    background: #18181e;
   }
   canvas {
     display: block;
     image-rendering: pixelated;
+  }
+  .zoom-toolbar {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    background: rgba(30, 30, 40, 0.85);
+    backdrop-filter: blur(4px);
+    border: 1px solid #38384a;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    z-index: 50;
+  }
+  .zoom-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    padding: 5px 9px;
+    font-size: 12px;
+    cursor: pointer;
+    border-right: 1px solid #38384a;
+  }
+  .zoom-btn:last-child {
+    border-right: none;
+  }
+  .zoom-btn:hover {
+    background: #323244;
+    color: #fff;
+  }
+  .zoom-level {
+    font-weight: bold;
+    font-size: 11px;
+    min-width: 42px;
+    text-align: center;
+  }
+  .fit-btn {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+  .char-nav-bar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(30, 30, 40, 0.9);
+    backdrop-filter: blur(4px);
+    border: 1px solid #38384a;
+    border-radius: 6px;
+    padding: 4px 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    z-index: 50;
+    color: #eee;
+    font-size: 12px;
+  }
+  .nav-btn {
+    background: #252532;
+    border: 1px solid #3e3e52;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .nav-btn:hover:not(:disabled) {
+    background: #39394e;
+  }
+  .nav-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .char-info {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-weight: 600;
+  }
+  .char-hex {
+    font-family: monospace;
+    color: #88aacc;
+    font-size: 11px;
+  }
+  .char-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 6px;
+    border-left: 1px solid #3e3e52;
+    padding-left: 6px;
+  }
+  .char-act-btn {
+    background: #252532;
+    border: 1px solid #3e3e52;
+    color: #bbb;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+  }
+  .char-act-btn:hover {
+    background: #36364a;
+    color: #fff;
+  }
+  .charset-sheet-panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: 295px;
+    background: rgba(26, 26, 36, 0.92);
+    backdrop-filter: blur(6px);
+    border: 1px solid #36364a;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 40;
+  }
+  .sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: #20202c;
+    border-bottom: 1px solid #333344;
+  }
+  .sheet-title {
+    font-weight: bold;
+    font-size: 12px;
+    color: #eee;
+  }
+  .sheet-meta {
+    font-size: 11px;
+    color: #88aacc;
+    font-family: monospace;
+  }
+  .sheet-canvas-wrapper {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #14141b;
   }
 </style>

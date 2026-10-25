@@ -49,6 +49,40 @@ describe('Graphic Model', () => {
     expect(c.width).toBe(128); // 16 cols * 8
     expect(c.height).toBe(128); // 16 rows * 8
   });
+
+  it('detects drawn pixels outside new dimensions', () => {
+    const g = Graphic.newSprite('spr', 4, 4);
+    expect(g.hasDrawnPixelsOutside(2, 2)).toBe(false);
+    g.set(3, 3, 1);
+    expect(g.hasDrawnPixelsOutside(2, 2)).toBe(true);
+    expect(g.hasDrawnPixelsOutside(4, 4)).toBe(false);
+  });
+
+  it('clears all pixels', () => {
+    const g = Graphic.newSprite('spr', 3, 3);
+    g.set(1, 1, 1);
+    expect(g.clear()).toBe(true);
+    expect(g.get(1, 1)).toBe(0);
+    expect(g.clear()).toBe(false);
+  });
+
+  it('inverts monochrome pixels', () => {
+    const g = Graphic.newSprite('spr', 2, 2);
+    g.set(0, 0, 1);
+    expect(g.invert()).toBe(true);
+    expect(g.get(0, 0)).toBe(0);
+    expect(g.get(0, 1)).toBe(1);
+    expect(g.get(1, 0)).toBe(1);
+    expect(g.get(1, 1)).toBe(1);
+  });
+
+  it('reads and writes individual character pixels in charset', () => {
+    const c = Graphic.newCharset('chars');
+    // char 1 is col 1, row 0 -> origin x=8, y=0
+    expect(c.setCharPixel(1, 2, 3, 1)).toBe(true);
+    expect(c.getCharPixel(1, 2, 3)).toBe(1);
+    expect(c.get(10, 3)).toBe(1);
+  });
 });
 
 describe('Project Serialization', () => {

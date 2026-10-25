@@ -141,7 +141,7 @@
 
   function addSprite() {
     const name = `sprite ${project.graphics.length + 1}`;
-    project.graphics.push(Graphic.newSprite(name, 24, 21, 2, 'hires'));
+    project.graphics = [...project.graphics, Graphic.newSprite(name, 24, 21, 2, 'hires')];
     activeGraphicIndex = project.graphics.length - 1;
     history.clear();
     markDirty();
@@ -150,11 +150,28 @@
 
   function addCharset() {
     const name = `charset ${project.graphics.length + 1}`;
-    project.graphics.push(Graphic.newCharset(name, 8, 8, 256, 16));
+    project.graphics = [...project.graphics, Graphic.newCharset(name, 8, 8, 256, 16)];
     activeGraphicIndex = project.graphics.length - 1;
     history.clear();
     markDirty();
     canvasRef?.fitToWindow();
+  }
+
+  function handleClear() {
+    history.pushSnapshot(activeGraphic.clonePixels());
+    if (activeGraphic.clear()) {
+      markDirty();
+      canvasRef?.redraw();
+    }
+  }
+
+  function handleInvert() {
+    if (activeGraphic.depth !== 2) return;
+    history.pushSnapshot(activeGraphic.clonePixels());
+    if (activeGraphic.invert()) {
+      markDirty();
+      canvasRef?.redraw();
+    }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -178,6 +195,12 @@
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault();
         newProject();
+      } else if (e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        handleClear();
+      } else if (e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        handleInvert();
       }
     } else {
       switch (e.key.toLowerCase()) {
@@ -223,6 +246,7 @@
   <MenuBar
     canUndo={history.canUndo()}
     canRedo={history.canRedo()}
+    canInvert={activeGraphic.depth === 2}
     {showGrid}
     onNewProject={newProject}
     onOpenProject={openProject}
@@ -232,6 +256,8 @@
     onExportCsv={exportCsv}
     onUndo={handleUndo}
     onRedo={handleRedo}
+    onClear={handleClear}
+    onInvert={handleInvert}
     onNewSprite={addSprite}
     onNewCharset={addCharset}
     onZoomIn={() => canvasRef?.zoomIn()}
@@ -248,6 +274,9 @@
         bind:brushShape
         bind:brushSize
         bind:fillMode
+        canInvert={activeGraphic.depth === 2}
+        onClear={handleClear}
+        onInvert={handleInvert}
       />
     </aside>
 
@@ -278,6 +307,10 @@
         bind:primary
         bind:secondary
         onColorChange={() => {
+          markDirty();
+          canvasRef?.redraw();
+        }}
+        onPaletteChange={() => {
           markDirty();
           canvasRef?.redraw();
         }}

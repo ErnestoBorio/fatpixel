@@ -163,6 +163,19 @@ export class Graphic {
     this.pixels = new Uint8Array(newPixels);
   }
 
+  hasDrawnPixelsOutside(newWidth: number, newHeight: number): boolean {
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (x >= newWidth || y >= newHeight) {
+          if (this.pixels[y * this.width + x] !== 0) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   resize(newWidth: number, newHeight: number): void {
     if (newWidth <= 0 || newHeight <= 0 || (newWidth === this.width && newHeight === this.height)) {
       return;
@@ -178,6 +191,85 @@ export class Graphic {
     this.width = newWidth;
     this.height = newHeight;
     this.pixels = newPixels;
+  }
+
+  clear(): boolean {
+    let changed = false;
+    for (let i = 0; i < this.pixels.length; i++) {
+      if (this.pixels[i] !== 0) {
+        this.pixels[i] = 0;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  invert(): boolean {
+    if (this.depth !== 2) return false;
+    for (let i = 0; i < this.pixels.length; i++) {
+      this.pixels[i] = this.pixels[i] === 0 ? 1 : 0;
+    }
+    return true;
+  }
+
+  getCharOrigin(charIndex: number): { x: number; y: number } | null {
+    const info = this.charsetInfo();
+    if (!info) return null;
+    const col = charIndex % info.columns;
+    const row = Math.floor(charIndex / info.columns);
+    return {
+      x: col * info.charWidth,
+      y: row * info.charHeight,
+    };
+  }
+
+  getCharPixel(charIndex: number, lx: number, ly: number): number | null {
+    const orig = this.getCharOrigin(charIndex);
+    const info = this.charsetInfo();
+    if (!orig || !info) return null;
+    if (lx < 0 || lx >= info.charWidth || ly < 0 || ly >= info.charHeight) return null;
+    return this.get(orig.x + lx, orig.y + ly);
+  }
+
+  setCharPixel(charIndex: number, lx: number, ly: number, value: number): boolean {
+    const orig = this.getCharOrigin(charIndex);
+    const info = this.charsetInfo();
+    if (!orig || !info) return false;
+    if (lx < 0 || lx >= info.charWidth || ly < 0 || ly >= info.charHeight) return false;
+    return this.set(orig.x + lx, orig.y + ly, value);
+  }
+
+  clearChar(charIndex: number): boolean {
+    const orig = this.getCharOrigin(charIndex);
+    const info = this.charsetInfo();
+    if (!orig || !info) return false;
+    let changed = false;
+    for (let ly = 0; ly < info.charHeight; ly++) {
+      for (let lx = 0; lx < info.charWidth; lx++) {
+        if (this.set(orig.x + lx, orig.y + ly, 0)) {
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
+  invertChar(charIndex: number): boolean {
+    if (this.depth !== 2) return false;
+    const orig = this.getCharOrigin(charIndex);
+    const info = this.charsetInfo();
+    if (!orig || !info) return false;
+    let changed = false;
+    for (let ly = 0; ly < info.charHeight; ly++) {
+      for (let lx = 0; lx < info.charWidth; lx++) {
+        const cur = this.get(orig.x + lx, orig.y + ly) ?? 0;
+        const next = cur === 0 ? 1 : 0;
+        if (this.set(orig.x + lx, orig.y + ly, next)) {
+          changed = true;
+        }
+      }
+    }
+    return changed;
   }
 
   setDepthAndMode(depth: ColorDepth, pixelMode: PixelMode): void {

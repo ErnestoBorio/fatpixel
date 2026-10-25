@@ -11,6 +11,9 @@
     onExportCsv,
     onUndo,
     onRedo,
+    onClear,
+    onInvert,
+    canInvert = true,
     onNewSprite,
     onNewCharset,
     onZoomIn,
@@ -20,6 +23,7 @@
   } = $props<{
     canUndo?: boolean;
     canRedo?: boolean;
+    canInvert?: boolean;
     showGrid?: boolean;
     onNewProject?: () => void;
     onOpenProject?: () => void;
@@ -29,6 +33,8 @@
     onExportCsv?: () => void;
     onUndo?: () => void;
     onRedo?: () => void;
+    onClear?: () => void;
+    onInvert?: () => void;
     onNewSprite?: () => void;
     onNewCharset?: () => void;
     onZoomIn?: () => void;
@@ -103,6 +109,20 @@
           onclick={() => { onRedo?.(); closeMenu(); }}
         >
           <span>Redo</span> <span class="shortcut">⇧⌘Z</span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button
+          class="dropdown-item"
+          onclick={() => { onClear?.(); closeMenu(); }}
+        >
+          <span>Clear Graphic</span> <span class="shortcut">⌘K</span>
+        </button>
+        <button
+          class="dropdown-item"
+          disabled={!canInvert}
+          onclick={() => { onInvert?.(); closeMenu(); }}
+        >
+          <span>Invert Graphic</span> <span class="shortcut">⌘I</span>
         </button>
       </div>
     {/if}

@@ -16,14 +16,14 @@
 
   function addSprite() {
     const name = `sprite ${project.graphics.length + 1}`;
-    project.graphics.push(Graphic.newSprite(name, 24, 21, 2, 'hires'));
+    project.graphics = [...project.graphics, Graphic.newSprite(name, 24, 21, 2, 'hires')];
     active = project.graphics.length - 1;
     onGraphicChange?.();
   }
 
   function addCharset() {
     const name = `charset ${project.graphics.length + 1}`;
-    project.graphics.push(Graphic.newCharset(name, 8, 8, 256, 16));
+    project.graphics = [...project.graphics, Graphic.newCharset(name, 8, 8, 256, 16)];
     active = project.graphics.length - 1;
     onGraphicChange?.();
   }
@@ -33,14 +33,18 @@
     const json = orig.toJson();
     json.name = `${orig.name} copy`;
     const dup = Graphic.fromJson(json);
-    project.graphics.splice(idx + 1, 0, dup);
+    const next = [...project.graphics];
+    next.splice(idx + 1, 0, dup);
+    project.graphics = next;
     active = idx + 1;
     onGraphicChange?.();
   }
 
   function deleteGraphic(idx: number) {
     if (project.graphics.length <= 1) return;
-    project.graphics.splice(idx, 1);
+    const next = [...project.graphics];
+    next.splice(idx, 1);
+    project.graphics = next;
     if (active >= project.graphics.length) {
       active = project.graphics.length - 1;
     }
@@ -149,8 +153,16 @@
             value={activeGraphic.width}
             class="num-input"
             onchange={(e) => {
-              const val = parseInt((e.target as HTMLInputElement).value, 10);
+              const input = e.target as HTMLInputElement;
+              const val = parseInt(input.value, 10);
               if (val > 0) {
+                if (activeGraphic.hasDrawnPixelsOutside(val, activeGraphic.height)) {
+                  const ok = confirm(`Resizing width from ${activeGraphic.width} to ${val} will discard drawn pixels. Do you want to continue?`);
+                  if (!ok) {
+                    input.value = String(activeGraphic.width);
+                    return;
+                  }
+                }
                 activeGraphic.resize(val, activeGraphic.height);
                 onGraphicChange?.();
               }
@@ -164,8 +176,16 @@
             value={activeGraphic.height}
             class="num-input"
             onchange={(e) => {
-              const val = parseInt((e.target as HTMLInputElement).value, 10);
+              const input = e.target as HTMLInputElement;
+              const val = parseInt(input.value, 10);
               if (val > 0) {
+                if (activeGraphic.hasDrawnPixelsOutside(activeGraphic.width, val)) {
+                  const ok = confirm(`Resizing height from ${activeGraphic.height} to ${val} will discard drawn pixels. Do you want to continue?`);
+                  if (!ok) {
+                    input.value = String(activeGraphic.height);
+                    return;
+                  }
+                }
                 activeGraphic.resize(activeGraphic.width, val);
                 onGraphicChange?.();
               }
@@ -178,6 +198,9 @@
         <button
           class="preset-btn"
           onclick={() => {
+            if (activeGraphic.hasDrawnPixelsOutside(24, 21)) {
+              if (!confirm('Applying 24×21 preset will discard pixels outside this size. Do you want to continue?')) return;
+            }
             activeGraphic.resize(24, 21);
             activeGraphic.setDepthAndMode(2, 'hires');
             onGraphicChange?.();
@@ -189,6 +212,9 @@
         <button
           class="preset-btn"
           onclick={() => {
+            if (activeGraphic.hasDrawnPixelsOutside(12, 21)) {
+              if (!confirm('Applying 12×21 Wide preset will discard pixels outside this size. Do you want to continue?')) return;
+            }
             activeGraphic.resize(12, 21);
             activeGraphic.setDepthAndMode(4, 'wide');
             onGraphicChange?.();

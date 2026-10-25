@@ -84,6 +84,44 @@ export const C64_COLOR_NAMES = [
   'Light Grey',
 ];
 
+export const DREAN_16_COLORS: Rgb[] = [
+  rgbHex(0x000000), // 0: Black
+  rgbHex(0x0000ff), // 1: Blue
+  rgbHex(0xff0000), // 2: Red
+  rgbHex(0xff00ff), // 3: Magenta
+  rgbHex(0x00ff00), // 4: Green
+  rgbHex(0x00ffff), // 5: Cyan
+  rgbHex(0xffff00), // 6: Yellow
+  rgbHex(0xffffff), // 7: White
+  rgbHex(0xffdbac), // 8: Light Skin
+  rgbHex(0x8b4513), // 9: Brown
+  rgbHex(0x008080), // 10: Teal
+  rgbHex(0x8a2be2), // 11: Violet
+  rgbHex(0x87ceeb), // 12: Sky Blue
+  rgbHex(0xff8080), // 13: Light Red
+  rgbHex(0xababab), // 14: Light Gray
+  rgbHex(0x575757), // 15: Dark Gray
+];
+
+export const DREAN_COLOR_NAMES = [
+  'Black',
+  'Blue',
+  'Red',
+  'Magenta',
+  'Green',
+  'Cyan',
+  'Yellow',
+  'White',
+  'Light Skin',
+  'Brown',
+  'Teal',
+  'Violet',
+  'Sky Blue',
+  'Light Red',
+  'Light Gray',
+  'Dark Gray',
+];
+
 export const DEFAULT_PALETTE_ID = 'c64-pepto';
 
 export const BUILTIN_PALETTES: Palette[] = [
@@ -91,6 +129,11 @@ export const BUILTIN_PALETTES: Palette[] = [
     id: DEFAULT_PALETTE_ID,
     name: 'Commodore 64 (Pepto)',
     colors: C64_PEPTO_COLORS,
+  },
+  {
+    id: 'drean-16',
+    name: 'Drean Commodore (16 colors)',
+    colors: DREAN_16_COLORS,
   },
 ];
 
@@ -100,4 +143,11 @@ export function getBuiltinPalette(id: string): Palette | undefined {
 
 export function defaultPalette(): Palette {
   return BUILTIN_PALETTES[0];
+}
+
+export function getColorName(paletteId: string, colorIndex: number): string {
+  if (paletteId === 'drean-16') {
+    return DREAN_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
+  }
+  return C64_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
 }

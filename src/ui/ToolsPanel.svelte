@@ -7,11 +7,17 @@
     brushShape = $bindable('square'),
     brushSize = $bindable(1),
     fillMode = $bindable(false),
+    canInvert = true,
+    onClear,
+    onInvert,
   } = $props<{
     tool: ToolType;
     brushShape: BrushShape;
     brushSize: number;
     fillMode: boolean;
+    canInvert?: boolean;
+    onClear?: () => void;
+    onInvert?: () => void;
   }>();
 
   let activeToolDef = $derived(TOOLS.find((t) => t.id === tool));
@@ -31,6 +37,26 @@
         <span class="tool-shortcut">{t.shortcut}</span>
       </button>
     {/each}
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Actions</div>
+  <div class="action-buttons">
+    <button
+      class="action-btn"
+      onclick={() => onClear?.()}
+      title="Delete / Clear entire graphic (fill with background)"
+    >
+      🗑 Clear Graphic
+    </button>
+    <button
+      class="action-btn"
+      disabled={!canInvert}
+      onclick={() => onInvert?.()}
+      title={canInvert ? 'Invert all monochrome pixels (0 ↔ 1)' : 'Invert is only available for monochrome (1bpp) graphics'}
+    >
+      ◐ Invert Graphic
+    </button>
   </div>
 
   {#if activeToolDef?.usesBrush}
@@ -126,6 +152,32 @@
   .tool-shortcut {
     color: #888;
     font-size: 10px;
+  }
+  .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .action-btn {
+    padding: 5px 8px;
+    background: #282832;
+    border: 1px solid #3d3d4a;
+    color: #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .action-btn:hover:not(:disabled) {
+    background: #353545;
+    color: #fff;
+  }
+  .action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
   .divider {
     height: 1px;
