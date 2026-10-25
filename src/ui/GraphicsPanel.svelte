@@ -261,10 +261,41 @@
       {:else if activeGraphic.isCharset()}
         {@const info = activeGraphic.charsetInfo()}
         {#if info}
-          <div class="info-text">{info.charWidth}×{info.charHeight} px · {info.charCount} chars</div>
-          <div class="info-text">Grid: {info.columns} cols · {activeGraphic.width}×{activeGraphic.height} px</div>
+          <div class="field-row">
+            <span class="label">Mode:</span>
+            <div class="readonly-badge">Hi-Res Charset (1bpp)</div>
+          </div>
+          <div class="field-row">
+            <span class="label">Char:</span>
+            <div class="dim-inputs">
+              <span>W:</span>
+              <input
+                type="number"
+                value={info.charWidth}
+                class="num-input"
+                disabled
+                title="Character width: 8px"
+              />
+              <span>H:</span>
+              <input
+                type="number"
+                value={info.charHeight}
+                class="num-input"
+                disabled
+                title="Character height: 8px"
+              />
+            </div>
+          </div>
+          <div class="presets-row">
+            <span class="charset-info-badge">{info.charCount} chars · {info.columns} cols ({activeGraphic.width}×{activeGraphic.height}px)</span>
+          </div>
         {/if}
       {/if}
+    </div>
+  {:else}
+    <div class="properties-section empty-props">
+      <div class="section-label">Graphic Properties</div>
+      <div class="empty-hint">No graphic selected</div>
     </div>
   {/if}
 
@@ -359,8 +390,13 @@
   .properties-section {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 6px;
+    height: 126px;
+    min-height: 126px;
+    max-height: 126px;
     flex-shrink: 0;
+    box-sizing: border-box;
+    overflow: hidden;
   }
   .divider {
     height: 1px;
@@ -615,8 +651,41 @@
     background: #333342;
     color: #fff;
   }
-  .info-text {
+  .readonly-badge {
+    flex: 1;
+    padding: 3px 6px;
+    background: #1e1e26;
+    border: 1px solid #2e2e38;
+    color: #a0a0b0;
+    border-radius: 3px;
+    font-size: 10px;
+    line-height: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .num-input:disabled {
+    opacity: 0.6;
+    cursor: default;
+    background: #1c1c22;
+    border-color: #2b2b36;
+    color: #888;
+  }
+  .charset-info-badge {
+    font-size: 10px;
+    color: #888;
+    line-height: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .empty-props {
+    justify-content: flex-start;
+  }
+  .empty-hint {
     font-size: 11px;
-    color: #999;
+    color: #666;
+    font-style: italic;
+    padding: 10px 0;
   }
 </style>

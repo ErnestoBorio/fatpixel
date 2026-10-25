@@ -105,4 +105,43 @@ describe('App Graphic actions and mode switching', () => {
     listItems = target.querySelectorAll('.graphic-item');
     expect(listItems.length).toBe(initialCount);
   });
+
+  it('keeps properties panel height and graphics list position stable between sprite and charset', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Add a charset
+    const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
+    expect(addCharsetBtn).toBeDefined();
+    addCharsetBtn?.click();
+    flushSync();
+
+    const listItems = target.querySelectorAll('.graphic-item');
+    expect(listItems.length).toBe(2);
+
+    const propsSection = target.querySelector<HTMLElement>('.properties-section');
+    expect(propsSection).toBeDefined();
+
+    // Initially sprite is item 0, charset is item 1 (active)
+    const selectCharsetBtn = listItems[1].querySelector<HTMLButtonElement>('.select-btn');
+    const selectSpriteBtn = listItems[0].querySelector<HTMLButtonElement>('.select-btn');
+
+    // Select sprite
+    selectSpriteBtn?.click();
+    flushSync();
+    expect(propsSection?.querySelector('.toggle-btn')).not.toBeNull();
+    const spriteHeight = propsSection?.clientHeight ?? 0;
+
+    // Select charset
+    selectCharsetBtn?.click();
+    flushSync();
+    expect(propsSection?.querySelector('.readonly-badge')).not.toBeNull();
+    const charsetHeight = propsSection?.clientHeight ?? 0;
+
+    // Both should maintain the exact same height
+    expect(spriteHeight).toBe(charsetHeight);
+  });
 });
