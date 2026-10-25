@@ -2,12 +2,21 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Build Pixel",
+            "type": "shell",
+            "command": "npm run build",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "group": { "kind": "build", "isDefault": true },
+            "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+        },
+        {
             "label": "Run Pixel (Web Dev)",
             "type": "shell",
             "command": "npm run dev",
             "options": { "cwd": "${workspaceFolder}" },
+            "isBackground": true,
             "problemMatcher": [],
-            "group": { "kind": "build", "isDefault": true },
             "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
         }
     ]
