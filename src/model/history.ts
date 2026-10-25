@@ -5,11 +5,16 @@ export interface ProjectSnapshot {
   activeGraphicIndex: number;
 }
 
-export function cloneProjectSnapshot(s: ProjectSnapshot): ProjectSnapshot {
-  return {
-    graphics: s.graphics.map((g) => g.clone()),
-    activeGraphicIndex: s.activeGraphicIndex,
-  };
+export function cloneProjectSnapshot(s: any): any {
+  if (!s) return s;
+  if (s instanceof Uint8Array) return new Uint8Array(s);
+  if (Array.isArray(s.graphics)) {
+    return {
+      graphics: s.graphics.map((g: Graphic) => (g && typeof g.clone === 'function' ? g.clone() : g)),
+      activeGraphicIndex: s.activeGraphicIndex ?? 0,
+    };
+  }
+  return s;
 }
 
 export class History<T = any> {

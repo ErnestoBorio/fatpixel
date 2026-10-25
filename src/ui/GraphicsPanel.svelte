@@ -6,7 +6,6 @@
 
   let {
     project,
-    palette,
     active = $bindable(0),
     projectRevision = 0,
     onBeforeChange,
@@ -18,7 +17,6 @@
     onReorderGraphics,
   } = $props<{
     project: Project;
-    palette: Palette;
     active: number;
     projectRevision?: number;
     onBeforeChange?: () => void;
@@ -268,7 +266,7 @@
               {#if hasPixels}
                 <canvas
                   class="thumb-canvas"
-                  use:drawThumbnail={{ graphic: g, pal: palette, rev: projectRevision }}
+                  use:drawThumbnail={{ graphic: g, pal: project.paletteOf(g), rev: projectRevision }}
                 ></canvas>
               {:else}
                 <span class="badge {g.isSprite() ? 'sprite-badge' : 'charset-badge'}">

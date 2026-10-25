@@ -89,11 +89,6 @@
   }
 
   function notifyGraphicChange() {
-    if (project.graphics[activeGraphicIndex]) {
-      project.graphics[activeGraphicIndex] = project.graphics[activeGraphicIndex].clone();
-      project.graphics = [...project.graphics];
-    }
-    project = new Project(project.name, project.graphics, project.customPalettes);
     stateVersion++;
     markDirty();
     saveNow();
@@ -621,7 +616,6 @@
         bind:this={canvasRef}
         graphic={activeGraphic}
         palette={activePalette}
-        {history}
         {tool}
         {brushShape}
         {brushSize}
@@ -633,7 +627,10 @@
         {showGrid}
         onSnapshot={pushHistorySnapshot}
         onPixelChange={markDirty}
-        onStrokeEnd={saveNow}
+        onStrokeEnd={() => {
+          stateVersion++;
+          saveNow();
+        }}
         onHoverChange={(pt) => (hoverPt = pt)}
       />
     </main>
@@ -651,7 +648,6 @@
       <div class="panel-divider"></div>
       <GraphicsPanel
         {project}
-        palette={activePalette}
         projectRevision={stateVersion}
         bind:active={activeGraphicIndex}
         onBeforeChange={pushHistorySnapshot}

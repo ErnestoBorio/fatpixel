@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import type { Graphic } from '../model/graphic';
   import type { Palette } from '../model/palette';
-  import type { History } from '../model/history';
   import type { ToolType } from '../tools';
   import {
     linePoints,
@@ -20,7 +19,6 @@
   let {
     graphic,
     palette,
-    history,
     tool,
     brushShape,
     brushSize,
@@ -37,7 +35,6 @@
   } = $props<{
     graphic: Graphic;
     palette: Palette;
-    history?: History;
     tool: ToolType;
     brushShape: BrushShape;
     brushSize: number;
@@ -149,7 +146,7 @@
     const imgH = drawHeight * pxH;
 
     // Account for side panel on the right (charset sheet or sprite preview)
-    const sidePanelW = isCharset ? 310 : 185;
+    const sidePanelW = isCharset ? 310 : 250;
     const availableW = containerElem.clientWidth - sidePanelW;
     offsetX = Math.round((availableW - imgW) / 2) + panOffsetX;
     offsetY = Math.round((containerElem.clientHeight - imgH) / 2) + panOffsetY;
@@ -477,7 +474,6 @@
 
   function pushHistory() {
     onSnapshot?.();
-    history?.pushSnapshot(graphic.clonePixels());
   }
 
   function handleMouseDown(e: MouseEvent) {
@@ -1000,8 +996,8 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    bottom: 12px;
     width: 295px;
+    max-height: calc(100vh - 24px);
     background: rgba(26, 26, 36, 0.92);
     backdrop-filter: blur(6px);
     border: 1px solid #36364a;
@@ -1031,7 +1027,6 @@
     font-family: monospace;
   }
   .sheet-canvas-wrapper {
-    flex: 1;
     overflow: auto;
     display: flex;
     align-items: center;
@@ -1043,7 +1038,7 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    width: 175px;
+    width: 235px;
     max-height: calc(100vh - 80px);
     background: rgba(26, 26, 36, 0.92);
     backdrop-filter: blur(6px);
@@ -1088,10 +1083,13 @@
     border: 1px solid #2b2b3a;
     border-radius: 5px;
     min-height: 36px;
+    overflow: auto;
   }
   .preview-viewport canvas {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.12);
     image-rendering: pixelated;
+    max-width: 100%;
+    height: auto;
   }
 </style>
