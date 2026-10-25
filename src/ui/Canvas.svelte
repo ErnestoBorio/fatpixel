@@ -47,6 +47,8 @@
   let canvasElem: HTMLCanvasElement;
   let containerElem: HTMLDivElement;
   let sheetCanvasElem: HTMLCanvasElement | null = $state(null);
+  let preview1xCanvasElem: HTMLCanvasElement | null = $state(null);
+  let preview2xCanvasElem: HTMLCanvasElement | null = $state(null);
 
   // Charset active character (0..255)
   let activeCharIndex = $state(0);
@@ -111,7 +113,8 @@
     if (!containerElem) return;
     panOffsetX = 0;
     panOffsetY = 0;
-    const cw = containerElem.clientWidth - (isCharset ? 340 : 40);
+    const sidePanelW = isCharset ? 340 : 200;
+    const cw = containerElem.clientWidth - sidePanelW;
     const ch = containerElem.clientHeight - 80;
     const gw = drawWidth * drawAspect;
     const gh = drawHeight;
@@ -124,7 +127,8 @@
         break;
       }
     }
-    zoomIndex = bestIdx;
+    // For sprites, default to a centered zoom (16x default) instead of zooming in excessively
+    zoomIndex = Math.min(bestIdx, isCharset ? 9 : 7);
     recalculateOffsets();
     redraw();
   }
@@ -137,8 +141,9 @@
     const imgW = drawWidth * pxW;
     const imgH = drawHeight * pxH;
 
-    // In charset mode, account for the sheet panel on the right
-    const availableW = isCharset ? (containerElem.clientWidth - 310) : containerElem.clientWidth;
+    // Account for side panel on the right (charset sheet or sprite preview)
+    const sidePanelW = isCharset ? 310 : 185;
+    const availableW = containerElem.clientWidth - sidePanelW;
     offsetX = Math.round((availableW - imgW) / 2) + panOffsetX;
     offsetY = Math.round((containerElem.clientHeight - imgH) / 2) + panOffsetY;
   }
@@ -204,6 +209,8 @@
     redrawMainCanvas();
     if (isCharset) {
       redrawSheetCanvas();
+    } else {
+      redrawSpritePreviews();
     }
   }
 
@@ -356,6 +363,64 @@
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 1;
         ctx.strokeRect(cx - 0.5, cy - 0.5, cellW + 1, cellH + 1);
+      }
+    }
+  }
+
+  function redrawSpritePreviews() {
+    if (isCharset) return;
+
+    const w = graphic.width;
+    const h = graphic.height;
+    const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
+    const bg = slotColor(graphic, palette, 0);
+    const bgCss = `rgb(${bg.r},${bg.g},${bg.b})`;
+
+    // 1x Preview (1:1 pixels)
+    if (preview1xCanvasElem) {
+      const targetW = Math.round(w * aspect);
+      const targetH = h;
+      if (preview1xCanvasElem.width !== targetW || preview1xCanvasElem.height !== targetH) {
+        preview1xCanvasElem.width = targetW;
+        preview1xCanvasElem.height = targetH;
+      }
+      const ctx1 = preview1xCanvasElem.getContext('2d');
+      if (ctx1) {
+        ctx1.fillStyle = bgCss;
+        ctx1.fillRect(0, 0, targetW, targetH);
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const val = graphic.get(x, y);
+            if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+            const col = slotColor(graphic, palette, val);
+            ctx1.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+            ctx1.fillRect(x * aspect, y, aspect, 1);
+          }
+        }
+      }
+    }
+
+    // 2x Preview (2x zoom)
+    if (preview2xCanvasElem) {
+      const targetW = Math.round(w * aspect * 2);
+      const targetH = h * 2;
+      if (preview2xCanvasElem.width !== targetW || preview2xCanvasElem.height !== targetH) {
+        preview2xCanvasElem.width = targetW;
+        preview2xCanvasElem.height = targetH;
+      }
+      const ctx2 = preview2xCanvasElem.getContext('2d');
+      if (ctx2) {
+        ctx2.fillStyle = bgCss;
+        ctx2.fillRect(0, 0, targetW, targetH);
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const val = graphic.get(x, y);
+            if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+            const col = slotColor(graphic, palette, val);
+            ctx2.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+            ctx2.fillRect(x * aspect * 2, y * 2, aspect * 2, 2);
+          }
+        }
       }
     }
   }
@@ -638,6 +703,8 @@
     secondary;
     primary;
     activeCharIndex;
+    preview1xCanvasElem;
+    preview2xCanvasElem;
     recalculateOffsets();
     redraw();
   });
@@ -708,6 +775,39 @@
           onmousemove={handleSheetMouseMove}
           onmouseleave={() => { sheetHoverChar = null; redrawSheetCanvas(); }}
         ></canvas>
+      </div>
+    </div>
+  {/if}
+
+  {#if !isCharset}
+    <!-- Sprite Preview Panel (1x and 2x zoom views) -->
+    <div class="sprite-preview-panel">
+      <div class="sheet-header">
+        <span class="sheet-title">Preview</span>
+        <span class="sheet-meta">{graphic.width}×{graphic.height} {graphic.pixelMode === 'wide' ? 'Multi' : 'Hi-Res'}</span>
+      </div>
+      <div class="sprite-previews-container">
+        <!-- 1x Preview (1:1 pixels) -->
+        <div class="preview-box">
+          <div class="preview-label">
+            <span>1× Actual</span>
+            <span class="preview-dim">{Math.round(graphic.width * drawAspect)}×{graphic.height}</span>
+          </div>
+          <div class="preview-viewport">
+            <canvas bind:this={preview1xCanvasElem}></canvas>
+          </div>
+        </div>
+
+        <!-- 2x Preview (2x zoom) -->
+        <div class="preview-box">
+          <div class="preview-label">
+            <span>2× Zoom</span>
+            <span class="preview-dim">{Math.round(graphic.width * drawAspect * 2)}×{graphic.height * 2}</span>
+          </div>
+          <div class="preview-viewport">
+            <canvas bind:this={preview2xCanvasElem}></canvas>
+          </div>
+        </div>
       </div>
     </div>
   {/if}
@@ -882,5 +982,58 @@
     justify-content: center;
     padding: 8px;
     background: #14141b;
+  }
+  .sprite-preview-panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 165px;
+    background: rgba(26, 26, 36, 0.92);
+    backdrop-filter: blur(6px);
+    border: 1px solid #36364a;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 40;
+  }
+  .sprite-previews-container {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .preview-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .preview-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+  }
+  .preview-dim {
+    font-family: monospace;
+    font-size: 10px;
+    color: #6688aa;
+  }
+  .preview-viewport {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #14141b;
+    border: 1px solid #2b2b3a;
+    border-radius: 5px;
+    min-height: 36px;
+  }
+  .preview-viewport canvas {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    image-rendering: pixelated;
   }
 </style>
