@@ -63,8 +63,6 @@
 
   let currentZoom = $derived(ZOOM_LEVELS[zoomIndex] ?? 16);
 
-  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
-
   function getCurrentSettings(): EditorSettings {
     return {
       activeGraphicIndex,
@@ -81,25 +79,13 @@
   }
 
   function saveNow() {
-    if (autoSaveTimer) {
-      clearTimeout(autoSaveTimer);
-      autoSaveTimer = null;
-    }
     saveAllToStorage(project, getCurrentSettings());
     savedLocally = true;
   }
 
-  function scheduleAutoSave() {
-    savedLocally = false;
-    if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => {
-      saveNow();
-    }, 5000);
-  }
-
   function markDirty() {
     isDirty = true;
-    scheduleAutoSave();
+    saveNow();
   }
 
   function notifyGraphicChange() {
@@ -110,6 +96,7 @@
     project = new Project(project.name, project.graphics, project.customPalettes);
     stateVersion++;
     markDirty();
+    saveNow();
     canvasRef?.recalculateOffsets();
     canvasRef?.redraw();
   }
@@ -133,7 +120,7 @@
   });
 
   $effect(() => {
-    // Track reactive settings changes for localStorage
+    // Save settings instantly whenever any setting changes
     activeGraphicIndex;
     activeCharIndex;
     tool;
@@ -146,7 +133,7 @@
     zoomIndex;
     stateVersion;
 
-    scheduleAutoSave();
+    saveNow();
   });
 
   function handleUndo() {
@@ -522,7 +509,13 @@
     // Initial save to make sure default state is persisted if fresh
     saveNow();
 
+    // Autosave happens each 5 seconds
+    const autoSaveInterval = setInterval(() => {
+      saveNow();
+    }, 5000);
+
     return () => {
+      clearInterval(autoSaveInterval);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
@@ -600,7 +593,7 @@
         bind:zoomIndex
         {showGrid}
         onPixelChange={markDirty}
-        onStrokeEnd={scheduleAutoSave}
+        onStrokeEnd={saveNow}
         onHoverChange={(pt) => (hoverPt = pt)}
       />
     </main>

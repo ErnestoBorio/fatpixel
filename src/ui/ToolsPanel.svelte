@@ -62,19 +62,53 @@
   <div class="section-label">Transform</div>
   <div class="transform-buttons">
     <div class="button-row">
-      <button class="action-btn-half" onclick={() => onRotate?.(false)} title="Rotate 90° Counter-Clockwise (<)">
-        ↺ 90° CCW
+      <button
+        class="transform-btn"
+        onclick={() => onRotate?.(false)}
+        title="Rotate 90° Counter-Clockwise (Shortcut: < or ,)"
+        aria-label="Rotate 90° Counter-Clockwise"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
       </button>
-      <button class="action-btn-half" onclick={() => onRotate?.(true)} title="Rotate 90° Clockwise (>)">
-        ↻ 90° CW
+      <button
+        class="transform-btn"
+        onclick={() => onRotate?.(true)}
+        title="Rotate 90° Clockwise (Shortcut: > or .)"
+        aria-label="Rotate 90° Clockwise"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
+        </svg>
       </button>
     </div>
     <div class="button-row">
-      <button class="action-btn-half" onclick={() => onMirrorH?.()} title="Flip / Mirror Horizontal (H)">
-        ⇆ Mirror H
+      <button
+        class="transform-btn"
+        onclick={() => onMirrorH?.()}
+        title="Flip / Mirror Horizontal (Shortcut: H)"
+        aria-label="Flip / Mirror Horizontal"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="2" x2="12" y2="22" stroke-dasharray="2 2" stroke-width="1.8"/>
+          <path d="M8 7L3 12l5 5V7z" fill="currentColor"/>
+          <path d="M16 7l5 5-5 5V7z"/>
+        </svg>
       </button>
-      <button class="action-btn-half" onclick={() => onMirrorV?.()} title="Flip / Mirror Vertical (V)">
-        ⇅ Mirror V
+      <button
+        class="transform-btn"
+        onclick={() => onMirrorV?.()}
+        title="Flip / Mirror Vertical (Shortcut: V)"
+        aria-label="Flip / Mirror Vertical"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="12" x2="22" y2="12" stroke-dasharray="2 2" stroke-width="1.8"/>
+          <path d="M7 8L12 3l5 5H7z" fill="currentColor"/>
+          <path d="M7 16l5 5 5-5H7z"/>
+        </svg>
       </button>
     </div>
   </div>
@@ -260,21 +294,22 @@
     gap: 3px;
   }
   .shift-btn {
-    padding: 6px 0;
+    height: 28px;
     background: #282832;
     border: 1px solid #3d3d4a;
     color: #ddd;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 13px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
   .shift-btn:hover {
     background: #38384a;
     color: #fff;
-    border-color: #5577aa;
+    border-color: #5588cc;
   }
   .transform-buttons {
     display: flex;
@@ -285,23 +320,26 @@
     display: flex;
     gap: 4px;
   }
-  .action-btn-half {
+  .transform-btn {
     flex: 1;
-    padding: 5px 4px;
+    height: 36px;
     background: #282832;
     border: 1px solid #3d3d4a;
     color: #ddd;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 10px;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
   }
-  .action-btn-half:hover {
+  .transform-btn:hover {
     background: #38384a;
     color: #fff;
-    border-color: #5577aa;
+    border-color: #5588cc;
+  }
+  .transform-btn:active {
+    background: #2b2b38;
+    transform: translateY(1px);
   }
 </style>
