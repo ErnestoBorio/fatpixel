@@ -2,44 +2,38 @@
 
 ## 1. Tech Stack
 
-| Concern | Crate | Notes |
+| Concern | Technology | Notes |
 |---|---|---|
-| App shell / UI | `eframe` + `egui` | Immediate mode, native on macOS/Win/Linux (also builds to WASM later if wanted) |
-| Canvas rendering | `egui::TextureHandle` / `Painter` | Graphic is rendered to an RGBA texture at 1:1, drawn scaled with nearest filtering |
-| Image I/O | `image` | PNG export, importing any image for tracing |
-| Native file dialogs | `rfd` | Open / Save / Import / Export dialogs |
-| Serialization | `serde` + `serde_json` | Project file format |
-| Color matching | `palette` (crate) | Perceptual (CIELAB) nearest-color when importing / remapping |
-| System clipboard (optional) | `arboard` | Paste images from other apps |
-| Config dirs | `directories` | Settings, recent files, autosave location |
-| Errors | `anyhow` / `thiserror` | |
+| Framework & UI | Svelte 5 (runes) | High performance reactive UI, clean components |
+| Language & Tooling | TypeScript + Vite | Instant HMR, static typechecking (`svelte-check`) |
+| Canvas Rendering | HTML5 2D Canvas | Hardware-accelerated pixel-perfect rendering (`image-rendering: pixelated`) |
+| Image I/O | Browser Canvas API & Blob | Native PNG export, CSV export |
+| Serialization | JSON (`.pxp`) | Git-diffable, human-readable project files |
+| Testing | Vitest | Fast unit testing for raster algorithms and data models |
 
 ## 2. Architecture
 
-Clear separation so the core is unit-testable without any UI:
+Clear separation so the core model and raster algorithms are unit-testable without any UI:
 
 ```
 src/
-  main.rs            // eframe bootstrap
-  app.rs             // App state, top-level layout, menus
-  model/             // PURE data, no egui
-    project.rs       // Project { graphics, palettes, settings }
-    graphic.rs       // Graphic { kind: Sprite | Charset, size, depth, pixel_mode, data }
-    palette.rs       // Palette, built-in palettes
-    selection.rs     // Selection mask + floating buffer
-    history.rs       // Undo / redo
-  tools/             // Pencil, Line, Fill, Select... (trait Tool)
-  raster/            // Brushes, Bresenham, flood fill, transforms (flip/rotate)
-  io/
-    project_file.rs  // Load / save
-    import.rs        // Image -> reference layer / palette conversion
-    export_png.rs
-    export_csv.rs
+  main.ts            // Svelte app mount
+  App.svelte         // Top-level state and layout
+  model/             // Pure data model
+    project.ts       // Project { graphics, customPalettes }
+    graphic.ts       // Graphic { kind: Sprite | Charset, dimensions, depth, slots, pixels }
+    palette.ts       // Palettes (C64 Pepto, Drean 16, etc.)
+    history.ts       // Snapshot-based Undo / Redo
+    render.ts        // Slot color mapping
+  raster/            // Bresenham lines, flood fill, shape algorithms, brushes
+  tools/             // Tool definitions (Pencil, Eraser, Line, Rect, Ellipse, Fill, Eyedropper)
   ui/
-    canvas.rs        // Zoom, pan, grid, input -> tool
-    palette_panel.rs
-    graphics_list.rs
-    dialogs/         // New graphic, palette editor, export options...
+    Canvas.svelte    // Centered zoomable viewport, single-char editor, 256-char sheet view
+    MenuBar.svelte   // Project management, export, undo/redo, clear/invert
+    PalettePanel.svelte // Palette selector, color slots (00, 01, 10, 11), 16-color grid
+    GraphicsPanel.svelte// Sprite / Charset list, mode toggles, dimensions, resize alerts
+    ToolsPanel.svelte// Drawing tools, brush shapes/sizes, actions
+    StatusBar.svelte // Cursor coords, zoom level, dirty state
 ```
 
 ### Core data model (key decisions)
