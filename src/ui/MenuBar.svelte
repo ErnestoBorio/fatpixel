@@ -20,6 +20,10 @@
     onZoomOut,
     onFit,
     onToggleGrid,
+    onShift,
+    onRotate,
+    onMirrorH,
+    onMirrorV,
   } = $props<{
     canUndo?: boolean;
     canRedo?: boolean;
@@ -41,6 +45,10 @@
     onZoomOut?: () => void;
     onFit?: () => void;
     onToggleGrid?: () => void;
+    onShift?: (dx: number, dy: number) => void;
+    onRotate?: (clockwise: boolean) => void;
+    onMirrorH?: () => void;
+    onMirrorV?: () => void;
   }>();
 
   let activeMenu = $state<string | null>(null);
@@ -123,6 +131,33 @@
           onclick={() => { onInvert?.(); closeMenu(); }}
         >
           <span>Invert Graphic</span> <span class="shortcut">⌘I</span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" onclick={() => { onShift?.(-1, 0); closeMenu(); }}>
+          <span>Shift Left</span> <span class="shortcut">←</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onShift?.(1, 0); closeMenu(); }}>
+          <span>Shift Right</span> <span class="shortcut">→</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onShift?.(0, -1); closeMenu(); }}>
+          <span>Shift Up</span> <span class="shortcut">↑</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onShift?.(0, 1); closeMenu(); }}>
+          <span>Shift Down</span> <span class="shortcut">↓</span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" onclick={() => { onRotate?.(true); closeMenu(); }}>
+          <span>Rotate 90° CW</span> <span class="shortcut">></span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onRotate?.(false); closeMenu(); }}>
+          <span>Rotate 90° CCW</span> <span class="shortcut">&lt;</span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" onclick={() => { onMirrorH?.(); closeMenu(); }}>
+          <span>Flip Horizontal</span> <span class="shortcut">H</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onMirrorV?.(); closeMenu(); }}>
+          <span>Flip Vertical</span> <span class="shortcut">V</span>
         </button>
       </div>
     {/if}

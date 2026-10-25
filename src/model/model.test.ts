@@ -130,3 +130,93 @@ describe('History Stack', () => {
     expect(redone![0]).toBe(1);
   });
 });
+
+describe('Graphic Transformations & Mode Conversion', () => {
+  it('converts multicolor sprite to hires turning all non-zero pixels to 1', () => {
+    const g = Graphic.newSprite('spr', 4, 4, 4, 'wide');
+    g.set(0, 0, 0); // background
+    g.set(1, 0, 1); // color 1
+    g.set(2, 0, 2); // color 2
+    g.set(3, 0, 3); // color 3
+
+    g.setDepthAndMode(2, 'hires');
+    expect(g.depth).toBe(2);
+    expect(g.pixelMode).toBe('hires');
+    expect(g.get(0, 0)).toBe(0);
+    expect(g.get(1, 0)).toBe(1);
+    expect(g.get(2, 0)).toBe(1);
+    expect(g.get(3, 0)).toBe(1);
+  });
+
+  it('shifts sprite pixels with edge wrap', () => {
+    const g = Graphic.newSprite('spr', 3, 3);
+    g.set(0, 0, 1);
+
+    // Shift right: (0,0) -> (1,0)
+    g.shiftPixels(1, 0);
+    expect(g.get(0, 0)).toBe(0);
+    expect(g.get(1, 0)).toBe(1);
+
+    // Shift left: (1,0) -> (0,0)
+    g.shiftPixels(-1, 0);
+    expect(g.get(0, 0)).toBe(1);
+
+    // Shift left again: wrap to (2,0)
+    g.shiftPixels(-1, 0);
+    expect(g.get(0, 0)).toBe(0);
+    expect(g.get(2, 0)).toBe(1);
+
+    // Shift down: (2,0) -> (2,1)
+    g.shiftPixels(0, 1);
+    expect(g.get(2, 1)).toBe(1);
+
+    // Shift up: (2,1) -> (2,0)
+    g.shiftPixels(0, -1);
+    expect(g.get(2, 0)).toBe(1);
+
+    // Shift up again: wrap to (2,2)
+    g.shiftPixels(0, -1);
+    expect(g.get(2, 2)).toBe(1);
+  });
+
+  it('mirrors horizontally and vertically', () => {
+    const g = Graphic.newSprite('spr', 4, 4);
+    g.set(0, 1, 1);
+
+    g.mirrorH();
+    expect(g.get(0, 1)).toBe(0);
+    expect(g.get(3, 1)).toBe(1);
+
+    g.mirrorV();
+    expect(g.get(3, 1)).toBe(0);
+    expect(g.get(3, 2)).toBe(1);
+  });
+
+  it('rotates square graphics 90 degrees without loss', () => {
+    const g = Graphic.newSprite('spr', 4, 4);
+    g.set(0, 0, 1);
+
+    expect(g.wouldRotationLoseData(true)).toBe(false);
+    expect(g.wouldRotationLoseData(false)).toBe(false);
+
+    // 90° Clockwise: top-left (0,0) -> top-right (3,0)
+    g.rotate(true);
+    expect(g.get(3, 0)).toBe(1);
+    expect(g.get(0, 0)).toBe(0);
+
+    // 90° Counter-Clockwise returns to (0,0)
+    g.rotate(false);
+    expect(g.get(0, 0)).toBe(1);
+  });
+
+  it('detects potential data loss on rotating non-square graphics', () => {
+    const g = Graphic.newSprite('spr', 24, 21);
+    // Pixel inside the 21x21 square safe area
+    g.set(5, 5, 1);
+    expect(g.wouldRotationLoseData(true)).toBe(false);
+
+    // Pixel at column 22 (outside height 21 when rotated CW)
+    g.set(22, 5, 1);
+    expect(g.wouldRotationLoseData(true)).toBe(true);
+  });
+});

@@ -26,6 +26,7 @@
     fillMode,
     primary = $bindable(1),
     secondary = $bindable(0),
+    activeCharIndex = $bindable(0),
     showGrid = true,
     onPixelChange,
     onHoverChange,
@@ -39,6 +40,7 @@
     fillMode: boolean;
     primary?: number;
     secondary?: number;
+    activeCharIndex?: number;
     showGrid?: boolean;
     onPixelChange?: () => void;
     onHoverChange?: (hover: { x: number; y: number } | null) => void;
@@ -51,7 +53,6 @@
   let preview2xCanvasElem: HTMLCanvasElement | null = $state(null);
 
   // Charset active character (0..255)
-  let activeCharIndex = $state(0);
   let sheetHoverChar = $state<number | null>(null);
 
   const ZOOM_LEVELS = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 40, 48, 64];

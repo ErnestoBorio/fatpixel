@@ -10,6 +10,10 @@
     canInvert = true,
     onClear,
     onInvert,
+    onShift,
+    onRotate,
+    onMirrorH,
+    onMirrorV,
   } = $props<{
     tool: ToolType;
     brushShape: BrushShape;
@@ -18,6 +22,10 @@
     canInvert?: boolean;
     onClear?: () => void;
     onInvert?: () => void;
+    onShift?: (dx: number, dy: number) => void;
+    onRotate?: (clockwise: boolean) => void;
+    onMirrorH?: () => void;
+    onMirrorV?: () => void;
   }>();
 
   let activeToolDef = $derived(TOOLS.find((t) => t.id === tool));
@@ -37,6 +45,38 @@
         <span class="tool-shortcut">{t.shortcut}</span>
       </button>
     {/each}
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Shift (Wrap)</div>
+  <div class="shift-grid">
+    <div></div>
+    <button class="shift-btn" onclick={() => onShift?.(0, -1)} title="Shift Up (↑)">▲</button>
+    <div></div>
+    <button class="shift-btn" onclick={() => onShift?.(-1, 0)} title="Shift Left (←)">◀</button>
+    <button class="shift-btn" onclick={() => onShift?.(0, 1)} title="Shift Down (↓)">▼</button>
+    <button class="shift-btn" onclick={() => onShift?.(1, 0)} title="Shift Right (→)">▶</button>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">Transform</div>
+  <div class="transform-buttons">
+    <div class="button-row">
+      <button class="action-btn-half" onclick={() => onRotate?.(false)} title="Rotate 90° Counter-Clockwise (<)">
+        ↺ 90° CCW
+      </button>
+      <button class="action-btn-half" onclick={() => onRotate?.(true)} title="Rotate 90° Clockwise (>)">
+        ↻ 90° CW
+      </button>
+    </div>
+    <div class="button-row">
+      <button class="action-btn-half" onclick={() => onMirrorH?.()} title="Flip / Mirror Horizontal (H)">
+        ⇆ Mirror H
+      </button>
+      <button class="action-btn-half" onclick={() => onMirrorV?.()} title="Flip / Mirror Vertical (V)">
+        ⇅ Mirror V
+      </button>
+    </div>
   </div>
 
   <div class="divider"></div>
@@ -213,5 +253,55 @@
   .slider {
     width: 100%;
     cursor: pointer;
+  }
+  .shift-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+  }
+  .shift-btn {
+    padding: 6px 0;
+    background: #282832;
+    border: 1px solid #3d3d4a;
+    color: #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .shift-btn:hover {
+    background: #38384a;
+    color: #fff;
+    border-color: #5577aa;
+  }
+  .transform-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .button-row {
+    display: flex;
+    gap: 4px;
+  }
+  .action-btn-half {
+    flex: 1;
+    padding: 5px 4px;
+    background: #282832;
+    border: 1px solid #3d3d4a;
+    color: #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .action-btn-half:hover {
+    background: #38384a;
+    color: #fff;
+    border-color: #5577aa;
   }
 </style>

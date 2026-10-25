@@ -16,6 +16,7 @@
 
   let project = $state(new Project());
   let activeGraphicIndex = $state(0);
+  let activeCharIndex = $state(0);
   let history = $state(new History());
   let stateVersion = $state(0);
 
@@ -239,6 +240,43 @@
     }
   }
 
+  function handleShift(dx: number, dy: number) {
+    history.pushSnapshot(activeGraphic.clonePixels());
+    const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
+    if (activeGraphic.shiftPixels(dx, dy, charIdx)) {
+      notifyGraphicChange();
+    }
+  }
+
+  function handleRotate(clockwise: boolean) {
+    const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
+    if (activeGraphic.wouldRotationLoseData(clockwise, charIdx)) {
+      if (!confirm(`Rotating 90° with dimensions ${activeGraphic.width}×${activeGraphic.height} will discard pixels outside the bounds. Do you want to continue?`)) {
+        return;
+      }
+    }
+    history.pushSnapshot(activeGraphic.clonePixels());
+    if (activeGraphic.rotate(clockwise, charIdx)) {
+      notifyGraphicChange();
+    }
+  }
+
+  function handleMirrorH() {
+    history.pushSnapshot(activeGraphic.clonePixels());
+    const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
+    if (activeGraphic.mirrorH(charIdx)) {
+      notifyGraphicChange();
+    }
+  }
+
+  function handleMirrorV() {
+    history.pushSnapshot(activeGraphic.clonePixels());
+    const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
+    if (activeGraphic.mirrorV(charIdx)) {
+      notifyGraphicChange();
+    }
+  }
+
   function handleKeyDown(e: KeyboardEvent) {
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
@@ -268,16 +306,61 @@
         handleInvert();
       }
     } else {
-      switch (e.key.toLowerCase()) {
-        case 'b': tool = 'pencil'; break;
-        case 'e': tool = 'eraser'; break;
-        case 'l': tool = 'line'; break;
-        case 'r': tool = 'rectangle'; break;
-        case 'c': tool = 'ellipse'; break;
-        case 'f': tool = 'fill'; break;
-        case 'i': tool = 'eyedropper'; break;
-        case 'g': showGrid = !showGrid; break;
-        case 'x': {
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          handleShift(-1, 0);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          handleShift(1, 0);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          handleShift(0, -1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          handleShift(0, 1);
+          break;
+        case '<':
+        case ',':
+          e.preventDefault();
+          handleRotate(false);
+          break;
+        case '>':
+        case '.':
+          e.preventDefault();
+          handleRotate(true);
+          break;
+        case 'h':
+        case 'H':
+          e.preventDefault();
+          handleMirrorH();
+          break;
+        case 'v':
+        case 'V':
+          e.preventDefault();
+          handleMirrorV();
+          break;
+        case 'b':
+        case 'B': tool = 'pencil'; break;
+        case 'e':
+        case 'E': tool = 'eraser'; break;
+        case 'l':
+        case 'L': tool = 'line'; break;
+        case 'r':
+        case 'R': tool = 'rectangle'; break;
+        case 'c':
+        case 'C': tool = 'ellipse'; break;
+        case 'f':
+        case 'F': tool = 'fill'; break;
+        case 'i':
+        case 'I': tool = 'eyedropper'; break;
+        case 'g':
+        case 'G': showGrid = !showGrid; break;
+        case 'x':
+        case 'X': {
           if (activeGraphic.depth === 2) {
             // In hi-res mode, slot 0 cannot be selected as primary draw slot
             break;
@@ -333,6 +416,10 @@
     onZoomOut={() => canvasRef?.zoomOut()}
     onFit={() => canvasRef?.fitToWindow()}
     onToggleGrid={() => (showGrid = !showGrid)}
+    onShift={handleShift}
+    onRotate={handleRotate}
+    onMirrorH={handleMirrorH}
+    onMirrorV={handleMirrorV}
   />
 
   <div class="main-workspace">
@@ -346,6 +433,10 @@
         canInvert={activeGraphic.depth === 2}
         onClear={handleClear}
         onInvert={handleInvert}
+        onShift={handleShift}
+        onRotate={handleRotate}
+        onMirrorH={handleMirrorH}
+        onMirrorV={handleMirrorV}
       />
     </aside>
 
@@ -362,6 +453,7 @@
         {fillMode}
         bind:primary
         bind:secondary
+        bind:activeCharIndex
         {showGrid}
         onPixelChange={markDirty}
         onHoverChange={(pt) => (hoverPt = pt)}

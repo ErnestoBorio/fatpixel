@@ -94,6 +94,12 @@
           <button
             class="toggle-btn {activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires' ? 'active' : ''}"
             onclick={() => {
+              if (activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires') return;
+              if (activeGraphic.hasDrawnPixels()) {
+                if (!confirm('Changing to Hi-Res mode will combine all multicolor pixel slots into foreground slot 01 and adjust pixel aspect ratio. Do you want to continue?')) {
+                  return;
+                }
+              }
               activeGraphic.setDepthAndMode(2, 'hires');
               onGraphicChange?.();
             }}
@@ -103,6 +109,12 @@
           <button
             class="toggle-btn {activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide' ? 'active' : ''}"
             onclick={() => {
+              if (activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide') return;
+              if (activeGraphic.hasDrawnPixels()) {
+                if (!confirm('Changing to Multicolor mode will change pixel aspect ratio to 2:1 wide. Do you want to continue?')) {
+                  return;
+                }
+              }
               activeGraphic.setDepthAndMode(4, 'wide');
               onGraphicChange?.();
             }}

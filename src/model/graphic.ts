@@ -272,19 +272,218 @@ export class Graphic {
     return changed;
   }
 
+  hasDrawnPixels(): boolean {
+    for (let i = 0; i < this.pixels.length; i++) {
+      if (this.pixels[i] !== 0) return true;
+    }
+    return false;
+  }
+
   setDepthAndMode(depth: ColorDepth, pixelMode: PixelMode): void {
     if (this.depth === depth && this.pixelMode === pixelMode) return;
+    const oldDepth = this.depth;
     this.depth = depth;
     this.pixelMode = pixelMode;
     while (this.slots.length < depth) {
       this.slots.push(this.slots.length);
     }
     this.slots = this.slots.slice(0, depth);
-    for (let i = 0; i < this.pixels.length; i++) {
-      if (this.pixels[i] >= depth) {
-        this.pixels[i] = 0;
+
+    if (oldDepth === 4 && depth === 2) {
+      // When changing a multi color sprite to a hires one, turn all color slots other than 00 into the new slot 01,
+      // so all opaque pixels in the original sprite are still opaque in the changed sprite.
+      for (let i = 0; i < this.pixels.length; i++) {
+        if (this.pixels[i] > 0) {
+          this.pixels[i] = 1;
+        }
+      }
+    } else {
+      for (let i = 0; i < this.pixels.length; i++) {
+        if (this.pixels[i] >= depth) {
+          this.pixels[i] = 0;
+        }
       }
     }
+  }
+
+  shiftPixels(dx: number, dy: number, charIndex?: number): boolean {
+    if (this.isCharset() && charIndex !== undefined) {
+      const info = this.charsetInfo();
+      const orig = this.getCharOrigin(charIndex);
+      if (!info || !orig) return false;
+      const cw = info.charWidth;
+      const ch = info.charHeight;
+      const temp = new Uint8Array(cw * ch);
+      for (let ly = 0; ly < ch; ly++) {
+        for (let lx = 0; lx < cw; lx++) {
+          temp[ly * cw + lx] = this.getCharPixel(charIndex, lx, ly) ?? 0;
+        }
+      }
+      for (let ly = 0; ly < ch; ly++) {
+        for (let lx = 0; lx < cw; lx++) {
+          const srcX = (lx - dx + cw) % cw;
+          const srcY = (ly - dy + ch) % ch;
+          this.setCharPixel(charIndex, lx, ly, temp[srcY * cw + srcX]);
+        }
+      }
+      return true;
+    }
+
+    const w = this.width;
+    const h = this.height;
+    const temp = new Uint8Array(this.pixels);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const srcX = (x - dx + w) % w;
+        const srcY = (y - dy + h) % h;
+        this.pixels[y * w + x] = temp[srcY * w + srcX];
+      }
+    }
+    return true;
+  }
+
+  mirrorH(charIndex?: number): boolean {
+    if (this.isCharset() && charIndex !== undefined) {
+      const info = this.charsetInfo();
+      const orig = this.getCharOrigin(charIndex);
+      if (!info || !orig) return false;
+      const cw = info.charWidth;
+      const ch = info.charHeight;
+      for (let ly = 0; ly < ch; ly++) {
+        for (let lx = 0; lx < Math.floor(cw / 2); lx++) {
+          const oppX = cw - 1 - lx;
+          const p1 = this.getCharPixel(charIndex, lx, ly) ?? 0;
+          const p2 = this.getCharPixel(charIndex, oppX, ly) ?? 0;
+          this.setCharPixel(charIndex, lx, ly, p2);
+          this.setCharPixel(charIndex, oppX, ly, p1);
+        }
+      }
+      return true;
+    }
+
+    const w = this.width;
+    const h = this.height;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < Math.floor(w / 2); x++) {
+        const oppX = w - 1 - x;
+        const idx1 = y * w + x;
+        const idx2 = y * w + oppX;
+        const tmp = this.pixels[idx1];
+        this.pixels[idx1] = this.pixels[idx2];
+        this.pixels[idx2] = tmp;
+      }
+    }
+    return true;
+  }
+
+  mirrorV(charIndex?: number): boolean {
+    if (this.isCharset() && charIndex !== undefined) {
+      const info = this.charsetInfo();
+      const orig = this.getCharOrigin(charIndex);
+      if (!info || !orig) return false;
+      const cw = info.charWidth;
+      const ch = info.charHeight;
+      for (let lx = 0; lx < cw; lx++) {
+        for (let ly = 0; ly < Math.floor(ch / 2); ly++) {
+          const oppY = ch - 1 - ly;
+          const p1 = this.getCharPixel(charIndex, lx, ly) ?? 0;
+          const p2 = this.getCharPixel(charIndex, lx, oppY) ?? 0;
+          this.setCharPixel(charIndex, lx, ly, p2);
+          this.setCharPixel(charIndex, lx, oppY, p1);
+        }
+      }
+      return true;
+    }
+
+    const w = this.width;
+    const h = this.height;
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < Math.floor(h / 2); y++) {
+        const oppY = h - 1 - y;
+        const idx1 = y * w + x;
+        const idx2 = oppY * w + x;
+        const tmp = this.pixels[idx1];
+        this.pixels[idx1] = this.pixels[idx2];
+        this.pixels[idx2] = tmp;
+      }
+    }
+    return true;
+  }
+
+  wouldRotationLoseData(clockwise: boolean, charIndex?: number): boolean {
+    if (this.isCharset() && charIndex !== undefined) {
+      const info = this.charsetInfo();
+      if (info && info.charWidth === info.charHeight) return false;
+    }
+    if (this.width === this.height) return false;
+
+    const w = this.width;
+    const h = this.height;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const val = this.pixels[y * w + x];
+        if (val !== 0) {
+          const targetX = clockwise ? h - 1 - y : y;
+          const targetY = clockwise ? x : w - 1 - x;
+          if (targetX < 0 || targetX >= w || targetY < 0 || targetY >= h) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  rotate(clockwise: boolean, charIndex?: number): boolean {
+    if (this.isCharset() && charIndex !== undefined) {
+      const info = this.charsetInfo();
+      const orig = this.getCharOrigin(charIndex);
+      if (!info || !orig) return false;
+      const cw = info.charWidth;
+      const ch = info.charHeight;
+      const temp = new Uint8Array(cw * ch);
+      for (let ly = 0; ly < ch; ly++) {
+        for (let lx = 0; lx < cw; lx++) {
+          temp[ly * cw + lx] = this.getCharPixel(charIndex, lx, ly) ?? 0;
+        }
+      }
+      for (let ly = 0; ly < ch; ly++) {
+        for (let lx = 0; lx < cw; lx++) {
+          this.setCharPixel(charIndex, lx, ly, 0);
+        }
+      }
+      for (let ly = 0; ly < ch; ly++) {
+        for (let lx = 0; lx < cw; lx++) {
+          const val = temp[ly * cw + lx];
+          if (val !== 0) {
+            const targetX = clockwise ? ch - 1 - ly : ly;
+            const targetY = clockwise ? lx : cw - 1 - lx;
+            if (targetX >= 0 && targetX < cw && targetY >= 0 && targetY < ch) {
+              this.setCharPixel(charIndex, targetX, targetY, val);
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    const w = this.width;
+    const h = this.height;
+    const temp = new Uint8Array(this.pixels);
+    this.pixels.fill(0);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const val = temp[y * w + x];
+        if (val !== 0) {
+          const targetX = clockwise ? h - 1 - y : y;
+          const targetY = clockwise ? x : w - 1 - x;
+          if (targetX >= 0 && targetX < w && targetY >= 0 && targetY < h) {
+            this.pixels[targetY * w + targetX] = val;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   clone(): Graphic {
