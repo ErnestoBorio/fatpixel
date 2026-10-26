@@ -217,15 +217,17 @@
 
   function exportPng() {
     const canvas = document.createElement('canvas');
-    canvas.width = activeGraphic.width;
-    canvas.height = activeGraphic.height;
+    const w = activeGraphic.sheetWidth();
+    const h = activeGraphic.sheetHeight();
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    for (let y = 0; y < activeGraphic.height; y++) {
-      for (let x = 0; x < activeGraphic.width; x++) {
-        const val = activeGraphic.pixels[y * activeGraphic.width + x];
-        if (activeGraphic.transparentSlot === val) continue;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const val = activeGraphic.get(x, y);
+        if (val === null || activeGraphic.transparentSlot === val) continue;
         const col = activePalette.colors[activeGraphic.slots[val] ?? 0];
         ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
         ctx.fillRect(x, y, 1, 1);
@@ -239,11 +241,13 @@
   }
 
   function exportCsv() {
+    const w = activeGraphic.sheetWidth();
+    const h = activeGraphic.sheetHeight();
     let csv = '';
-    for (let y = 0; y < activeGraphic.height; y++) {
+    for (let y = 0; y < h; y++) {
       const row: number[] = [];
-      for (let x = 0; x < activeGraphic.width; x++) {
-        row.push(activeGraphic.pixels[y * activeGraphic.width + x]);
+      for (let x = 0; x < w; x++) {
+        row.push(activeGraphic.get(x, y) ?? 0);
       }
       csv += row.join(',') + '\n';
     }
@@ -674,6 +678,7 @@
     zoom={currentZoom}
     {isDirty}
     {savedLocally}
+    {activeCharIndex}
   />
 </div>
 

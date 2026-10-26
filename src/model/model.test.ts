@@ -46,8 +46,10 @@ describe('Graphic Model', () => {
   it('creates charset with 256 8x8 characters', () => {
     const c = Graphic.newCharset('font 1');
     expect(c.isCharset()).toBe(true);
-    expect(c.width).toBe(128); // 16 cols * 8
-    expect(c.height).toBe(128); // 16 rows * 8
+    expect(c.width).toBe(8); // single character width
+    expect(c.height).toBe(8); // single character height
+    expect(c.sheetWidth()).toBe(128); // 16 cols * 8
+    expect(c.sheetHeight()).toBe(128); // 16 rows * 8
   });
 
   it('detects drawn pixels outside new dimensions', () => {
@@ -104,13 +106,57 @@ describe('Project Serialization', () => {
     expect(Array.isArray(data.graphics[1].pixels)).toBe(true);
     expect(data.graphics[1].pixels.length).toBe(256);
     expect(typeof data.graphics[1].pixels[0]).toBe('string');
+    // Charset width and height in pxp format should be character dimensions (8x8)
+    expect(data.graphics[1].width).toBe(8);
+    expect(data.graphics[1].height).toBe(8);
+    expect(data.graphics[1].char_width).toBe(8);
+    expect(data.graphics[1].char_height).toBe(8);
 
     const loaded = Project.fromJson(json);
     expect(loaded.name).toBe('Test Game');
     expect(loaded.graphics.length).toBe(2);
     expect(loaded.graphics[0].get(1, 1)).toBe(1);
     expect(loaded.graphics[1].isCharset()).toBe(true);
+    expect(loaded.graphics[1].width).toBe(8);
+    expect(loaded.graphics[1].height).toBe(8);
+    expect(loaded.graphics[1].sheetWidth()).toBe(128);
+    expect(loaded.graphics[1].sheetHeight()).toBe(128);
     expect(loaded.graphics[1].getCharPixel(0, 3, 3)).toBe(1);
+  });
+
+  it('deserializes legacy charset pxp files with 128x128 dimensions', () => {
+    const legacyJson = JSON.stringify({
+      format: 'pixel_project',
+      version: 1,
+      name: 'Legacy Project',
+      palettes: [],
+      graphics: [
+        {
+          name: 'Old Charset',
+          kind: 'charset',
+          width: 128,
+          height: 128,
+          char_width: 8,
+          char_height: 8,
+          char_count: 256,
+          columns: 16,
+          depth: 2,
+          pixel_mode: 'hires',
+          palette: 'builtin:c64_pepto',
+          slots: [0, 1],
+          transparent_slot: null,
+          pixels: Array(256).fill('0'.repeat(64)),
+        },
+      ],
+    });
+
+    const loaded = Project.fromJson(legacyJson);
+    const g = loaded.graphics[0];
+    expect(g.isCharset()).toBe(true);
+    expect(g.width).toBe(8);
+    expect(g.height).toBe(8);
+    expect(g.sheetWidth()).toBe(128);
+    expect(g.sheetHeight()).toBe(128);
   });
 });
 

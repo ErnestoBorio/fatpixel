@@ -55,8 +55,14 @@
 
   let activeMenu = $state<string | null>(null);
 
-  function toggleMenu(menu: string) {
+  function handleMenuClick(menu: string) {
     activeMenu = activeMenu === menu ? null : menu;
+  }
+
+  function handleMenuMouseEnter(menu: string) {
+    if (activeMenu !== null) {
+      activeMenu = menu;
+    }
   }
 
   function closeMenu() {
@@ -64,16 +70,23 @@
   }
 </script>
 
-<svelte:window onclick={(e) => {
-  if (!(e.target as HTMLElement).closest('.menu-bar')) {
-    closeMenu();
-  }
-}} />
+<svelte:window
+  onclick={(e) => {
+    if (!(e.target as HTMLElement).closest('.menu-bar')) {
+      closeMenu();
+    }
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') {
+      closeMenu();
+    }
+  }}
+/>
 
-<div class="menu-bar" role="menubar" tabindex="0" onmouseleave={closeMenu}>
+<div class="menu-bar" role="menubar" tabindex="0">
   <div class="menu-left">
-    <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'file')}>
-    <button class="menu-btn {activeMenu === 'file' ? 'active' : ''}" onclick={() => toggleMenu('file')}>
+    <div class="menu-item" role="none" onmouseenter={() => handleMenuMouseEnter('file')}>
+    <button class="menu-btn {activeMenu === 'file' ? 'active' : ''}" onclick={() => handleMenuClick('file')}>
       File
     </button>
     {#if activeMenu === 'file'}
@@ -101,8 +114,8 @@
     {/if}
   </div>
 
-  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'edit')}>
-    <button class="menu-btn {activeMenu === 'edit' ? 'active' : ''}" onclick={() => toggleMenu('edit')}>
+  <div class="menu-item" role="none" onmouseenter={() => handleMenuMouseEnter('edit')}>
+    <button class="menu-btn {activeMenu === 'edit' ? 'active' : ''}" onclick={() => handleMenuClick('edit')}>
       Edit
     </button>
     {#if activeMenu === 'edit'}
@@ -166,8 +179,8 @@
     {/if}
   </div>
 
-  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'graphic')}>
-    <button class="menu-btn {activeMenu === 'graphic' ? 'active' : ''}" onclick={() => toggleMenu('graphic')}>
+  <div class="menu-item" role="none" onmouseenter={() => handleMenuMouseEnter('graphic')}>
+    <button class="menu-btn {activeMenu === 'graphic' ? 'active' : ''}" onclick={() => handleMenuClick('graphic')}>
       Graphic
     </button>
     {#if activeMenu === 'graphic'}
@@ -182,8 +195,8 @@
     {/if}
   </div>
 
-  <div class="menu-item" role="none" onmouseenter={() => (activeMenu = 'view')}>
-    <button class="menu-btn {activeMenu === 'view' ? 'active' : ''}" onclick={() => toggleMenu('view')}>
+  <div class="menu-item" role="none" onmouseenter={() => handleMenuMouseEnter('view')}>
+    <button class="menu-btn {activeMenu === 'view' ? 'active' : ''}" onclick={() => handleMenuClick('view')}>
       View
     </button>
     {#if activeMenu === 'view'}

@@ -111,9 +111,34 @@
       const bg = slotColor(graphic, pal, 0);
       ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
       ctx.fillRect(0, 0, targetW, targetH);
+      let displayChar = 0;
+      if (graphic.isCharset()) {
+        const info = graphic.charsetInfo();
+        const totalChars = info?.charCount ?? 256;
+        for (let c = 0; c < totalChars; c++) {
+          let hasPx = false;
+          for (let cy = 0; cy < h; cy++) {
+            for (let cx = 0; cx < w; cx++) {
+              const val = graphic.getCharPixel(c, cx, cy);
+              if (val !== null && val !== 0 && graphic.transparentSlot !== val) {
+                hasPx = true;
+                break;
+              }
+            }
+            if (hasPx) break;
+          }
+          if (hasPx) {
+            displayChar = c;
+            break;
+          }
+        }
+      }
+
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
-          const val = graphic.get(x, y);
+          const val = graphic.isCharset()
+            ? graphic.getCharPixel(displayChar, x, y)
+            : graphic.get(x, y);
           if (val === null || val === 0 || graphic.transparentSlot === val) continue;
           const col = slotColor(graphic, pal, val);
           ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
@@ -136,7 +161,7 @@
   function graphicSubtext(g: Graphic, _rev: number): string {
     return g.isSprite()
       ? `${g.width}×${g.height} · ${g.pixelMode === 'wide' ? 'Multi' : 'Hi-Res'}`
-      : `${g.charsetInfo()?.charCount ?? 256} chars`;
+      : `${g.charsetInfo()?.charCount ?? 256} chars (${g.width}×${g.height})`;
   }
 </script>
 
@@ -287,7 +312,7 @@
             </div>
           </div>
           <div class="presets-row">
-            <span class="charset-info-badge">{info.charCount} chars · {info.columns} cols ({activeGraphic.width}×{activeGraphic.height}px)</span>
+            <span class="charset-info-badge">{info.charCount} chars · {info.columns} cols · {activeGraphic.sheetWidth()}×{activeGraphic.sheetHeight()} sheet</span>
           </div>
         {/if}
       {/if}

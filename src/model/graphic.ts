@@ -68,7 +68,13 @@ export class Graphic {
     this.palette = palette;
     this.slots = slots;
     this.transparentSlot = transparentSlot;
-    this.pixels = pixels ?? new Uint8Array(width * height);
+
+    const totalPixels =
+      kind.kind === 'charset'
+        ? kind.columns * width * Math.ceil(kind.charCount / kind.columns) * height
+        : width * height;
+
+    this.pixels = pixels ?? new Uint8Array(totalPixels);
   }
 
   static newSprite(
@@ -99,14 +105,11 @@ export class Graphic {
     charCount = 256,
     columns = 16
   ): Graphic {
-    const rows = Math.ceil(charCount / columns);
-    const width = columns * charWidth;
-    const height = rows * charHeight;
     return new Graphic(
       name,
       { kind: 'charset', charWidth, charHeight, charCount, columns },
-      width,
-      height,
+      charWidth,
+      charHeight,
       2,
       'hires',
       { kind: 'builtin', id: DEFAULT_PALETTE_ID },
@@ -123,11 +126,26 @@ export class Graphic {
     return this.kind.kind === 'charset';
   }
 
+  sheetWidth(): number {
+    if (this.kind.kind === 'charset') {
+      return this.kind.columns * this.width;
+    }
+    return this.width;
+  }
+
+  sheetHeight(): number {
+    if (this.kind.kind === 'charset') {
+      const rows = Math.ceil(this.kind.charCount / this.kind.columns);
+      return rows * this.height;
+    }
+    return this.height;
+  }
+
   charsetInfo(): { charWidth: number; charHeight: number; charCount: number; columns: number } | null {
     if (this.kind.kind === 'charset') {
       return {
-        charWidth: this.kind.charWidth,
-        charHeight: this.kind.charHeight,
+        charWidth: this.width,
+        charHeight: this.height,
         charCount: this.kind.charCount,
         columns: this.kind.columns,
       };
@@ -136,17 +154,20 @@ export class Graphic {
   }
 
   inBounds(x: number, y: number): boolean {
-    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+    const w = this.sheetWidth();
+    const h = this.sheetHeight();
+    return x >= 0 && y >= 0 && x < w && y < h;
   }
 
   get(x: number, y: number): number | null {
     if (!this.inBounds(x, y)) return null;
-    return this.pixels[y * this.width + x];
+    return this.pixels[y * this.sheetWidth() + x];
   }
 
   set(x: number, y: number, value: number): boolean {
     if (!this.inBounds(x, y)) return false;
-    const idx = y * this.width + x;
+    const stride = this.sheetWidth();
+    const idx = y * stride + x;
     const changed = this.pixels[idx] !== value;
     this.pixels[idx] = value;
     return changed;
@@ -157,13 +178,15 @@ export class Graphic {
   }
 
   replacePixels(newPixels: Uint8Array): void {
-    if (newPixels.length !== this.width * this.height) {
+    const expected = this.sheetWidth() * this.sheetHeight();
+    if (newPixels.length !== expected) {
       throw new Error('Pixel size mismatch');
     }
     this.pixels = new Uint8Array(newPixels);
   }
 
   hasDrawnPixelsOutside(newWidth: number, newHeight: number): boolean {
+    if (this.isCharset()) return false;
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         if (x >= newWidth || y >= newHeight) {
@@ -177,6 +200,7 @@ export class Graphic {
   }
 
   resize(newWidth: number, newHeight: number): void {
+    if (this.isCharset()) return;
     if (newWidth <= 0 || newHeight <= 0 || (newWidth === this.width && newHeight === this.height)) {
       return;
     }
@@ -218,8 +242,8 @@ export class Graphic {
     const col = charIndex % info.columns;
     const row = Math.floor(charIndex / info.columns);
     return {
-      x: col * info.charWidth,
-      y: row * info.charHeight,
+      x: col * this.width,
+      y: row * this.height,
     };
   }
 
@@ -227,7 +251,7 @@ export class Graphic {
     const orig = this.getCharOrigin(charIndex);
     const info = this.charsetInfo();
     if (!orig || !info) return null;
-    if (lx < 0 || lx >= info.charWidth || ly < 0 || ly >= info.charHeight) return null;
+    if (lx < 0 || lx >= this.width || ly < 0 || ly >= this.height) return null;
     return this.get(orig.x + lx, orig.y + ly);
   }
 
@@ -235,7 +259,7 @@ export class Graphic {
     const orig = this.getCharOrigin(charIndex);
     const info = this.charsetInfo();
     if (!orig || !info) return false;
-    if (lx < 0 || lx >= info.charWidth || ly < 0 || ly >= info.charHeight) return false;
+    if (lx < 0 || lx >= this.width || ly < 0 || ly >= this.height) return false;
     return this.set(orig.x + lx, orig.y + ly, value);
   }
 
@@ -244,8 +268,8 @@ export class Graphic {
     const info = this.charsetInfo();
     if (!orig || !info) return false;
     let changed = false;
-    for (let ly = 0; ly < info.charHeight; ly++) {
-      for (let lx = 0; lx < info.charWidth; lx++) {
+    for (let ly = 0; ly < this.height; ly++) {
+      for (let lx = 0; lx < this.width; lx++) {
         if (this.set(orig.x + lx, orig.y + ly, 0)) {
           changed = true;
         }
@@ -260,8 +284,8 @@ export class Graphic {
     const info = this.charsetInfo();
     if (!orig || !info) return false;
     let changed = false;
-    for (let ly = 0; ly < info.charHeight; ly++) {
-      for (let lx = 0; lx < info.charWidth; lx++) {
+    for (let ly = 0; ly < this.height; ly++) {
+      for (let lx = 0; lx < this.width; lx++) {
         const cur = this.get(orig.x + lx, orig.y + ly) ?? 0;
         const next = cur === 0 ? 1 : 0;
         if (this.set(orig.x + lx, orig.y + ly, next)) {
@@ -308,11 +332,10 @@ export class Graphic {
 
   shiftPixels(dx: number, dy: number, charIndex?: number): boolean {
     if (this.isCharset() && charIndex !== undefined) {
-      const info = this.charsetInfo();
       const orig = this.getCharOrigin(charIndex);
-      if (!info || !orig) return false;
-      const cw = info.charWidth;
-      const ch = info.charHeight;
+      if (!orig) return false;
+      const cw = this.width;
+      const ch = this.height;
       const temp = new Uint8Array(cw * ch);
       for (let ly = 0; ly < ch; ly++) {
         for (let lx = 0; lx < cw; lx++) {
@@ -329,8 +352,8 @@ export class Graphic {
       return true;
     }
 
-    const w = this.width;
-    const h = this.height;
+    const w = this.sheetWidth();
+    const h = this.sheetHeight();
     const temp = new Uint8Array(this.pixels);
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
@@ -344,11 +367,10 @@ export class Graphic {
 
   mirrorH(charIndex?: number): boolean {
     if (this.isCharset() && charIndex !== undefined) {
-      const info = this.charsetInfo();
       const orig = this.getCharOrigin(charIndex);
-      if (!info || !orig) return false;
-      const cw = info.charWidth;
-      const ch = info.charHeight;
+      if (!orig) return false;
+      const cw = this.width;
+      const ch = this.height;
       for (let ly = 0; ly < ch; ly++) {
         for (let lx = 0; lx < Math.floor(cw / 2); lx++) {
           const oppX = cw - 1 - lx;
@@ -361,8 +383,8 @@ export class Graphic {
       return true;
     }
 
-    const w = this.width;
-    const h = this.height;
+    const w = this.sheetWidth();
+    const h = this.sheetHeight();
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < Math.floor(w / 2); x++) {
         const oppX = w - 1 - x;
@@ -378,11 +400,10 @@ export class Graphic {
 
   mirrorV(charIndex?: number): boolean {
     if (this.isCharset() && charIndex !== undefined) {
-      const info = this.charsetInfo();
       const orig = this.getCharOrigin(charIndex);
-      if (!info || !orig) return false;
-      const cw = info.charWidth;
-      const ch = info.charHeight;
+      if (!orig) return false;
+      const cw = this.width;
+      const ch = this.height;
       for (let lx = 0; lx < cw; lx++) {
         for (let ly = 0; ly < Math.floor(ch / 2); ly++) {
           const oppY = ch - 1 - ly;
@@ -395,8 +416,8 @@ export class Graphic {
       return true;
     }
 
-    const w = this.width;
-    const h = this.height;
+    const w = this.sheetWidth();
+    const h = this.sheetHeight();
     for (let x = 0; x < w; x++) {
       for (let y = 0; y < Math.floor(h / 2); y++) {
         const oppY = h - 1 - y;
@@ -412,13 +433,15 @@ export class Graphic {
 
   wouldRotationLoseData(clockwise: boolean, charIndex?: number): boolean {
     if (this.isCharset() && charIndex !== undefined) {
-      const info = this.charsetInfo();
-      if (info && info.charWidth === info.charHeight) return false;
+      if (this.width === this.height) return false;
+    } else if (this.isCharset()) {
+      if (this.sheetWidth() === this.sheetHeight()) return false;
+    } else if (this.width === this.height) {
+      return false;
     }
-    if (this.width === this.height) return false;
 
-    const w = this.width;
-    const h = this.height;
+    const w = this.sheetWidth();
+    const h = this.sheetHeight();
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const val = this.pixels[y * w + x];
@@ -436,11 +459,10 @@ export class Graphic {
 
   rotate(clockwise: boolean, charIndex?: number): boolean {
     if (this.isCharset() && charIndex !== undefined) {
-      const info = this.charsetInfo();
       const orig = this.getCharOrigin(charIndex);
-      if (!info || !orig) return false;
-      const cw = info.charWidth;
-      const ch = info.charHeight;
+      if (!orig) return false;
+      const cw = this.width;
+      const ch = this.height;
       const temp = new Uint8Array(cw * ch);
       for (let ly = 0; ly < ch; ly++) {
         for (let lx = 0; lx < cw; lx++) {
@@ -467,8 +489,8 @@ export class Graphic {
       return true;
     }
 
-    const w = this.width;
-    const h = this.height;
+    const w = this.sheetWidth();
+    const h = this.sheetHeight();
     const temp = new Uint8Array(this.pixels);
     this.pixels.fill(0);
     for (let y = 0; y < h; y++) {
@@ -497,7 +519,7 @@ export class Graphic {
       { ...this.palette },
       [...this.slots],
       this.transparentSlot,
-      this.pixels
+      this.clonePixels()
     );
   }
 
@@ -516,16 +538,16 @@ export class Graphic {
     };
 
     if (this.kind.kind === 'charset') {
-      base.char_width = this.kind.charWidth;
-      base.char_height = this.kind.charHeight;
+      base.char_width = this.width;
+      base.char_height = this.height;
       base.char_count = this.kind.charCount;
       base.columns = this.kind.columns;
 
       const charStrings: string[] = [];
       for (let c = 0; c < this.kind.charCount; c++) {
         let str = '';
-        for (let ly = 0; ly < this.kind.charHeight; ly++) {
-          for (let lx = 0; lx < this.kind.charWidth; lx++) {
+        for (let ly = 0; ly < this.height; ly++) {
+          for (let lx = 0; lx < this.width; lx++) {
             str += (this.getCharPixel(c, lx, ly) ?? 0).toString(16);
           }
         }
@@ -543,16 +565,27 @@ export class Graphic {
   }
 
   static fromJson(json: GraphicJson): Graphic {
-    const kind: GraphicKind =
-      json.kind === 'charset'
-        ? {
-            kind: 'charset',
-            charWidth: json.char_width ?? 8,
-            charHeight: json.char_height ?? 8,
-            charCount: json.char_count ?? 256,
-            columns: json.columns ?? 16,
-          }
-        : { kind: 'sprite' };
+    let kind: GraphicKind;
+    let width = json.width;
+    let height = json.height;
+
+    if (json.kind === 'charset') {
+      const charWidth = json.char_width ?? (json.width > 32 ? 8 : json.width) ?? 8;
+      const charHeight = json.char_height ?? (json.height > 32 ? 8 : json.height) ?? 8;
+      const charCount = json.char_count ?? 256;
+      const columns = json.columns ?? 16;
+      kind = {
+        kind: 'charset',
+        charWidth,
+        charHeight,
+        charCount,
+        columns,
+      };
+      width = charWidth;
+      height = charHeight;
+    } else {
+      kind = { kind: 'sprite' };
+    }
 
     const paletteParts = json.palette.split(':');
     const paletteRef: PaletteRef =
@@ -565,8 +598,8 @@ export class Graphic {
     const graphic = new Graphic(
       json.name,
       kind,
-      json.width,
-      json.height,
+      width,
+      height,
       parsedDepth,
       pixelMode,
       paletteRef,
@@ -585,9 +618,9 @@ export class Graphic {
           const info = graphic.charsetInfo()!;
           for (let c = 0; c < charStrs.length && c < info.charCount; c++) {
             const str = charStrs[c];
-            for (let ly = 0; ly < info.charHeight; ly++) {
-              for (let lx = 0; lx < info.charWidth; lx++) {
-                const idx = ly * info.charWidth + lx;
+            for (let ly = 0; ly < graphic.height; ly++) {
+              for (let lx = 0; lx < graphic.width; lx++) {
+                const idx = ly * graphic.width + lx;
                 if (idx < str.length) {
                   graphic.setCharPixel(c, lx, ly, parseInt(str[idx], 16) || 0);
                 }

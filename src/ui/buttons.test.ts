@@ -143,5 +143,76 @@ describe('App Graphic actions and mode switching', () => {
 
     // Both should maintain the exact same height
     expect(spriteHeight).toBe(charsetHeight);
+
+    // Active charset status bar should show 8x8 dimensions
+    const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
+    expect(statusDim?.textContent).toContain('8 × 8 (Hi-Res Charset)');
+
+    // Properties badge should show 128x128 sheet
+    const charsetBadge = target.querySelector<HTMLElement>('.charset-info-badge');
+    expect(charsetBadge?.textContent).toContain('256 chars · 16 cols · 128×128 sheet');
+  });
+
+  it('manages menu bar click-to-open and hover-when-open submenus', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const menuItems = target.querySelectorAll<HTMLElement>('.menu-bar .menu-item');
+    expect(menuItems.length).toBeGreaterThanOrEqual(4);
+
+    const fileItem = menuItems[0];
+    const editItem = menuItems[1];
+    const viewItem = menuItems[3];
+
+    const fileBtn = fileItem.querySelector<HTMLButtonElement>('.menu-btn');
+
+    // 1. Hovering before click does NOT show dropdown
+    fileItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    flushSync();
+    expect(target.querySelector('.dropdown')).toBeNull();
+
+    editItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    flushSync();
+    expect(target.querySelector('.dropdown')).toBeNull();
+
+    // 2. Clicking File opens its dropdown
+    fileBtn?.click();
+    flushSync();
+    let dropdown = target.querySelector('.dropdown');
+    expect(dropdown).not.toBeNull();
+    expect(dropdown?.textContent).toContain('New Project');
+
+    // 3. Hovering Edit while menu is open switches to Edit dropdown
+    editItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    flushSync();
+    dropdown = target.querySelector('.dropdown');
+    expect(dropdown).not.toBeNull();
+    expect(dropdown?.textContent).toContain('Undo');
+    expect(dropdown?.textContent).not.toContain('New Project');
+
+    // 4. Hovering View switches to View dropdown
+    viewItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    flushSync();
+    dropdown = target.querySelector('.dropdown');
+    expect(dropdown).not.toBeNull();
+    expect(dropdown?.textContent).toContain('Pixel Grid');
+
+    // 5. Clicking View button toggles the menu closed
+    const viewBtn = viewItem.querySelector<HTMLButtonElement>('.menu-btn');
+    viewBtn?.click();
+    flushSync();
+    expect(target.querySelector('.dropdown')).toBeNull();
+
+    // 6. Clicking File opens again, pressing Escape closes it
+    fileBtn?.click();
+    flushSync();
+    expect(target.querySelector('.dropdown')).not.toBeNull();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+    expect(target.querySelector('.dropdown')).toBeNull();
   });
 });

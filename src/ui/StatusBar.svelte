@@ -9,6 +9,7 @@
     zoom = 16,
     isDirty = false,
     savedLocally = true,
+    activeCharIndex = 0,
   } = $props<{
     graphic: Graphic;
     projectRevision?: number;
@@ -16,10 +17,12 @@
     zoom?: number;
     isDirty?: boolean;
     savedLocally?: boolean;
+    activeCharIndex?: number;
   }>();
 
   let modeStr = $derived.by(() => {
     projectRevision;
+    if (graphic.isCharset()) return 'Hi-Res Charset';
     if (graphic.depth === 2) return '1 bpp (Hi-Res)';
     if (graphic.depth === 4 && graphic.pixelMode === 'wide') return '2 bpp (Wide)';
     if (graphic.depth === 4) return '2 bpp';
@@ -29,14 +32,11 @@
   let hoverText = $derived.by(() => {
     if (!hoverPt) return '—';
     const { x, y } = hoverPt;
-    const v = graphic.get(x, y) ?? 0;
-    const charset = graphic.charsetInfo();
-    if (charset) {
-      const cx = Math.floor(x / charset.charWidth);
-      const cy = Math.floor(y / charset.charHeight);
-      const cIdx = cy * charset.columns + cx;
-      return `Char #${cIdx} (${cx}, ${cy}) · Pixel (${x}, ${y}) · slot ${v}`;
+    if (graphic.isCharset()) {
+      const v = graphic.getCharPixel(activeCharIndex, x, y) ?? 0;
+      return `Char #${activeCharIndex} · Pixel (${x}, ${y}) · slot ${v}`;
     }
+    const v = graphic.get(x, y) ?? 0;
     return `Pixel (${x}, ${y}) · slot ${v}`;
   });
 </script>
