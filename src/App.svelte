@@ -17,6 +17,12 @@
     loadAllFromStorage,
     type EditorSettings,
   } from './model/storage';
+  import {
+    copyFromGraphic,
+    pasteToGraphic,
+    getMemoryClipboard,
+    type Rect,
+  } from './model/clipboard';
 
   const stored = loadAllFromStorage();
   const initialProject = stored.project ?? new Project();
@@ -46,6 +52,8 @@
   let isDirty = $state(false);
   let savedLocally = $state(true);
   let hoverPt = $state<Point | null>(null);
+  let selection = $state<Rect | null>(null);
+  let clipboardHasItem = $state(false);
 
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
@@ -332,13 +340,52 @@
 
   function handleClear() {
     pushHistorySnapshot();
-    if (activeGraphic.isCharset()) {
+    if (selection) {
+      for (let ly = 0; ly < selection.h; ly++) {
+        for (let lx = 0; lx < selection.w; lx++) {
+          const x = selection.x + lx;
+          const y = selection.y + ly;
+          if (activeGraphic.isCharset()) {
+            activeGraphic.setCharPixel(activeCharIndex, x, y, 0);
+          } else {
+            activeGraphic.set(x, y, 0);
+          }
+        }
+      }
+    } else if (activeGraphic.isCharset()) {
       activeGraphic.clearChar(activeCharIndex);
     } else {
       activeGraphic.clear();
     }
     notifyGraphicChange();
   }
+
+  function handleCopy() {
+    copyFromGraphic(activeGraphic, activeCharIndex, selection);
+    clipboardHasItem = true;
+  }
+
+  function handlePaste() {
+    const item = getMemoryClipboard();
+    if (!item) return;
+    pushHistorySnapshot();
+    const atPos = selection ? { x: selection.x, y: selection.y } : { x: 0, y: 0 };
+    const { pastedW, pastedH } = pasteToGraphic(activeGraphic, item, activeCharIndex, atPos);
+    if (pastedW > 0 && pastedH > 0) {
+      selection = { x: atPos.x, y: atPos.y, w: pastedW, h: pastedH };
+    }
+    notifyGraphicChange();
+  }
+
+  function handleDeselect() {
+    selection = null;
+  }
+
+  $effect(() => {
+    activeGraphicIndex;
+    activeCharIndex;
+    selection = null;
+  });
 
   function handleInvert() {
     if (activeGraphic.depth !== 2) return;
@@ -436,9 +483,33 @@
       } else if (e.key.toLowerCase() === 'i') {
         e.preventDefault();
         handleInvert();
+      } else if (e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        handleCopy();
+      } else if (e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        handlePaste();
+      } else if (e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        handleDeselect();
       }
     } else {
       switch (e.key) {
+        case 'm':
+        case 'M': tool = 'select'; break;
+        case 'Escape':
+          if (selection) {
+            e.preventDefault();
+            handleDeselect();
+          }
+          break;
+        case 'Backspace':
+        case 'Delete':
+          if (selection) {
+            e.preventDefault();
+            handleClear();
+          }
+          break;
         case 'ArrowLeft':
           if (activeGraphic.isCharset()) {
             e.preventDefault();
@@ -575,6 +646,8 @@
   <MenuBar
     canUndo={history.canUndo()}
     canRedo={history.canRedo()}
+    canPaste={clipboardHasItem}
+    hasSelection={selection !== null}
     canInvert={activeGraphic.depth === 2}
     {showGrid}
     onNewProject={newProject}
@@ -585,6 +658,9 @@
     onExportCsv={exportCsv}
     onUndo={handleUndo}
     onRedo={handleRedo}
+    onCopy={handleCopy}
+    onPaste={handlePaste}
+    onDeselect={handleDeselect}
     onClear={handleClear}
     onInvert={handleInvert}
     onNewSprite={addSprite}
@@ -633,6 +709,7 @@
         bind:activeCharIndex
         bind:zoomIndex
         {showGrid}
+        bind:selection
         onSnapshot={pushHistorySnapshot}
         onPixelChange={markDirty}
         onStrokeEnd={() => {
@@ -679,6 +756,7 @@
     {isDirty}
     {savedLocally}
     {activeCharIndex}
+    {selection}
   />
 </div>
 

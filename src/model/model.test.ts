@@ -407,3 +407,104 @@ describe('ProjectSnapshot History & Undoable Operations', () => {
   });
 });
 
+describe('Clipboard and Copy & Paste', () => {
+  it('copies full sprite and pastes into another sprite', async () => {
+    const { copyFromGraphic, pasteToGraphic } = await import('./clipboard');
+    const src = Graphic.newSprite('Src', 4, 4);
+    src.set(0, 0, 1);
+    src.set(1, 1, 1);
+
+    const clip = copyFromGraphic(src);
+    expect(clip.width).toBe(4);
+    expect(clip.height).toBe(4);
+
+    const dst = Graphic.newSprite('Dst', 4, 4);
+    const { pastedW, pastedH } = pasteToGraphic(dst, clip);
+    expect(pastedW).toBe(4);
+    expect(pastedH).toBe(4);
+    expect(dst.get(0, 0)).toBe(1);
+    expect(dst.get(1, 1)).toBe(1);
+    expect(dst.get(2, 2)).toBe(0);
+  });
+
+  it('copies rectangular selection and pastes at target position', async () => {
+    const { copyFromGraphic, pasteToGraphic } = await import('./clipboard');
+    const src = Graphic.newSprite('Src', 8, 8);
+    src.set(2, 3, 1);
+    src.set(3, 4, 1);
+
+    // Copy 2x2 selection starting at (2, 3)
+    const clip = copyFromGraphic(src, 0, { x: 2, y: 3, w: 2, h: 2 });
+    expect(clip.width).toBe(2);
+    expect(clip.height).toBe(2);
+    expect(clip.pixels[0]).toBe(1); // (2, 3) -> (0, 0) in clip
+    expect(clip.pixels[3]).toBe(1); // (3, 4) -> (1, 1) in clip
+
+    const dst = Graphic.newSprite('Dst', 8, 8);
+    pasteToGraphic(dst, clip, 0, { x: 5, y: 5 });
+    expect(dst.get(5, 5)).toBe(1);
+    expect(dst.get(6, 6)).toBe(1);
+    expect(dst.get(0, 0)).toBe(0);
+  });
+
+  it('pastes from sprite into charset character, keeping whatever fits', async () => {
+    const { copyFromGraphic, pasteToGraphic } = await import('./clipboard');
+    // Large sprite: 24x21
+    const sprite = Graphic.newSprite('BigSprite', 24, 21);
+    sprite.set(0, 0, 1);
+    sprite.set(7, 7, 1);
+    sprite.set(15, 15, 1); // Outside 8x8 character cell
+
+    const clip = copyFromGraphic(sprite);
+    expect(clip.width).toBe(24);
+    expect(clip.height).toBe(21);
+
+    // Paste into charset character (8x8)
+    const charset = Graphic.newCharset('TestFont');
+    const { pastedW, pastedH } = pasteToGraphic(charset, clip, 5); // Char 5
+    expect(pastedW).toBe(8);
+    expect(pastedH).toBe(8);
+    expect(charset.getCharPixel(5, 0, 0)).toBe(1);
+    expect(charset.getCharPixel(5, 7, 7)).toBe(1);
+  });
+
+  it('pastes from charset character into sprite', async () => {
+    const { copyFromGraphic, pasteToGraphic } = await import('./clipboard');
+    const charset = Graphic.newCharset('TestFont');
+    charset.setCharPixel(2, 1, 1, 1);
+    charset.setCharPixel(2, 3, 3, 1);
+
+    // Copy character 2 (8x8)
+    const clip = copyFromGraphic(charset, 2);
+    expect(clip.width).toBe(8);
+    expect(clip.height).toBe(8);
+
+    const sprite = Graphic.newSprite('Player', 24, 21);
+    const { pastedW, pastedH } = pasteToGraphic(sprite, clip, 0, { x: 10, y: 10 });
+    expect(pastedW).toBe(8);
+    expect(pastedH).toBe(8);
+    expect(sprite.get(11, 11)).toBe(1);
+    expect(sprite.get(13, 13)).toBe(1);
+    expect(sprite.get(0, 0)).toBe(0);
+  });
+
+  it('converts multicolor 2bpp slots when pasting into 1bpp hires graphic', async () => {
+    const { copyFromGraphic, pasteToGraphic } = await import('./clipboard');
+    const multi = Graphic.newSprite('Multi', 4, 4, 4, 'wide');
+    multi.set(0, 0, 1);
+    multi.set(1, 1, 2);
+    multi.set(2, 2, 3);
+    multi.set(3, 3, 0);
+
+    const clip = copyFromGraphic(multi);
+    const hires = Graphic.newSprite('Hires', 4, 4, 2, 'hires');
+    pasteToGraphic(hires, clip);
+
+    // Any non-zero slot becomes 1 in 1bpp
+    expect(hires.get(0, 0)).toBe(1);
+    expect(hires.get(1, 1)).toBe(1);
+    expect(hires.get(2, 2)).toBe(1);
+    expect(hires.get(3, 3)).toBe(0);
+  });
+});
+

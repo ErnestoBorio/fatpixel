@@ -4,6 +4,8 @@
   let {
     canUndo = false,
     canRedo = false,
+    canPaste = false,
+    hasSelection = false,
     showGrid = true,
     onNewProject,
     onOpenProject,
@@ -13,6 +15,9 @@
     onExportCsv,
     onUndo,
     onRedo,
+    onCopy,
+    onPaste,
+    onDeselect,
     onClear,
     onInvert,
     canInvert = true,
@@ -29,6 +34,8 @@
   } = $props<{
     canUndo?: boolean;
     canRedo?: boolean;
+    canPaste?: boolean;
+    hasSelection?: boolean;
     canInvert?: boolean;
     showGrid?: boolean;
     onNewProject?: () => void;
@@ -39,6 +46,9 @@
     onExportCsv?: () => void;
     onUndo?: () => void;
     onRedo?: () => void;
+    onCopy?: () => void;
+    onPaste?: () => void;
+    onDeselect?: () => void;
     onClear?: () => void;
     onInvert?: () => void;
     onNewSprite?: () => void;
@@ -133,6 +143,27 @@
           onclick={() => { onRedo?.(); closeMenu(); }}
         >
           <span>Redo</span> <span class="shortcut">⇧⌘Z</span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button
+          class="dropdown-item"
+          onclick={() => { onCopy?.(); closeMenu(); }}
+        >
+          <span>Copy</span> <span class="shortcut">⌘C</span>
+        </button>
+        <button
+          class="dropdown-item"
+          disabled={!canPaste}
+          onclick={() => { onPaste?.(); closeMenu(); }}
+        >
+          <span>Paste</span> <span class="shortcut">⌘V</span>
+        </button>
+        <button
+          class="dropdown-item"
+          disabled={!hasSelection}
+          onclick={() => { onDeselect?.(); closeMenu(); }}
+        >
+          <span>Deselect</span> <span class="shortcut">⌘D</span>
         </button>
         <div class="dropdown-divider"></div>
         <button

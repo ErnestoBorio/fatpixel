@@ -10,6 +10,7 @@
     isDirty = false,
     savedLocally = true,
     activeCharIndex = 0,
+    selection = null,
   } = $props<{
     graphic: Graphic;
     projectRevision?: number;
@@ -18,6 +19,7 @@
     isDirty?: boolean;
     savedLocally?: boolean;
     activeCharIndex?: number;
+    selection?: { x: number; y: number; w: number; h: number } | null;
   }>();
 
   let modeStr = $derived.by(() => {
@@ -48,6 +50,10 @@
     <span class="zoom-text">zoom {zoom}×</span>
     <span class="sep">|</span>
     <span class="hover-text">{hoverText}</span>
+    {#if selection}
+      <span class="sep">|</span>
+      <span class="selection-badge">Sel: {selection.w}×{selection.h}</span>
+    {/if}
   </div>
 
   <div class="right-section">

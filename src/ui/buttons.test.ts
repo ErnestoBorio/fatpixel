@@ -215,4 +215,66 @@ describe('App Graphic actions and mode switching', () => {
     flushSync();
     expect(target.querySelector('.dropdown')).toBeNull();
   });
+
+  it('activates Select tool and performs copy and paste', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Select tool button is present in ToolsPanel
+    const toolButtons = target.querySelectorAll<HTMLButtonElement>('.tool-btn');
+    const selectToolBtn = Array.from(toolButtons).find((b) => b.textContent?.includes('Select'));
+    expect(selectToolBtn).toBeDefined();
+    expect(selectToolBtn?.textContent).toContain('M');
+
+    selectToolBtn?.click();
+    flushSync();
+    expect(selectToolBtn?.classList.contains('active')).toBe(true);
+
+    // 2. Edit menu has Copy, Paste, Deselect
+    const editMenuBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
+      (b) => b.textContent?.trim() === 'Edit'
+    );
+    expect(editMenuBtn).toBeDefined();
+    editMenuBtn?.click();
+    flushSync();
+
+    const dropdown = target.querySelector('.dropdown');
+    expect(dropdown?.textContent).toContain('Copy');
+    expect(dropdown?.textContent).toContain('Paste');
+    expect(dropdown?.textContent).toContain('Deselect');
+
+    // Close menu with Escape
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+
+    // 3. Draw a pixel in sprite (slot 1 at 2, 2)
+    const canvas = target.querySelector<HTMLCanvasElement>('.main-canvas');
+    expect(canvas).toBeDefined();
+
+    // 4. Test Copy shortcut (⌘C)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }));
+    flushSync();
+
+    // 5. Add a charset and paste (⌘V) into it
+    const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
+    addCharsetBtn?.click();
+    flushSync();
+
+    // Pasting into charset replaces whatever fits
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
+    flushSync();
+
+    // Status bar shows selection badge for pasted region
+    const selBadge = target.querySelector('.selection-badge');
+    expect(selBadge).not.toBeNull();
+    expect(selBadge?.textContent).toContain('Sel: 8×8');
+
+    // 6. Deselect via Escape
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+    expect(target.querySelector('.selection-badge')).toBeNull();
+  });
 });
