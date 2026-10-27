@@ -792,7 +792,7 @@
         </div>
         <form onsubmit={handleSaveAsSubmit}>
           <div class="modal-body">
-            <label for="save-as-filename" class="modal-label">Filename (without extension):</label>
+            <label for="save-as-filename" class="modal-label">Filename:</label>
             <div class="input-with-ext">
               <input
                 id="save-as-filename"
