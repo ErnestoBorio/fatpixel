@@ -56,6 +56,8 @@
   let savedLocally = $state(true);
   let hoverPt = $state<Point | null>(null);
   let clipboardHasItem = $state(false);
+  let showSaveDialog = $state(false);
+  let saveDialogInputName = $state('');
 
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
@@ -186,17 +188,70 @@
     canvasRef?.fitToWindow();
   }
 
-  function saveProject() {
+  async function saveProject() {
     saveNow();
+    const currentName = (project.name || 'Untitled').trim();
+    const defaultFileName = currentName.toLowerCase().endsWith('.pxp')
+      ? currentName
+      : `${currentName}.pxp`;
+
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultFileName,
+          types: [
+            {
+              description: 'Pixel Project (*.pxp)',
+              accept: {
+                'application/json': ['.pxp'],
+              },
+            },
+          ],
+        });
+        const chosenFileName: string = handle.name;
+        const cleanName = chosenFileName.replace(/\.pxp$/i, '').trim() || currentName;
+        project.name = cleanName;
+        saveNow();
+
+        const json = project.toJson();
+        const writable = await handle.createWritable();
+        await writable.write(json);
+        await writable.close();
+        isDirty = false;
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          // User cancelled the save dialog
+          return;
+        }
+        console.warn('showSaveFilePicker failed, falling back to modal:', err);
+      }
+    }
+
+    saveDialogInputName = project.name || 'Untitled';
+    showSaveDialog = true;
+  }
+
+  function handleSaveDialogSubmit(e?: Event) {
+    e?.preventDefault();
+    const cleanName = saveDialogInputName.trim() || 'Untitled';
+    project.name = cleanName;
+    saveNow();
+
     const json = project.toJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${project.name.toLowerCase().replace(/\s+/g, '_')}.pxp`;
+    a.download = `${cleanName.toLowerCase().replace(/\s+/g, '_')}.pxp`;
     a.click();
     URL.revokeObjectURL(url);
     isDirty = false;
+    showSaveDialog = false;
+  }
+
+  function handleSaveDialogCancel() {
+    showSaveDialog = false;
   }
 
   function openProject() {
@@ -211,6 +266,10 @@
       try {
         const text = event.target?.result as string;
         project = Project.fromJson(text);
+        const fileNameWithoutExt = file.name.replace(/\.pxp$/i, '').replace(/\.json$/i, '').trim();
+        if (fileNameWithoutExt && (!project.name || project.name === 'Untitled')) {
+          project.name = fileNameWithoutExt;
+        }
         activeGraphicIndex = 0;
         activeCharIndex = 0;
         history.clear();
@@ -433,6 +492,14 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    if (showSaveDialog) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleSaveDialogCancel();
+      }
+      return;
+    }
+
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
     const cmd = e.metaKey || e.ctrlKey;
@@ -610,7 +677,6 @@
     onNewProject={newProject}
     onOpenProject={openProject}
     onSaveProject={saveProject}
-    onSaveProjectAs={saveProject}
     onExportPng={exportPng}
     onExportCsv={exportCsv}
     onUndo={handleUndo}
@@ -712,6 +778,49 @@
     {savedLocally}
     {activeCharIndex}
   />
+
+  {#if showSaveDialog}
+    <div
+      class="modal-backdrop"
+      onclick={handleSaveDialogCancel}
+      onkeydown={(e) => { if (e.key === 'Escape') handleSaveDialogCancel(); }}
+      role="presentation"
+    >
+      <div
+        class="modal-card save-dialog"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+        role="dialog"
+        tabindex="-1"
+        aria-modal="true"
+        aria-labelledby="save-dialog-title"
+      >
+        <div class="modal-header">
+          <h3 id="save-dialog-title" class="modal-title">Save Project</h3>
+          <button type="button" class="modal-close-btn" onclick={handleSaveDialogCancel} aria-label="Close">✕</button>
+        </div>
+        <form onsubmit={handleSaveDialogSubmit}>
+          <div class="modal-body">
+            <label for="save-project-name" class="modal-label">Save project as:</label>
+            <div class="input-with-ext">
+              <input
+                id="save-project-name"
+                type="text"
+                class="modal-input"
+                bind:value={saveDialogInputName}
+                placeholder="Project Name"
+              />
+              <span class="file-ext">.pxp</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="dialog-btn dialog-btn-secondary" onclick={handleSaveDialogCancel}>Cancel</button>
+            <button type="submit" class="dialog-btn dialog-btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -757,5 +866,122 @@
     flex: 1;
     position: relative;
     background: #1e1e24;
+  }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 14, 0.75);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-card {
+    background: #202028;
+    border: 1px solid #363646;
+    border-radius: 8px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    width: 380px;
+    max-width: 90vw;
+    overflow: hidden;
+    color: #eee;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #262632;
+    border-bottom: 1px solid #363646;
+  }
+  .modal-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .modal-close-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .modal-body {
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .modal-label {
+    font-size: 12px;
+    color: #aaa;
+  }
+  .input-with-ext {
+    display: flex;
+    align-items: center;
+    background: #16161c;
+    border: 1px solid #363646;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .input-with-ext:focus-within {
+    border-color: #5577aa;
+  }
+  .modal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 10px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+  }
+  .file-ext {
+    padding-right: 10px;
+    color: #778899;
+    font-size: 12px;
+    font-family: monospace;
+    user-select: none;
+  }
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #1c1c24;
+    border-top: 1px solid #2b2b36;
+  }
+  .dialog-btn {
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .dialog-btn-secondary {
+    background: #2a2a34;
+    border-color: #383848;
+    color: #ccc;
+  }
+  .dialog-btn-secondary:hover {
+    background: #343442;
+    color: #fff;
+  }
+  .dialog-btn-primary {
+    background: #3b5a8c;
+    border-color: #4c70aa;
+    color: #fff;
+  }
+  .dialog-btn-primary:hover {
+    background: #466ca6;
   }
 </style>

@@ -268,4 +268,67 @@ describe('App Graphic actions and mode switching', () => {
     // No selection badge exists
     expect(target.querySelector('.selection-badge')).toBeNull();
   });
+
+  it('removes Save As from File menu, shows save dialog, and remembers name for future saves', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Open File menu
+    const fileBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
+      (b) => b.textContent?.trim() === 'File'
+    );
+    expect(fileBtn).toBeDefined();
+    fileBtn?.click();
+    flushSync();
+
+    const dropdown = target.querySelector('.dropdown');
+    expect(dropdown?.textContent).toContain('Save');
+    expect(dropdown?.textContent).not.toContain('Save As');
+
+    // 2. Click Save in File menu
+    const saveMenuItem = Array.from(target.querySelectorAll<HTMLButtonElement>('.dropdown-item')).find(
+      (b) => b.textContent?.includes('Save')
+    );
+    expect(saveMenuItem).toBeDefined();
+    saveMenuItem?.click();
+    flushSync();
+
+    // 3. Save dialog modal should now be visible
+    let saveModal = target.querySelector('.save-dialog');
+    expect(saveModal).not.toBeNull();
+    let nameInput = saveModal?.querySelector<HTMLInputElement>('#save-project-name');
+    expect(nameInput).not.toBeNull();
+    expect(nameInput?.value).toBe('Untitled');
+
+    // 4. Change name to 'my_c64_game' and submit
+    if (nameInput) {
+      nameInput.value = 'my_c64_game';
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const saveSubmitBtn = saveModal?.querySelector<HTMLButtonElement>('.dialog-btn-primary');
+    saveSubmitBtn?.click();
+    flushSync();
+
+    // Dialog closes
+    expect(target.querySelector('.save-dialog')).toBeNull();
+
+    // 5. Trigger Save again via shortcut (⌘S)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true }));
+    flushSync();
+
+    // Save dialog should reappear, remembering the previously saved name
+    saveModal = target.querySelector('.save-dialog');
+    expect(saveModal).not.toBeNull();
+    nameInput = saveModal?.querySelector<HTMLInputElement>('#save-project-name');
+    expect(nameInput?.value).toBe('my_c64_game');
+
+    // 6. Test cancel button closes the dialog
+    const cancelBtn = saveModal?.querySelector<HTMLButtonElement>('.dialog-btn-secondary');
+    cancelBtn?.click();
+    flushSync();
+    expect(target.querySelector('.save-dialog')).toBeNull();
+  });
 });
