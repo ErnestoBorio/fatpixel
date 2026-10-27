@@ -56,8 +56,14 @@
   let savedLocally = $state(true);
   let hoverPt = $state<Point | null>(null);
   let clipboardHasItem = $state(false);
-  let showSaveDialog = $state(false);
-  let saveDialogInputName = $state('');
+  let hasSavedFile = $state(
+    initialSettings.hasSavedFile ?? (Boolean(initialProject.name) && initialProject.name !== 'Untitled')
+  );
+  let savedFileName = $state(
+    initialSettings.savedFileName || (initialProject.name !== 'Untitled' ? initialProject.name : '')
+  );
+  let showSaveAsModal = $state(false);
+  let saveAsInputName = $state('');
 
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
@@ -87,6 +93,8 @@
       secondary,
       showGrid,
       zoomIndex,
+      savedFileName,
+      hasSavedFile,
     };
   }
 
@@ -179,6 +187,8 @@
 
   function newProject() {
     project = new Project();
+    savedFileName = '';
+    hasSavedFile = false;
     activeGraphicIndex = 0;
     activeCharIndex = 0;
     history.clear();
@@ -188,70 +198,44 @@
     canvasRef?.fitToWindow();
   }
 
-  async function saveProject() {
+  function triggerDownload(fileName: string) {
     saveNow();
-    const currentName = (project.name || 'Untitled').trim();
-    const defaultFileName = currentName.toLowerCase().endsWith('.pxp')
-      ? currentName
-      : `${currentName}.pxp`;
-
-    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
-      try {
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: defaultFileName,
-          types: [
-            {
-              description: 'Pixel Project (*.pxp)',
-              accept: {
-                'application/json': ['.pxp'],
-              },
-            },
-          ],
-        });
-        const chosenFileName: string = handle.name;
-        const cleanName = chosenFileName.replace(/\.pxp$/i, '').trim() || currentName;
-        project.name = cleanName;
-        saveNow();
-
-        const json = project.toJson();
-        const writable = await handle.createWritable();
-        await writable.write(json);
-        await writable.close();
-        isDirty = false;
-        return;
-      } catch (err: any) {
-        if (err.name === 'AbortError') {
-          // User cancelled the save dialog
-          return;
-        }
-        console.warn('showSaveFilePicker failed, falling back to modal:', err);
-      }
-    }
-
-    saveDialogInputName = project.name || 'Untitled';
-    showSaveDialog = true;
-  }
-
-  function handleSaveDialogSubmit(e?: Event) {
-    e?.preventDefault();
-    const cleanName = saveDialogInputName.trim() || 'Untitled';
-    project.name = cleanName;
-    saveNow();
-
     const json = project.toJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${cleanName.toLowerCase().replace(/\s+/g, '_')}.pxp`;
+    a.download = `${fileName}.pxp`;
     a.click();
     URL.revokeObjectURL(url);
     isDirty = false;
-    showSaveDialog = false;
   }
 
-  function handleSaveDialogCancel() {
-    showSaveDialog = false;
+  function saveProject() {
+    if (!hasSavedFile || !savedFileName.trim()) {
+      saveProjectAs();
+    } else {
+      triggerDownload(savedFileName.trim());
+    }
+  }
+
+  function saveProjectAs() {
+    saveAsInputName = savedFileName || (project.name !== 'Untitled' ? project.name : '');
+    showSaveAsModal = true;
+  }
+
+  function handleSaveAsSubmit(e?: Event) {
+    e?.preventDefault();
+    const cleanName = saveAsInputName.replace(/\.pxp$/i, '').trim() || 'untitled';
+    savedFileName = cleanName;
+    hasSavedFile = true;
+    project.name = cleanName;
+    showSaveAsModal = false;
+    triggerDownload(cleanName);
+  }
+
+  function handleSaveAsCancel() {
+    showSaveAsModal = false;
   }
 
   function openProject() {
@@ -267,6 +251,8 @@
         const text = event.target?.result as string;
         project = Project.fromJson(text);
         const fileNameWithoutExt = file.name.replace(/\.pxp$/i, '').replace(/\.json$/i, '').trim();
+        savedFileName = fileNameWithoutExt || project.name || 'untitled';
+        hasSavedFile = true;
         if (fileNameWithoutExt && (!project.name || project.name === 'Untitled')) {
           project.name = fileNameWithoutExt;
         }
@@ -492,10 +478,10 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (showSaveDialog) {
+    if (showSaveAsModal) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        handleSaveDialogCancel();
+        handleSaveAsCancel();
       }
       return;
     }
@@ -513,7 +499,11 @@
         handleRedo();
       } else if (e.key.toLowerCase() === 's') {
         e.preventDefault();
-        saveProject();
+        if (e.shiftKey) {
+          saveProjectAs();
+        } else {
+          saveProject();
+        }
       } else if (e.key.toLowerCase() === 'o') {
         e.preventDefault();
         openProject();
@@ -677,6 +667,7 @@
     onNewProject={newProject}
     onOpenProject={openProject}
     onSaveProject={saveProject}
+    onSaveProjectAs={saveProjectAs}
     onExportPng={exportPng}
     onExportCsv={exportCsv}
     onUndo={handleUndo}
@@ -779,42 +770,42 @@
     {activeCharIndex}
   />
 
-  {#if showSaveDialog}
+  {#if showSaveAsModal}
     <div
       class="modal-backdrop"
-      onclick={handleSaveDialogCancel}
-      onkeydown={(e) => { if (e.key === 'Escape') handleSaveDialogCancel(); }}
+      onclick={handleSaveAsCancel}
+      onkeydown={(e) => { if (e.key === 'Escape') handleSaveAsCancel(); }}
       role="presentation"
     >
       <div
-        class="modal-card save-dialog"
+        class="modal-card save-as-modal"
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => e.stopPropagation()}
         role="dialog"
         tabindex="-1"
         aria-modal="true"
-        aria-labelledby="save-dialog-title"
+        aria-labelledby="save-as-title"
       >
         <div class="modal-header">
-          <h3 id="save-dialog-title" class="modal-title">Save Project</h3>
-          <button type="button" class="modal-close-btn" onclick={handleSaveDialogCancel} aria-label="Close">✕</button>
+          <h3 id="save-as-title" class="modal-title">Save As</h3>
+          <button type="button" class="modal-close-btn" onclick={handleSaveAsCancel} aria-label="Close">✕</button>
         </div>
-        <form onsubmit={handleSaveDialogSubmit}>
+        <form onsubmit={handleSaveAsSubmit}>
           <div class="modal-body">
-            <label for="save-project-name" class="modal-label">Save project as:</label>
+            <label for="save-as-filename" class="modal-label">Filename (without extension):</label>
             <div class="input-with-ext">
               <input
-                id="save-project-name"
+                id="save-as-filename"
                 type="text"
                 class="modal-input"
-                bind:value={saveDialogInputName}
-                placeholder="Project Name"
+                bind:value={saveAsInputName}
+                placeholder="my_graphic"
               />
               <span class="file-ext">.pxp</span>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="dialog-btn dialog-btn-secondary" onclick={handleSaveDialogCancel}>Cancel</button>
+            <button type="button" class="dialog-btn dialog-btn-secondary" onclick={handleSaveAsCancel}>Cancel</button>
             <button type="submit" class="dialog-btn dialog-btn-primary">Save</button>
           </div>
         </form>

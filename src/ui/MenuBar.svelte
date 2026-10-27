@@ -9,6 +9,7 @@
     onNewProject,
     onOpenProject,
     onSaveProject,
+    onSaveProjectAs,
     onExportPng,
     onExportCsv,
     onUndo,
@@ -37,6 +38,7 @@
     onNewProject?: () => void;
     onOpenProject?: () => void;
     onSaveProject?: () => void;
+    onSaveProjectAs?: () => void;
     onExportPng?: () => void;
     onExportCsv?: () => void;
     onUndo?: () => void;
@@ -103,6 +105,9 @@
         </button>
         <button class="dropdown-item" onclick={() => { onSaveProject?.(); closeMenu(); }}>
           <span>Save</span> <span class="shortcut">⌘S</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onSaveProjectAs?.(); closeMenu(); }}>
+          <span>Save As…</span> <span class="shortcut">⇧⌘S</span>
         </button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onExportPng?.(); closeMenu(); }}>

@@ -13,6 +13,8 @@ export interface EditorSettings {
   secondary: number;
   showGrid: boolean;
   zoomIndex?: number;
+  savedFileName?: string;
+  hasSavedFile?: boolean;
 }
 
 export const STORAGE_KEY_PROJECT = 'pixel_project';

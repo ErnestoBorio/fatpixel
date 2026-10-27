@@ -269,14 +269,14 @@ describe('App Graphic actions and mode switching', () => {
     expect(target.querySelector('.selection-badge')).toBeNull();
   });
 
-  it('removes Save As from File menu, shows save dialog, and remembers name for future saves', async () => {
+  it('verifies Save As window, direct save with last used name, and first save prompt', async () => {
     const target = document.createElement('div');
     document.body.appendChild(target);
 
     mount(App, { target });
     flushSync();
 
-    // 1. Open File menu
+    // 1. Open File menu: both Save and Save As… should be present
     const fileBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
       (b) => b.textContent?.trim() === 'File'
     );
@@ -286,24 +286,23 @@ describe('App Graphic actions and mode switching', () => {
 
     const dropdown = target.querySelector('.dropdown');
     expect(dropdown?.textContent).toContain('Save');
-    expect(dropdown?.textContent).not.toContain('Save As');
+    expect(dropdown?.textContent).toContain('Save As…');
 
-    // 2. Click Save in File menu
+    // 2. Click Save on fresh/first project: prompts with the Save As window
     const saveMenuItem = Array.from(target.querySelectorAll<HTMLButtonElement>('.dropdown-item')).find(
-      (b) => b.textContent?.includes('Save')
+      (b) => b.textContent?.trim().startsWith('Save\n') || b.textContent?.trim().startsWith('Save ')
     );
     expect(saveMenuItem).toBeDefined();
     saveMenuItem?.click();
     flushSync();
 
-    // 3. Save dialog modal should now be visible
-    let saveModal = target.querySelector('.save-dialog');
+    // 3. Save As modal window should now be visible for the first save
+    let saveModal = target.querySelector('.save-as-modal');
     expect(saveModal).not.toBeNull();
-    let nameInput = saveModal?.querySelector<HTMLInputElement>('#save-project-name');
+    let nameInput = saveModal?.querySelector<HTMLInputElement>('#save-as-filename');
     expect(nameInput).not.toBeNull();
-    expect(nameInput?.value).toBe('Untitled');
 
-    // 4. Change name to 'my_c64_game' and submit
+    // 4. Enter filename without extension: 'my_c64_game'
     if (nameInput) {
       nameInput.value = 'my_c64_game';
       nameInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -312,23 +311,29 @@ describe('App Graphic actions and mode switching', () => {
     saveSubmitBtn?.click();
     flushSync();
 
-    // Dialog closes
-    expect(target.querySelector('.save-dialog')).toBeNull();
+    // Modal closes
+    expect(target.querySelector('.save-as-modal')).toBeNull();
 
-    // 5. Trigger Save again via shortcut (⌘S)
+    // 5. Subsequent Save (⌘S) should directly download WITHOUT opening any prompt
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true }));
     flushSync();
 
-    // Save dialog should reappear, remembering the previously saved name
-    saveModal = target.querySelector('.save-dialog');
+    // Save As modal should NOT be opened
+    expect(target.querySelector('.save-as-modal')).toBeNull();
+
+    // 6. Explicit Save As (⇧⌘S) should open the window with previous name prefilled
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', metaKey: true, shiftKey: true, bubbles: true }));
+    flushSync();
+
+    saveModal = target.querySelector('.save-as-modal');
     expect(saveModal).not.toBeNull();
-    nameInput = saveModal?.querySelector<HTMLInputElement>('#save-project-name');
+    nameInput = saveModal?.querySelector<HTMLInputElement>('#save-as-filename');
     expect(nameInput?.value).toBe('my_c64_game');
 
-    // 6. Test cancel button closes the dialog
+    // 7. Test cancel button closes the window
     const cancelBtn = saveModal?.querySelector<HTMLButtonElement>('.dialog-btn-secondary');
     cancelBtn?.click();
     flushSync();
-    expect(target.querySelector('.save-dialog')).toBeNull();
+    expect(target.querySelector('.save-as-modal')).toBeNull();
   });
 });
