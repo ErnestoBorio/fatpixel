@@ -1,5 +1,4 @@
 export type ToolType =
-  | 'select'
   | 'pencil'
   | 'eraser'
   | 'line'
@@ -17,7 +16,6 @@ export interface ToolDef {
 }
 
 export const TOOLS: ToolDef[] = [
-  { id: 'select', label: 'Select', shortcut: 'M', usesBrush: false, usesFillOption: false },
   { id: 'pencil', label: 'Pencil', shortcut: 'B', usesBrush: true, usesFillOption: false },
   { id: 'eraser', label: 'Eraser', shortcut: 'E', usesBrush: true, usesFillOption: false },
   { id: 'line', label: 'Line', shortcut: 'L', usesBrush: false, usesFillOption: false },

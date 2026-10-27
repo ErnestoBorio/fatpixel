@@ -427,23 +427,22 @@ describe('Clipboard and Copy & Paste', () => {
     expect(dst.get(2, 2)).toBe(0);
   });
 
-  it('copies rectangular selection and pastes at target position', async () => {
+  it('copies whole graphic and pastes it', async () => {
     const { copyFromGraphic, pasteToGraphic } = await import('./clipboard');
     const src = Graphic.newSprite('Src', 8, 8);
     src.set(2, 3, 1);
     src.set(3, 4, 1);
 
-    // Copy 2x2 selection starting at (2, 3)
-    const clip = copyFromGraphic(src, 0, { x: 2, y: 3, w: 2, h: 2 });
-    expect(clip.width).toBe(2);
-    expect(clip.height).toBe(2);
-    expect(clip.pixels[0]).toBe(1); // (2, 3) -> (0, 0) in clip
-    expect(clip.pixels[3]).toBe(1); // (3, 4) -> (1, 1) in clip
+    const clip = copyFromGraphic(src);
+    expect(clip.width).toBe(8);
+    expect(clip.height).toBe(8);
+    expect(clip.pixels[3 * 8 + 2]).toBe(1);
+    expect(clip.pixels[4 * 8 + 3]).toBe(1);
 
     const dst = Graphic.newSprite('Dst', 8, 8);
-    pasteToGraphic(dst, clip, 0, { x: 5, y: 5 });
-    expect(dst.get(5, 5)).toBe(1);
-    expect(dst.get(6, 6)).toBe(1);
+    pasteToGraphic(dst, clip);
+    expect(dst.get(2, 3)).toBe(1);
+    expect(dst.get(3, 4)).toBe(1);
     expect(dst.get(0, 0)).toBe(0);
   });
 

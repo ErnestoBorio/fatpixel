@@ -3,7 +3,6 @@
   import type { Graphic } from '../model/graphic';
   import type { Palette } from '../model/palette';
   import type { ToolType } from '../tools';
-  import type { Rect } from '../model/clipboard';
   import {
     linePoints,
     snapLine,
@@ -30,7 +29,6 @@
     activeCharIndex = $bindable(0),
     zoomIndex = $bindable(7),
     showGrid = true,
-    selection = $bindable<Rect | null>(null),
     onSnapshot,
     onPixelChange,
     onStrokeEnd,
@@ -48,54 +46,13 @@
     activeCharIndex?: number;
     zoomIndex?: number;
     showGrid?: boolean;
-    selection?: Rect | null;
     onSnapshot?: () => void;
     onPixelChange?: () => void;
     onStrokeEnd?: () => void;
     onHoverChange?: (hover: { x: number; y: number } | null) => void;
   }>();
 
-  let isSelecting = $state(false);
-  let selectDragStart = $state<Point | null>(null);
-  let hasDraggedSelection = $state(false);
-  let antsOffset = $state(0);
-  let antsTimer: number | null = null;
 
-  function startAntsAnimation() {
-    if (antsTimer !== null) return;
-    let lastTime = performance.now();
-    const tick = (now: number) => {
-      if (!selection) {
-        antsTimer = null;
-        return;
-      }
-      if (now - lastTime >= 60) {
-        antsOffset = (antsOffset + 1) % 8;
-        lastTime = now;
-        redrawMainCanvas();
-      }
-      antsTimer = requestAnimationFrame(tick);
-    };
-    antsTimer = requestAnimationFrame(tick);
-  }
-
-  function stopAntsAnimation() {
-    if (antsTimer !== null) {
-      cancelAnimationFrame(antsTimer);
-      antsTimer = null;
-    }
-  }
-
-  $effect(() => {
-    if (selection) {
-      startAntsAnimation();
-    } else {
-      stopAntsAnimation();
-    }
-    return () => {
-      stopAntsAnimation();
-    };
-  });
 
   let canvasElem: HTMLCanvasElement;
   let containerElem: HTMLDivElement;
@@ -359,36 +316,8 @@
     ctx.lineWidth = 1.5;
     ctx.strokeRect(offsetX - 0.5, offsetY - 0.5, imgW + 1, imgH + 1);
 
-    // Walking ants selection rectangle
-    if (selection) {
-      const sx = Math.floor(offsetX + selection.x * pxW);
-      const sy = Math.floor(offsetY + selection.y * pxH);
-      const sw = Math.floor(selection.w * pxW);
-      const sh = Math.floor(selection.h * pxH);
-
-      ctx.save();
-      // Semi-transparent overlay inside selection
-      ctx.fillStyle = 'rgba(64, 150, 255, 0.18)';
-      ctx.fillRect(sx, sy, sw, sh);
-
-      // Walking ants dashed border
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-
-      // Alternating black and white dashes
-      ctx.lineDashOffset = -antsOffset;
-      ctx.strokeStyle = '#000000';
-      ctx.strokeRect(sx + 0.5, sy + 0.5, Math.max(1, sw - 1), Math.max(1, sh - 1));
-
-      ctx.lineDashOffset = -antsOffset + 4;
-      ctx.strokeStyle = '#ffffff';
-      ctx.strokeRect(sx + 0.5, sy + 0.5, Math.max(1, sw - 1), Math.max(1, sh - 1));
-
-      ctx.restore();
-    }
-
     // Hover footprint cursor
-    if (hoverPt && inDrawBounds(hoverPt.x, hoverPt.y) && !isPanning && !isSelecting) {
+    if (hoverPt && inDrawBounds(hoverPt.x, hoverPt.y) && !isPanning) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.lineWidth = 1.5;
       const effectiveTool = isAltDown ? 'eyedropper' : tool;
@@ -399,9 +328,6 @@
             ctx.strokeRect(offsetX + pt.x * pxW, offsetY + pt.y * pxH, pxW, pxH);
           }
         }
-      } else if (effectiveTool === 'select') {
-        ctx.strokeStyle = 'rgba(100, 180, 255, 0.65)';
-        ctx.strokeRect(offsetX + hoverPt.x * pxW, offsetY + hoverPt.y * pxH, pxW, pxH);
       } else {
         ctx.strokeRect(offsetX + hoverPt.x * pxW, offsetY + hoverPt.y * pxH, pxW, pxH);
       }
@@ -600,14 +526,7 @@
       return;
     }
 
-    if (effectiveTool === 'select') {
-      if (e.button === 0) {
-        selectDragStart = pt;
-        hasDraggedSelection = false;
-        isSelecting = true;
-      }
-      return;
-    }
+
 
     paintValue = getEffectivePaintValue(e.button);
 
@@ -660,25 +579,7 @@
       onHoverChange?.(null);
     }
 
-    if (isSelecting && selectDragStart) {
-      const clampedX = Math.max(0, Math.min(drawWidth - 1, pt.x));
-      const clampedY = Math.max(0, Math.min(drawHeight - 1, pt.y));
-      if (clampedX !== selectDragStart.x || clampedY !== selectDragStart.y || hasDraggedSelection) {
-        hasDraggedSelection = true;
-        const minX = Math.min(selectDragStart.x, clampedX);
-        const maxX = Math.max(selectDragStart.x, clampedX);
-        const minY = Math.min(selectDragStart.y, clampedY);
-        const maxY = Math.max(selectDragStart.y, clampedY);
-        selection = {
-          x: minX,
-          y: minY,
-          w: maxX - minX + 1,
-          h: maxY - minY + 1,
-        };
-        redrawMainCanvas();
-      }
-      return;
-    }
+
 
     if (isPainting && dragShapeStart) {
       // Live geometric preview
@@ -725,16 +626,6 @@
   function handleMouseUp() {
     if (isPanning) {
       isPanning = false;
-    }
-    if (isSelecting) {
-      isSelecting = false;
-      if (!hasDraggedSelection) {
-        selection = null;
-      }
-      selectDragStart = null;
-      hasDraggedSelection = false;
-      redrawMainCanvas();
-      return;
     }
     const wasPainting = isPainting;
     if (isPainting && dragShapeStart && previewPoints.length > 0) {
@@ -850,22 +741,7 @@
     }
   }
 
-  function clearActiveChar() {
-    pushHistory();
-    if (graphic.clearChar(activeCharIndex)) {
-      onPixelChange?.();
-      redraw();
-    }
-  }
 
-  function invertActiveChar() {
-    if (graphic.depth !== 2) return;
-    pushHistory();
-    if (graphic.invertChar(activeCharIndex)) {
-      onPixelChange?.();
-      redraw();
-    }
-  }
 
   $effect(() => {
     // Redraw whenever graphic, palette, activeCharIndex or tool settings update
@@ -876,7 +752,6 @@
     secondary;
     primary;
     activeCharIndex;
-    selection;
     preview1xCanvasElem;
     preview2xCanvasElem;
     preview4xCanvasElem;
@@ -929,10 +804,6 @@
         <span class="char-hex">(0x{activeCharIndex.toString(16).toUpperCase().padStart(2, '0')})</span>
       </div>
       <button class="nav-btn" onclick={nextChar} disabled={activeCharIndex >= (charsetInfo?.charCount ?? 256) - 1} title="Next Character">▶</button>
-      <div class="char-actions">
-        <button class="char-act-btn" onclick={clearActiveChar} title="Clear this character only">Clear</button>
-        <button class="char-act-btn" onclick={invertActiveChar} title="Invert this character only">Invert</button>
-      </div>
     </div>
 
     <!-- 256 Character Sheet View (docked on right) -->
@@ -1103,26 +974,7 @@
     color: #88aacc;
     font-size: 11px;
   }
-  .char-actions {
-    display: flex;
-    gap: 4px;
-    margin-left: 6px;
-    border-left: 1px solid #3e3e52;
-    padding-left: 6px;
-  }
-  .char-act-btn {
-    background: #252532;
-    border: 1px solid #3e3e52;
-    color: #bbb;
-    padding: 2px 6px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 10px;
-  }
-  .char-act-btn:hover {
-    background: #36364a;
-    color: #fff;
-  }
+
   .charset-sheet-panel {
     position: absolute;
     top: 12px;

@@ -5,7 +5,6 @@
     canUndo = false,
     canRedo = false,
     canPaste = false,
-    hasSelection = false,
     showGrid = true,
     onNewProject,
     onOpenProject,
@@ -17,7 +16,6 @@
     onRedo,
     onCopy,
     onPaste,
-    onDeselect,
     onClear,
     onInvert,
     canInvert = true,
@@ -35,7 +33,6 @@
     canUndo?: boolean;
     canRedo?: boolean;
     canPaste?: boolean;
-    hasSelection?: boolean;
     canInvert?: boolean;
     showGrid?: boolean;
     onNewProject?: () => void;
@@ -48,7 +45,6 @@
     onRedo?: () => void;
     onCopy?: () => void;
     onPaste?: () => void;
-    onDeselect?: () => void;
     onClear?: () => void;
     onInvert?: () => void;
     onNewSprite?: () => void;
@@ -157,13 +153,6 @@
           onclick={() => { onPaste?.(); closeMenu(); }}
         >
           <span>Paste</span> <span class="shortcut">⌘V</span>
-        </button>
-        <button
-          class="dropdown-item"
-          disabled={!hasSelection}
-          onclick={() => { onDeselect?.(); closeMenu(); }}
-        >
-          <span>Deselect</span> <span class="shortcut">⌘D</span>
         </button>
         <div class="dropdown-divider"></div>
         <button

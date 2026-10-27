@@ -21,7 +21,6 @@
     copyFromGraphic,
     pasteToGraphic,
     getMemoryClipboard,
-    type Rect,
   } from './model/clipboard';
 
   const stored = loadAllFromStorage();
@@ -41,7 +40,11 @@
   let history = $state(new History<ProjectSnapshot>(100, cloneProjectSnapshot));
   let stateVersion = $state(0);
 
-  let tool = $state<ToolType>(initialSettings.tool ?? 'pencil');
+  let tool = $state<ToolType>(
+    initialSettings.tool && (initialSettings.tool as string) !== 'select'
+      ? initialSettings.tool
+      : 'pencil'
+  );
   let brushShape = $state<BrushShape>(initialSettings.brushShape ?? 'square');
   let brushSize = $state(initialSettings.brushSize ?? 1);
   let fillMode = $state(initialSettings.fillMode ?? false);
@@ -52,7 +55,6 @@
   let isDirty = $state(false);
   let savedLocally = $state(true);
   let hoverPt = $state<Point | null>(null);
-  let selection = $state<Rect | null>(null);
   let clipboardHasItem = $state(false);
 
   let canvasRef: any = $state();
@@ -340,19 +342,7 @@
 
   function handleClear() {
     pushHistorySnapshot();
-    if (selection) {
-      for (let ly = 0; ly < selection.h; ly++) {
-        for (let lx = 0; lx < selection.w; lx++) {
-          const x = selection.x + lx;
-          const y = selection.y + ly;
-          if (activeGraphic.isCharset()) {
-            activeGraphic.setCharPixel(activeCharIndex, x, y, 0);
-          } else {
-            activeGraphic.set(x, y, 0);
-          }
-        }
-      }
-    } else if (activeGraphic.isCharset()) {
+    if (activeGraphic.isCharset()) {
       activeGraphic.clearChar(activeCharIndex);
     } else {
       activeGraphic.clear();
@@ -361,7 +351,7 @@
   }
 
   function handleCopy() {
-    copyFromGraphic(activeGraphic, activeCharIndex, selection);
+    copyFromGraphic(activeGraphic, activeCharIndex);
     clipboardHasItem = true;
   }
 
@@ -369,23 +359,9 @@
     const item = getMemoryClipboard();
     if (!item) return;
     pushHistorySnapshot();
-    const atPos = selection ? { x: selection.x, y: selection.y } : { x: 0, y: 0 };
-    const { pastedW, pastedH } = pasteToGraphic(activeGraphic, item, activeCharIndex, atPos);
-    if (pastedW > 0 && pastedH > 0) {
-      selection = { x: atPos.x, y: atPos.y, w: pastedW, h: pastedH };
-    }
+    pasteToGraphic(activeGraphic, item, activeCharIndex);
     notifyGraphicChange();
   }
-
-  function handleDeselect() {
-    selection = null;
-  }
-
-  $effect(() => {
-    activeGraphicIndex;
-    activeCharIndex;
-    selection = null;
-  });
 
   function handleInvert() {
     if (activeGraphic.depth !== 2) return;
@@ -489,27 +465,9 @@
       } else if (e.key.toLowerCase() === 'v') {
         e.preventDefault();
         handlePaste();
-      } else if (e.key.toLowerCase() === 'd') {
-        e.preventDefault();
-        handleDeselect();
       }
     } else {
       switch (e.key) {
-        case 'm':
-        case 'M': tool = 'select'; break;
-        case 'Escape':
-          if (selection) {
-            e.preventDefault();
-            handleDeselect();
-          }
-          break;
-        case 'Backspace':
-        case 'Delete':
-          if (selection) {
-            e.preventDefault();
-            handleClear();
-          }
-          break;
         case 'ArrowLeft':
           if (activeGraphic.isCharset()) {
             e.preventDefault();
@@ -647,7 +605,6 @@
     canUndo={history.canUndo()}
     canRedo={history.canRedo()}
     canPaste={clipboardHasItem}
-    hasSelection={selection !== null}
     canInvert={activeGraphic.depth === 2}
     {showGrid}
     onNewProject={newProject}
@@ -660,7 +617,6 @@
     onRedo={handleRedo}
     onCopy={handleCopy}
     onPaste={handlePaste}
-    onDeselect={handleDeselect}
     onClear={handleClear}
     onInvert={handleInvert}
     onNewSprite={addSprite}
@@ -709,7 +665,6 @@
         bind:activeCharIndex
         bind:zoomIndex
         {showGrid}
-        bind:selection
         onSnapshot={pushHistorySnapshot}
         onPixelChange={markDirty}
         onStrokeEnd={() => {
@@ -756,7 +711,6 @@
     {isDirty}
     {savedLocally}
     {activeCharIndex}
-    {selection}
   />
 </div>
 

@@ -1,12 +1,5 @@
 import type { Graphic, ColorDepth, PixelMode } from './graphic';
 
-export interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
 export interface ClipboardItem {
   width: number;
   height: number;
@@ -27,30 +20,19 @@ export function setMemoryClipboard(item: ClipboardItem | null): void {
 
 export function copyFromGraphic(
   graphic: Graphic,
-  charIndex = 0,
-  selection?: Rect | null
+  charIndex = 0
 ): ClipboardItem {
-  let ox = 0;
-  let oy = 0;
-  let w = graphic.width;
-  let h = graphic.height;
-
-  if (selection) {
-    ox = Math.max(0, selection.x);
-    oy = Math.max(0, selection.y);
-    w = Math.max(1, Math.min(selection.w, graphic.width - ox));
-    h = Math.max(1, Math.min(selection.h, graphic.height - oy));
-  }
-
+  const w = graphic.width;
+  const h = graphic.height;
   const pixels = new Uint8Array(w * h);
 
   for (let ly = 0; ly < h; ly++) {
     for (let lx = 0; lx < w; lx++) {
       let val: number | null = null;
       if (graphic.isCharset()) {
-        val = graphic.getCharPixel(charIndex, ox + lx, oy + ly);
+        val = graphic.getCharPixel(charIndex, lx, ly);
       } else {
-        val = graphic.get(ox + lx, oy + ly);
+        val = graphic.get(lx, ly);
       }
       pixels[ly * w + lx] = val ?? 0;
     }
