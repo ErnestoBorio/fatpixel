@@ -226,7 +226,6 @@
   }
 
   function getEffectivePaintValue(button: number): number {
-    if (tool === 'eraser') return 0;
     // Right button
     if (button === 2) {
       if (isDirect) {
@@ -346,7 +345,7 @@
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.lineWidth = 1.5;
       const effectiveTool = isAltDown ? 'eyedropper' : tool;
-      if (effectiveTool === 'pencil' || effectiveTool === 'eraser') {
+      if (effectiveTool === 'pencil') {
         const pts = brushPoints(brushShape, brushSize, hoverPt.x, hoverPt.y);
         for (const pt of pts) {
           if (inDrawBounds(pt.x, pt.y)) {

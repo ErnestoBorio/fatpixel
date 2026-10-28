@@ -254,10 +254,12 @@ describe('App Graphic actions and mode switching', () => {
     mount(App, { target });
     flushSync();
 
-    // 1. Select tool button is NOT present in ToolsPanel
+    // 1. Select and Eraser tool buttons are NOT present in ToolsPanel
     const toolButtons = target.querySelectorAll<HTMLButtonElement>('.tool-btn');
     const selectToolBtn = Array.from(toolButtons).find((b) => b.textContent?.includes('Select'));
     expect(selectToolBtn).toBeUndefined();
+    const eraserToolBtn = Array.from(toolButtons).find((b) => b.textContent?.includes('Eraser'));
+    expect(eraserToolBtn).toBeUndefined();
 
     // 2. Edit menu has Copy and Paste, but NOT Deselect
     const editMenuBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(

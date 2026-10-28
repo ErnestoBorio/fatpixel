@@ -42,8 +42,8 @@
   let stateVersion = $state(0);
 
   let tool = $state<ToolType>(
-    initialSettings.tool && (initialSettings.tool as string) !== 'select'
-      ? initialSettings.tool
+    initialSettings.tool && (initialSettings.tool as string) !== 'select' && (initialSettings.tool as string) !== 'eraser'
+      ? (initialSettings.tool as ToolType)
       : 'pencil'
   );
   let brushShape = $state<BrushShape>(initialSettings.brushShape ?? 'square');
@@ -653,8 +653,6 @@
           break;
         case 'b':
         case 'B': tool = 'pencil'; break;
-        case 'e':
-        case 'E': tool = 'eraser'; break;
         case 'l':
         case 'L': tool = 'line'; break;
         case 'r':

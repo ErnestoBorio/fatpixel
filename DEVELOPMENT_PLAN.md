@@ -26,7 +26,7 @@ src/
     history.ts       // Snapshot-based Undo / Redo
     render.ts        // Slot color mapping
   raster/            // Bresenham lines, flood fill, shape algorithms, brushes
-  tools/             // Tool definitions (Pencil, Eraser, Line, Rect, Ellipse, Fill, Eyedropper)
+  tools/             // Tool definitions (Pencil, Line, Rect, Ellipse, Fill, Eyedropper)
   ui/
     Canvas.svelte    // Centered zoomable viewport, single-char editor, 256-char sheet view
     MenuBar.svelte   // Project management, export, undo/redo, clear/invert
@@ -121,7 +121,7 @@ Each phase ends with a runnable app you can try.
 - `Graphic`, `Palette`, `Project` structs (sprite only for now, hi-res).
 - Canvas widget: render indexed buffer → texture, nearest-neighbor zoom, pan (space/middle-drag), pixel grid toggle.
 - Palette panel showing the graphic's color slots; left/right mouse = primary/secondary color.
-- Pencil tool (1 px), eraser (paints transparent/slot 0).
+- Pencil tool (1 px, left/right mouse button).
 - **Deliverable:** draw on a single fixed-size sprite.
 
 ### Phase 2 — Drawing tools & undo
