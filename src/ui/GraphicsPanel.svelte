@@ -329,7 +329,10 @@
   <!-- Graphics View (bottom of panel, taking all remaining space) -->
   <div class="graphics-view-section">
     <div class="header">
-      <span class="title">Graphics ({project.graphics.length})</span>
+      <div class="header-title-row">
+        <span class="title">Graphics</span>
+        <span class="count-pill">{project.graphics.length}</span>
+      </div>
       <div class="add-buttons">
         <button class="add-btn" onclick={() => onAddSprite?.()} title="Add new C64 Sprite (24×21, 1 bpp)">
           + Sprite
@@ -340,62 +343,64 @@
       </div>
     </div>
 
-    <!-- Scrollable Graphics List -->
-    <div class="graphics-list" role="list">
-      {#each project.graphics as g, idx (g)}
-        {@const isActive = active === idx}
-        {@const hasPixels = graphicHasPixels(g, projectRevision)}
-        <div
-          class="graphic-item {isActive ? 'active' : ''} {draggedIdx === idx ? 'dragging' : ''} {dragOverIdx === idx ? 'drag-over' : ''}"
-          draggable="true"
-          ondragstart={(e) => handleDragStart(e, idx)}
-          ondragover={(e) => handleDragOver(e, idx)}
-          ondragleave={() => handleDragLeave(idx)}
-          ondrop={(e) => handleDrop(e, idx)}
-          ondragend={handleDragEnd}
-          role="listitem"
-        >
-          <button class="select-btn" onclick={() => (active = idx)} title={g.name}>
-            <div class="thumb-container">
-              {#if hasPixels}
-                <canvas
-                  class="thumb-canvas"
-                  use:drawThumbnail={{ graphic: g, pal: project.paletteOf(g), rev: projectRevision }}
-                ></canvas>
-              {:else}
-                <span class="badge {g.isSprite() ? 'sprite-badge' : 'charset-badge'}">
-                  {g.isSprite() ? 'S' : 'C'}
+    <!-- Framed Layers List (Photoshop-style container) -->
+    <div class="graphics-frame">
+      <div class="graphics-list" role="list">
+        {#each project.graphics as g, idx (g)}
+          {@const isActive = active === idx}
+          {@const hasPixels = graphicHasPixels(g, projectRevision)}
+          <div
+            class="graphic-item {isActive ? 'active' : ''} {draggedIdx === idx ? 'dragging' : ''} {dragOverIdx === idx ? 'drag-over' : ''}"
+            draggable="true"
+            ondragstart={(e) => handleDragStart(e, idx)}
+            ondragover={(e) => handleDragOver(e, idx)}
+            ondragleave={() => handleDragLeave(idx)}
+            ondrop={(e) => handleDrop(e, idx)}
+            ondragend={handleDragEnd}
+            role="listitem"
+          >
+            <button class="select-btn" onclick={() => (active = idx)} title={g.name}>
+              <div class="thumb-container {isActive ? 'active-thumb' : ''}">
+                {#if hasPixels}
+                  <canvas
+                    class="thumb-canvas"
+                    use:drawThumbnail={{ graphic: g, pal: project.paletteOf(g), rev: projectRevision }}
+                  ></canvas>
+                {:else}
+                  <span class="badge {g.isSprite() ? 'sprite-badge' : 'charset-badge'}">
+                    {g.isSprite() ? 'S' : 'C'}
+                  </span>
+                {/if}
+              </div>
+              <div class="graphic-meta">
+                <span class="name">{g.name}</span>
+                <span class="subtext">
+                  {graphicSubtext(g, projectRevision)}
                 </span>
+              </div>
+            </button>
+
+            <div class="actions">
+              <button
+                class="icon-btn"
+                title="Duplicate (Undoable)"
+                onclick={() => onDuplicateGraphic?.(idx)}
+              >
+                ⧉
+              </button>
+              {#if project.graphics.length > 1}
+                <button
+                  class="icon-btn delete-btn"
+                  title="Delete (Undoable)"
+                  onclick={() => onDeleteGraphic?.(idx)}
+                >
+                  ×
+                </button>
               {/if}
             </div>
-            <div class="graphic-meta">
-              <span class="name">{g.name}</span>
-              <span class="subtext">
-                {graphicSubtext(g, projectRevision)}
-              </span>
-            </div>
-          </button>
-
-          <div class="actions">
-            <button
-              class="icon-btn"
-              title="Duplicate (Undoable)"
-              onclick={() => onDuplicateGraphic?.(idx)}
-            >
-              ⧉
-            </button>
-            {#if project.graphics.length > 1}
-              <button
-                class="icon-btn delete-btn"
-                title="Delete (Undoable)"
-                onclick={() => onDeleteGraphic?.(idx)}
-              >
-                ×
-              </button>
-            {/if}
           </div>
-        </div>
-      {/each}
+        {/each}
+      </div>
     </div>
   </div>
 </div>
@@ -443,10 +448,25 @@
     align-items: center;
     flex-shrink: 0;
   }
+  .header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
   .title {
     font-weight: bold;
     font-size: 12px;
     color: #eee;
+  }
+  .count-pill {
+    background: #252532;
+    color: #88aacc;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 8px;
+    border: 1px solid #36364a;
+    font-family: monospace;
   }
   .add-buttons {
     display: flex;
@@ -461,11 +481,24 @@
     font-size: 10px;
     font-weight: 500;
     cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
   }
   .add-btn:hover {
     background: #343444;
     color: #93c5fd;
     border-color: #60a5fa;
+  }
+  /* Photoshop Layers Frame */
+  .graphics-frame {
+    flex: 1;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    background: #14141c;
+    border: 1px solid #282836;
+    border-radius: 6px;
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
   }
   .graphics-list {
     flex: 1;
@@ -473,28 +506,30 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding-right: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #38384a transparent;
   }
   .graphic-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #1b1b22;
-    border: 1px solid #2b2b36;
-    border-radius: 5px;
-    padding: 4px 6px;
+    background: #171720;
+    border-bottom: 1px solid #21212c;
+    border-left: 3px solid transparent;
+    padding: 5px 8px;
     cursor: grab;
-    transition: background 0.12s, border-color 0.12s;
+    transition: background 0.1s, border-color 0.1s;
     user-select: none;
   }
-  .graphic-item:hover {
-    background: #24242e;
-    border-color: #3b3b4a;
+  .graphic-item:last-child {
+    border-bottom: none;
+  }
+  .graphic-item:hover:not(.active) {
+    background: #1e1e28;
   }
   .graphic-item.active {
-    background: #242c3c;
-    border-color: #00d2ff;
+    background: #23344a;
+    border-left-color: #00d2ff;
   }
   .graphic-item.dragging {
     opacity: 0.35;
@@ -502,7 +537,7 @@
   }
   .graphic-item.drag-over {
     border-top: 2px solid #00d2ff;
-    background: #283042;
+    background: #283446;
   }
   .select-btn {
     display: flex;
@@ -519,20 +554,24 @@
     min-width: 0;
   }
   .thumb-container {
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
-    background: #121218;
-    border: 1px solid #282834;
-    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    background: #0d0d12;
+    border: 1px solid #282836;
+    border-radius: 3px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  .thumb-container.active-thumb {
+    border-color: #4a6fa5;
   }
   .thumb-canvas {
-    max-width: 28px;
-    max-height: 28px;
+    max-width: 26px;
+    max-height: 26px;
     image-rendering: pixelated;
   }
   .graphic-meta {
@@ -548,6 +587,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 11px;
+  }
+  .graphic-item.active .name {
+    color: #fff;
+    font-weight: 600;
   }
   .subtext {
     font-size: 9px;
@@ -557,10 +601,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .graphic-item.active .subtext {
+    color: #9bbcd8;
+  }
   .actions {
     display: flex;
     gap: 2px;
     flex-shrink: 0;
+    opacity: 0.8;
+  }
+  .graphic-item:hover .actions,
+  .graphic-item.active .actions {
+    opacity: 1;
   }
   .icon-btn {
     background: none;
@@ -570,10 +622,11 @@
     font-size: 12px;
     padding: 2px 4px;
     border-radius: 3px;
+    transition: background 0.1s, color 0.1s;
   }
   .icon-btn:hover {
     color: #fff;
-    background: #333342;
+    background: #2f2f3e;
   }
   .delete-btn:hover {
     color: #f87171;
