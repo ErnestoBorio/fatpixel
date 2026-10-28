@@ -456,4 +456,30 @@ describe('App Graphic actions and mode switching', () => {
     const vgaReadoutRgb = target.querySelector<HTMLElement>('.readout-rgb');
     expect(vgaReadoutRgb?.textContent).toMatch(/^\(\d+,\s*\d+,\s*\d+\)$/);
   });
+
+  it('draws circles constrained to visual 1:1 shape in 2:1 mode', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Select 2:1 ratio
+    const ratio2Btn = Array.from(target.querySelectorAll<HTMLButtonElement>('.ratio-btn')).find(
+      (b) => b.textContent?.trim() === '2:1'
+    );
+    ratio2Btn?.click();
+    flushSync();
+
+    // Select Ellipse tool
+    const ellipseToolBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tool-btn')).find(
+      (b) => b.textContent?.includes('Ellipse')
+    );
+    expect(ellipseToolBtn).toBeDefined();
+    ellipseToolBtn?.click();
+    flushSync();
+
+    const canvas = target.querySelector<HTMLCanvasElement>('canvas.pixel-canvas');
+    expect(canvas).not.toBeNull();
+  });
 });

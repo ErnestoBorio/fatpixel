@@ -28,6 +28,12 @@ describe('Line rasterization', () => {
     const snapped = snapLine(0, 0, 10, 9);
     expect(snapped.x).toBe(snapped.y);
   });
+
+  it('snaps line to visual 45 degree angle in 2:1 aspect ratio', () => {
+    const snapped = snapLine(0, 0, 5, 9, 2.0);
+    // In 2:1 mode, 5 horizontal pixels equals 10 visual units, so targetDy is 10 and targetDx is 5
+    expect(snapped.x * 2).toBe(snapped.y);
+  });
 });
 
 describe('Brush shapes', () => {

@@ -580,6 +580,40 @@
     applyStrokePoints(pts, paintValue);
   }
 
+  function updateShapePreview(pt: Point) {
+    if (!isPainting || !dragShapeStart) return;
+    let endPt = pt;
+    if (isShiftDown) {
+      if (tool === 'line') {
+        endPt = snapLine(dragShapeStart.x, dragShapeStart.y, pt.x, pt.y, drawAspect);
+      } else {
+        // Visual 1:1 constraint for circle / square (adjusting horizontal pixels by drawAspect)
+        const dx = pt.x - dragShapeStart.x;
+        const dy = pt.y - dragShapeStart.y;
+        const sx = dx === 0 ? 1 : Math.sign(dx);
+        const sy = dy === 0 ? 1 : Math.sign(dy);
+        const visualDx = Math.abs(dx) * drawAspect;
+        const visualDy = Math.abs(dy);
+        const visualD = Math.max(visualDx, visualDy);
+        const targetDx = visualD === 0 ? 0 : Math.max(1, Math.round(visualD / drawAspect));
+        const targetDy = visualD;
+        endPt = {
+          x: dragShapeStart.x + sx * targetDx,
+          y: dragShapeStart.y + sy * targetDy,
+        };
+      }
+    }
+
+    if (tool === 'line') {
+      previewPoints = linePoints(dragShapeStart.x, dragShapeStart.y, endPt.x, endPt.y);
+    } else if (tool === 'rectangle') {
+      previewPoints = rectPoints(dragShapeStart.x, dragShapeStart.y, endPt.x, endPt.y, fillMode);
+    } else if (tool === 'ellipse') {
+      previewPoints = ellipsePoints(dragShapeStart.x, dragShapeStart.y, endPt.x, endPt.y, fillMode);
+    }
+    redraw();
+  }
+
   function handleMouseMove(e: MouseEvent) {
     const rect = canvasElem.getBoundingClientRect();
     const sx = e.clientX - rect.left;
@@ -601,34 +635,8 @@
       onHoverChange?.(null);
     }
 
-
-
     if (isPainting && dragShapeStart) {
-      // Live geometric preview
-      let endPt = pt;
-      if (isShiftDown) {
-        if (tool === 'line') {
-          endPt = snapLine(dragShapeStart.x, dragShapeStart.y, pt.x, pt.y);
-        } else {
-          // Square constraint
-          const dx = pt.x - dragShapeStart.x;
-          const dy = pt.y - dragShapeStart.y;
-          const d = Math.max(Math.abs(dx), Math.abs(dy));
-          endPt = {
-            x: dragShapeStart.x + Math.sign(dx) * d,
-            y: dragShapeStart.y + Math.sign(dy) * d,
-          };
-        }
-      }
-
-      if (tool === 'line') {
-        previewPoints = linePoints(dragShapeStart.x, dragShapeStart.y, endPt.x, endPt.y);
-      } else if (tool === 'rectangle') {
-        previewPoints = rectPoints(dragShapeStart.x, dragShapeStart.y, endPt.x, endPt.y, fillMode);
-      } else if (tool === 'ellipse') {
-        previewPoints = ellipsePoints(dragShapeStart.x, dragShapeStart.y, endPt.x, endPt.y, fillMode);
-      }
-      redraw();
+      updateShapePreview(pt);
       return;
     }
 
@@ -731,7 +739,12 @@
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
     if (e.key === 'Alt') isAltDown = true;
-    if (e.key === 'Shift') isShiftDown = true;
+    if (e.key === 'Shift') {
+      isShiftDown = true;
+      if (isPainting && dragShapeStart && hoverPt) {
+        updateShapePreview(hoverPt);
+      }
+    }
     if (e.code === 'Space') isSpaceDown = true;
 
     // Slot selection hotkeys: 0..9 based on graphic depth
@@ -745,7 +758,12 @@
 
   function handleKeyUp(e: KeyboardEvent) {
     if (e.key === 'Alt') isAltDown = false;
-    if (e.key === 'Shift') isShiftDown = false;
+    if (e.key === 'Shift') {
+      isShiftDown = false;
+      if (isPainting && dragShapeStart && hoverPt) {
+        updateShapePreview(hoverPt);
+      }
+    }
     if (e.code === 'Space') isSpaceDown = false;
   }
 
@@ -811,6 +829,7 @@
 >
   <!-- Main Drawing Canvas (Sprite or Single Char) -->
   <canvas
+    class="pixel-canvas"
     bind:this={canvasElem}
     onmousedown={handleMouseDown}
     onmousemove={handleMouseMove}

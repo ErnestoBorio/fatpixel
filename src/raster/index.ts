@@ -35,23 +35,25 @@ export function linePoints(x0: number, y0: number, x1: number, y1: number): Poin
   return points;
 }
 
-export function snapLine(x0: number, y0: number, x1: number, y1: number): Point {
+export function snapLine(x0: number, y0: number, x1: number, y1: number, aspect: number = 1.0): Point {
   const dx = x1 - x0;
   const dy = y1 - y0;
-  const ax = Math.abs(dx);
-  const ay = Math.abs(dy);
+  const vax = Math.abs(dx) * aspect;
+  const vay = Math.abs(dy);
 
-  if (ax === 0 && ay === 0) return { x: x1, y: y1 };
+  if (vax === 0 && vay === 0) return { x: x1, y: y1 };
 
-  if (ay < ax * 0.414) {
+  if (vay < vax * 0.414) {
     return { x: x1, y: y0 };
-  } else if (ax < ay * 0.414) {
+  } else if (vax < vay * 0.414) {
     return { x: x0, y: y1 };
   } else {
-    const d = Math.round((ax + ay) / 2);
+    const vd = Math.round((vax + vay) / 2);
+    const targetDx = Math.round(vd / aspect);
+    const targetDy = vd;
     return {
-      x: x0 + Math.sign(dx) * d,
-      y: y0 + Math.sign(dy) * d,
+      x: x0 + Math.sign(dx) * targetDx,
+      y: y0 + Math.sign(dy) * targetDy,
     };
   }
 }
