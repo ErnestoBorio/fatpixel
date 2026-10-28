@@ -538,12 +538,12 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'ega-16',
-    name: 'IBM PC EGA (16)',
+    name: 'EGA',
     colors: EGA_16_COLORS,
   },
   {
     id: 'msx-16',
-    name: 'MSX / TMS9918A (16)',
+    name: 'MSX',
     colors: MSX_16_COLORS,
   },
   {
@@ -573,7 +573,7 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'teletext-8',
-    name: 'Teletext / RGB (8)',
+    name: 'Teletext',
     colors: TELETEXT_8_COLORS,
   },
   {

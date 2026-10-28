@@ -435,10 +435,20 @@ describe('App Graphic actions and mode switching', () => {
     const readoutRgb = target.querySelector<HTMLElement>('.readout-rgb');
     expect(readoutRgb?.textContent).toMatch(/^\(\d+,\s*\d+,\s*\d+\)$/);
 
-    // Switch to VGA
+    // Check palette names
     if (palSelect) {
       const vgaOption = Array.from(palSelect.options).find((o) => o.value === 'vga-256');
       expect(vgaOption?.textContent).toBe('VGA');
+
+      const egaOption = Array.from(palSelect.options).find((o) => o.value === 'ega-16');
+      expect(egaOption?.textContent).toBe('EGA');
+
+      const msxOption = Array.from(palSelect.options).find((o) => o.value === 'msx-16');
+      expect(msxOption?.textContent).toBe('MSX');
+
+      const teletextOption = Array.from(palSelect.options).find((o) => o.value === 'teletext-8');
+      expect(teletextOption?.textContent).toBe('Teletext');
+
       palSelect.value = 'vga-256';
       palSelect.dispatchEvent(new Event('change', { bubbles: true }));
       flushSync();
