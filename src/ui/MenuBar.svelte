@@ -29,12 +29,20 @@
     onRotate,
     onMirrorH,
     onMirrorV,
+    showLeftPanel = true,
+    showRightPanel = true,
+    onToggleLeftPanel,
+    onToggleRightPanel,
   } = $props<{
     canUndo?: boolean;
     canRedo?: boolean;
     canPaste?: boolean;
     canInvert?: boolean;
     showGrid?: boolean;
+    showLeftPanel?: boolean;
+    showRightPanel?: boolean;
+    onToggleLeftPanel?: () => void;
+    onToggleRightPanel?: () => void;
     onNewProject?: () => void;
     onOpenProject?: () => void;
     onSaveProject?: () => void;
@@ -234,12 +242,38 @@
         <button class="dropdown-item" onclick={() => { onToggleGrid?.(); closeMenu(); }}>
           <span>{showGrid ? '✓ ' : ''}Pixel Grid</span> <span class="shortcut">G</span>
         </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" onclick={() => { onToggleLeftPanel?.(); closeMenu(); }}>
+          <span>{showLeftPanel ? '✓ ' : ''}Tools Panel</span> <span class="shortcut">⌥1</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onToggleRightPanel?.(); closeMenu(); }}>
+          <span>{showRightPanel ? '✓ ' : ''}Right Sidebar</span> <span class="shortcut">⌥2</span>
+        </button>
       </div>
     {/if}
   </div>
   </div>
 
   <div class="menu-right">
+    <button
+      type="button"
+      class="header-toggle-btn {showLeftPanel ? 'active' : ''}"
+      onclick={() => onToggleLeftPanel?.()}
+      title="Toggle Tools Panel (⌥1)"
+      aria-label="Toggle Tools Panel"
+    >
+      🛠
+    </button>
+    <button
+      type="button"
+      class="header-toggle-btn {showRightPanel ? 'active' : ''}"
+      onclick={() => onToggleRightPanel?.()}
+      title="Toggle Right Sidebar (⌥2)"
+      aria-label="Toggle Right Sidebar"
+    >
+      🎨
+    </button>
+    <div class="header-divider"></div>
     <span class="app-title">Pixel</span>
     <span class="version-badge" title="Pixel v{APP_VERSION}">v{APP_VERSION}</span>
   </div>
@@ -343,5 +377,40 @@
     height: 1px;
     background: #33333d;
     margin: 4px 0;
+  }
+  .header-toggle-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #888;
+    padding: 2px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .header-toggle-btn:hover {
+    background: #2a2a34;
+    color: #fff;
+  }
+  .header-toggle-btn.active {
+    color: #60a5fa;
+    border-color: #384860;
+    background: #1e2838;
+  }
+  .header-divider {
+    width: 1px;
+    height: 14px;
+    background: #333342;
+    margin: 0 2px;
+  }
+  @media (max-width: 650px) {
+    .app-title,
+    .version-badge {
+      display: none;
+    }
   }
 </style>

@@ -63,11 +63,12 @@
 
   // Charset active character (0..255)
   let sheetHoverChar = $state<number | null>(null);
+  let showFloatingPanel = $state(typeof window !== 'undefined' ? window.innerWidth >= 1200 : true);
 
-  let offsetX = $state(0);
-  let offsetY = $state(0);
-  let panOffsetX = $state(0);
-  let panOffsetY = $state(0);
+  let offsetX = 0;
+  let offsetY = 0;
+  let panOffsetX = 0;
+  let panOffsetY = 0;
 
   let isPanning = $state(false);
   let panStartX = 0;
@@ -134,9 +135,12 @@
     if (!containerElem) return;
     panOffsetX = 0;
     panOffsetY = 0;
-    const sidePanelW = isCharset ? 340 : 200;
-    const cw = containerElem.clientWidth - sidePanelW;
-    const ch = containerElem.clientHeight - 80;
+    let sidePanelW = 0;
+    if (showFloatingPanel && containerElem.clientWidth >= 900) {
+      sidePanelW = isCharset ? 310 : 250;
+    }
+    const cw = Math.max(100, containerElem.clientWidth - sidePanelW - 30);
+    const ch = Math.max(100, containerElem.clientHeight - 80);
     const gw = drawWidth * drawAspect;
     const gh = drawHeight;
 
@@ -162,11 +166,22 @@
     const imgW = drawWidth * pxW;
     const imgH = drawHeight * pxH;
 
-    // Account for side panel on the right (charset sheet or sprite preview)
-    const sidePanelW = isCharset ? 310 : 250;
+    // Account for side panel on the right only if shown AND container has enough room
+    let sidePanelW = 0;
+    if (showFloatingPanel && containerElem.clientWidth >= (imgW + (isCharset ? 310 : 250) + 50)) {
+      sidePanelW = isCharset ? 310 : 250;
+    }
     const availableW = containerElem.clientWidth - sidePanelW;
     offsetX = Math.round((availableW - imgW) / 2) + panOffsetX;
     offsetY = Math.round((containerElem.clientHeight - imgH) / 2) + panOffsetY;
+
+    // Guard against artwork being forced offscreen when not manually panning
+    if (panOffsetX === 0 && (offsetX < 12 || (offsetX + imgW > containerElem.clientWidth && availableW < imgW))) {
+      offsetX = Math.max(12, Math.round((containerElem.clientWidth - imgW) / 2));
+    }
+    if (panOffsetY === 0 && (offsetY < 12 || (offsetY + imgH > containerElem.clientHeight && containerElem.clientHeight < imgH))) {
+      offsetY = Math.max(12, Math.round((containerElem.clientHeight - imgH) / 2));
+    }
   }
 
   function stepZoom(delta: number) {
@@ -807,63 +822,107 @@
     </div>
 
     <!-- 256 Character Sheet View (docked on right) -->
-    <div class="charset-sheet-panel">
-      <div class="sheet-header">
-        <span class="sheet-title">256-Char Sheet</span>
-        <span class="sheet-meta">
-          {sheetHoverChar !== null ? `Char #${sheetHoverChar} (0x${sheetHoverChar.toString(16).toUpperCase().padStart(2, '0')})` : '1px grid'}
-        </span>
+    {#if showFloatingPanel}
+      <div class="charset-sheet-panel">
+        <div class="sheet-header">
+          <span class="sheet-title">256-Char Sheet</span>
+          <div class="sheet-actions">
+            <span class="sheet-meta">
+              {sheetHoverChar !== null ? `Char #${sheetHoverChar} (0x${sheetHoverChar.toString(16).toUpperCase().padStart(2, '0')})` : '1px grid'}
+            </span>
+            <button
+              type="button"
+              class="sheet-minimize-btn"
+              onclick={() => { showFloatingPanel = false; recalculateOffsets(); redraw(); }}
+              title="Minimize Charset Sheet"
+              aria-label="Minimize Charset Sheet"
+            >
+              −
+            </button>
+          </div>
+        </div>
+        <div class="sheet-canvas-wrapper">
+          <canvas
+            bind:this={sheetCanvasElem}
+            onmousedown={handleSheetMouseDown}
+            onmousemove={handleSheetMouseMove}
+            onmouseleave={() => { sheetHoverChar = null; redrawSheetCanvas(); }}
+          ></canvas>
+        </div>
       </div>
-      <div class="sheet-canvas-wrapper">
-        <canvas
-          bind:this={sheetCanvasElem}
-          onmousedown={handleSheetMouseDown}
-          onmousemove={handleSheetMouseMove}
-          onmouseleave={() => { sheetHoverChar = null; redrawSheetCanvas(); }}
-        ></canvas>
-      </div>
-    </div>
+    {:else}
+      <button
+        type="button"
+        class="floating-panel-pill"
+        onclick={() => { showFloatingPanel = true; recalculateOffsets(); redraw(); }}
+        title="Open 256-Char Sheet View"
+      >
+        🔤 256-Char Sheet ▾
+      </button>
+    {/if}
   {/if}
 
   {#if !isCharset}
-    <!-- Sprite Preview Panel (1x and 2x zoom views) -->
-    <div class="sprite-preview-panel">
-      <div class="sheet-header">
-        <span class="sheet-title">Preview</span>
-        <span class="sheet-meta">{graphicWidth}×{graphicHeight}</span>
-      </div>
-      <div class="sprite-previews-container">
-        <!-- 1x Preview (1:1 pixels) -->
-        <div class="preview-box">
-          <div class="preview-label">
-            <span>1×</span>
+    {#if showFloatingPanel}
+      <!-- Sprite Preview Panel (1x and 2x zoom views) -->
+      <div class="sprite-preview-panel">
+        <div class="sheet-header">
+          <div class="sheet-title-group">
+            <span class="sheet-title">Preview</span>
+            <span class="sheet-meta">{graphicWidth}×{graphicHeight}</span>
           </div>
-          <div class="preview-viewport">
-            <canvas bind:this={preview1xCanvasElem}></canvas>
-          </div>
+          <button
+            type="button"
+            class="sheet-minimize-btn"
+            onclick={() => { showFloatingPanel = false; recalculateOffsets(); redraw(); }}
+            title="Minimize Preview Panel"
+            aria-label="Minimize Preview Panel"
+          >
+            −
+          </button>
         </div>
+        <div class="sprite-previews-container">
+          <!-- 1x Preview (1:1 pixels) -->
+          <div class="preview-box">
+            <div class="preview-label">
+              <span>1×</span>
+            </div>
+            <div class="preview-viewport">
+              <canvas bind:this={preview1xCanvasElem}></canvas>
+            </div>
+          </div>
 
-        <!-- 2x Preview (2x zoom) -->
-        <div class="preview-box">
-          <div class="preview-label">
-            <span>2×</span>
+          <!-- 2x Preview (2x zoom) -->
+          <div class="preview-box">
+            <div class="preview-label">
+              <span>2×</span>
+            </div>
+            <div class="preview-viewport">
+              <canvas bind:this={preview2xCanvasElem}></canvas>
+            </div>
           </div>
-          <div class="preview-viewport">
-            <canvas bind:this={preview2xCanvasElem}></canvas>
-          </div>
-        </div>
 
-        <!-- 4x Preview (4x zoom) -->
-        <div class="preview-box">
-          <div class="preview-label">
-            <span>4×</span>
-          </div>
-          <div class="preview-viewport">
-            <canvas bind:this={preview4xCanvasElem}></canvas>
+          <!-- 4x Preview (4x zoom) -->
+          <div class="preview-box">
+            <div class="preview-label">
+              <span>4×</span>
+            </div>
+            <div class="preview-viewport">
+              <canvas bind:this={preview4xCanvasElem}></canvas>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    {:else}
+      <button
+        type="button"
+        class="floating-panel-pill"
+        onclick={() => { showFloatingPanel = true; recalculateOffsets(); redraw(); }}
+        title="Open Sprite Preview Panel"
+      >
+        👁 Preview ({graphicWidth}×{graphicHeight}) ▾
+      </button>
+    {/if}
   {/if}
 
   <!-- Floating Zoom Toolbar -->
@@ -980,9 +1039,9 @@
     top: 12px;
     right: 12px;
     width: 295px;
-    max-height: calc(100vh - 24px);
-    background: rgba(26, 26, 36, 0.92);
-    backdrop-filter: blur(6px);
+    max-height: calc(100% - 24px);
+    background: rgba(26, 26, 36, 0.94);
+    backdrop-filter: blur(8px);
     border: 1px solid #36364a;
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
@@ -995,14 +1054,66 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 10px;
+    padding: 7px 10px;
     background: #20202c;
     border-bottom: 1px solid #333344;
+  }
+  .sheet-title-group {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
   }
   .sheet-title {
     font-weight: bold;
     font-size: 12px;
     color: #eee;
+  }
+  .sheet-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sheet-minimize-btn {
+    background: #282836;
+    border: 1px solid #3d3d50;
+    color: #bbb;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .sheet-minimize-btn:hover {
+    background: #38384a;
+    color: #fff;
+    border-color: #5588cc;
+  }
+  .floating-panel-pill {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(26, 26, 36, 0.92);
+    backdrop-filter: blur(6px);
+    border: 1px solid #3d3d50;
+    color: #c0d0e8;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 40;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .floating-panel-pill:hover {
+    background: #2d3b52;
+    border-color: #5882c4;
+    color: #fff;
   }
   .sheet-meta {
     font-size: 11px;
@@ -1022,9 +1133,9 @@
     top: 12px;
     right: 12px;
     width: 235px;
-    max-height: calc(100vh - 80px);
-    background: rgba(26, 26, 36, 0.92);
-    backdrop-filter: blur(6px);
+    max-height: calc(100% - 24px);
+    background: rgba(26, 26, 36, 0.94);
+    backdrop-filter: blur(8px);
     border: 1px solid #36364a;
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);

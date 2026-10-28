@@ -78,12 +78,20 @@
     height: 24px;
     font-size: 11px;
     color: #999;
+    white-space: nowrap;
+    overflow: hidden;
   }
   .left-section,
   .right-section {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+  }
+  .hover-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .sep {
     color: #333;
@@ -110,5 +118,15 @@
     background: #202028;
     border-radius: 3px;
     border: 1px solid #2d2d3a;
+  }
+  @media (max-width: 900px) {
+    .hints {
+      display: none;
+    }
+  }
+  @media (max-width: 650px) {
+    .version-tag {
+      display: none;
+    }
   }
 </style>

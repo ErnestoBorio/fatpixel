@@ -32,8 +32,6 @@
 </script>
 
 <div class="tools-panel">
-  <div class="title">Tools</div>
-
   <div class="tool-list">
     {#each TOOLS as t}
       <button
@@ -191,11 +189,6 @@
     gap: 8px;
     color: #ccc;
     font-size: 12px;
-  }
-  .title {
-    font-weight: bold;
-    font-size: 14px;
-    color: #fff;
   }
   .tool-list {
     display: flex;

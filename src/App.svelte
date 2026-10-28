@@ -11,7 +11,8 @@
   import GraphicsPanel from './ui/GraphicsPanel.svelte';
   import MenuBar from './ui/MenuBar.svelte';
   import StatusBar from './ui/StatusBar.svelte';
-  import { defaultPalette } from './model/palette';
+  import { defaultPalette, rgbToHexStr } from './model/palette';
+  import { slotColor } from './model/render';
   import {
     saveAllToStorage,
     loadAllFromStorage,
@@ -64,6 +65,26 @@
   );
   let showSaveAsModal = $state(false);
   let saveAsInputName = $state('');
+
+  let windowHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 900);
+  let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1400);
+  let showLeftPanel = $state(true);
+  let showRightPanel = $state(true);
+  let isCompactHeight = $derived(windowHeight < 780);
+  let userPickedTab = $state(false);
+  let rightTab = $state<'palette' | 'graphics' | 'both'>('both');
+
+  $effect(() => {
+    if (!userPickedTab) {
+      rightTab = isCompactHeight ? 'palette' : 'both';
+    }
+  });
+
+  let activePrimaryHex = $derived.by(() => {
+    stateVersion;
+    const col = slotColor(activeGraphic, activePalette, primary);
+    return rgbToHexStr(col);
+  });
 
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
@@ -524,6 +545,16 @@
         handlePaste();
       }
     } else {
+      if (e.altKey && (e.key === '1' || e.code === 'Digit1')) {
+        e.preventDefault();
+        showLeftPanel = !showLeftPanel;
+        return;
+      }
+      if (e.altKey && (e.key === '2' || e.code === 'Digit2')) {
+        e.preventDefault();
+        showRightPanel = !showRightPanel;
+        return;
+      }
       switch (e.key) {
         case 'ArrowLeft':
           if (activeGraphic.isCharset()) {
@@ -649,6 +680,11 @@
   });
 </script>
 
+<svelte:window
+  bind:innerHeight={windowHeight}
+  bind:innerWidth={windowWidth}
+/>
+
 <input
   type="file"
   accept=".pxp,.json"
@@ -664,6 +700,10 @@
     canPaste={clipboardHasItem}
     canInvert={activeGraphic.depth === 2}
     {showGrid}
+    {showLeftPanel}
+    {showRightPanel}
+    onToggleLeftPanel={() => (showLeftPanel = !showLeftPanel)}
+    onToggleRightPanel={() => (showRightPanel = !showRightPanel)}
     onNewProject={newProject}
     onOpenProject={openProject}
     onSaveProject={saveProject}
@@ -676,8 +716,16 @@
     onPaste={handlePaste}
     onClear={handleClear}
     onInvert={handleInvert}
-    onNewSprite={addSprite}
-    onNewCharset={addCharset}
+    onNewSprite={() => {
+      rightTab = 'graphics';
+      userPickedTab = true;
+      addSprite();
+    }}
+    onNewCharset={() => {
+      rightTab = 'graphics';
+      userPickedTab = true;
+      addCharset();
+    }}
     onZoomIn={() => canvasRef?.zoomIn()}
     onZoomOut={() => canvasRef?.zoomOut()}
     onFit={() => canvasRef?.fitToWindow()}
@@ -689,8 +737,32 @@
   />
 
   <div class="main-workspace">
+    <!-- Floating toggle button to restore Left Panel if collapsed -->
+    {#if !showLeftPanel}
+      <button
+        type="button"
+        class="floating-panel-toggle left-toggle"
+        onclick={() => (showLeftPanel = true)}
+        title="Open Tools Panel (⌥1)"
+      >
+        🛠 Tools ▾
+      </button>
+    {/if}
+
     <!-- Left Tools Panel -->
-    <aside class="panel left-panel">
+    <aside class="panel left-panel" class:collapsed={!showLeftPanel}>
+      <div class="panel-header-compact">
+        <span class="panel-header-title">Tools</span>
+        <button
+          type="button"
+          class="panel-collapse-btn"
+          onclick={() => (showLeftPanel = false)}
+          title="Collapse Tools Panel (⌥1)"
+          aria-label="Collapse Tools Panel"
+        >
+          ◀
+        </button>
+      </div>
       <ToolsPanel
         bind:tool
         bind:brushShape
@@ -732,31 +804,100 @@
       />
     </main>
 
+    <!-- Floating toggle button to restore Right Panel if collapsed -->
+    {#if !showRightPanel}
+      <button
+        type="button"
+        class="floating-panel-toggle right-toggle"
+        onclick={() => (showRightPanel = true)}
+        title="Open Sidebar (⌥2)"
+      >
+        🎨 Sidebar ▾
+      </button>
+    {/if}
+
     <!-- Right Side Panels (Palette & Graphics) -->
-    <aside class="panel right-panel">
-      <PalettePanel
-        graphic={activeGraphic}
-        palette={activePalette}
-        projectRevision={stateVersion}
-        bind:primary
-        bind:secondary
-        onBeforeChange={pushHistorySnapshot}
-        onColorChange={notifyGraphicChange}
-        onPaletteSelect={handlePaletteSelect}
-      />
-      <div class="panel-divider"></div>
-      <GraphicsPanel
-        {project}
-        projectRevision={stateVersion}
-        bind:active={activeGraphicIndex}
-        onBeforeChange={pushHistorySnapshot}
-        onGraphicChange={notifyGraphicChange}
-        onAddSprite={addSprite}
-        onAddCharset={addCharset}
-        onDuplicateGraphic={duplicateGraphic}
-        onDeleteGraphic={deleteGraphic}
-        onReorderGraphics={reorderGraphics}
-      />
+    <aside class="panel right-panel" class:collapsed={!showRightPanel}>
+      <div class="right-panel-tabs">
+        <button
+          type="button"
+          class="tab-btn {rightTab === 'palette' ? 'active' : ''}"
+          onclick={() => { rightTab = 'palette'; userPickedTab = true; }}
+          title="Show Palette Panel"
+        >
+          <span class="tab-icon">🎨</span>
+          <span class="tab-text">Palette</span>
+          <span class="tab-dot" style="background-color: {activePrimaryHex};"></span>
+        </button>
+        <button
+          type="button"
+          class="tab-btn {rightTab === 'graphics' ? 'active' : ''}"
+          onclick={() => { rightTab = 'graphics'; userPickedTab = true; }}
+          title="Show Graphics & Sprites List"
+        >
+          <span class="tab-icon">🖼</span>
+          <span class="tab-text">Graphics</span>
+          <span class="tab-badge">{project.graphics.length}</span>
+        </button>
+        <button
+          type="button"
+          class="tab-btn tab-both {rightTab === 'both' ? 'active' : ''}"
+          onclick={() => { rightTab = 'both'; userPickedTab = true; }}
+          title="Split View: Show Both Palette & Graphics"
+        >
+          <span class="tab-icon">↕</span>
+          <span class="tab-text">Both</span>
+        </button>
+        <button
+          type="button"
+          class="tab-collapse-btn"
+          onclick={() => (showRightPanel = false)}
+          title="Collapse Sidebar (⌥2)"
+          aria-label="Collapse Sidebar"
+        >
+          ▶
+        </button>
+      </div>
+
+      <div class="right-panel-content">
+        <div class="panel-view {rightTab === 'palette' || rightTab === 'both' ? '' : 'is-hidden'} {rightTab === 'both' ? 'is-split' : 'is-full'}">
+          <PalettePanel
+            graphic={activeGraphic}
+            palette={activePalette}
+            projectRevision={stateVersion}
+            bind:primary
+            bind:secondary
+            onBeforeChange={pushHistorySnapshot}
+            onColorChange={notifyGraphicChange}
+            onPaletteSelect={handlePaletteSelect}
+          />
+        </div>
+        {#if rightTab === 'both'}
+          <div class="panel-divider"></div>
+        {/if}
+        <div class="panel-view {rightTab === 'graphics' || rightTab === 'both' ? '' : 'is-hidden'} {rightTab === 'both' ? 'is-split' : 'is-full'}">
+          <GraphicsPanel
+            {project}
+            projectRevision={stateVersion}
+            bind:active={activeGraphicIndex}
+            onBeforeChange={pushHistorySnapshot}
+            onGraphicChange={notifyGraphicChange}
+            onAddSprite={() => {
+              rightTab = 'graphics';
+              userPickedTab = true;
+              addSprite();
+            }}
+            onAddCharset={() => {
+              rightTab = 'graphics';
+              userPickedTab = true;
+              addCharset();
+            }}
+            onDuplicateGraphic={duplicateGraphic}
+            onDeleteGraphic={deleteGraphic}
+            onReorderGraphics={reorderGraphics}
+          />
+        </div>
+      </div>
     </aside>
   </div>
 
@@ -833,19 +974,33 @@
   .panel {
     background: #202028;
     border-color: #2b2b36;
-    overflow-y: auto;
     z-index: 10;
   }
   .left-panel {
+    flex: 0 0 125px;
     width: 125px;
+    min-width: 125px;
     border-right: 1px solid #2b2b36;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #38384a transparent;
+  }
+  .left-panel.collapsed {
+    display: none;
   }
   .right-panel {
-    width: 205px;
+    flex: 0 0 215px;
+    width: 215px;
+    min-width: 215px;
     border-left: 1px solid #2b2b36;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+  .right-panel.collapsed {
+    display: none;
   }
   .panel-divider {
     height: 1px;
@@ -853,10 +1008,171 @@
     margin: 2px 0;
     flex-shrink: 0;
   }
+  .right-panel-tabs {
+    display: flex;
+    align-items: center;
+    background: #1a1a22;
+    border-bottom: 1px solid #2b2b36;
+    padding: 3px 4px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 3px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #999;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .tab-btn:hover {
+    background: #252530;
+    color: #eee;
+  }
+  .tab-btn.active {
+    background: #2a374c;
+    border-color: #4a6fa5;
+    color: #fff;
+    font-weight: 600;
+  }
+  .tab-icon {
+    font-size: 11px;
+    line-height: 1;
+  }
+  .tab-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .tab-badge {
+    background: #36364a;
+    color: #bbb;
+    font-size: 9px;
+    padding: 0 4px;
+    border-radius: 8px;
+    font-family: monospace;
+    line-height: 13px;
+  }
+  .tab-btn.active .tab-badge {
+    background: #4a6fa5;
+    color: #fff;
+  }
+  .tab-collapse-btn {
+    background: transparent;
+    border: none;
+    color: #777;
+    padding: 4px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tab-collapse-btn:hover {
+    background: #282834;
+    color: #fff;
+  }
+  .panel-header-compact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: #1a1a22;
+    border-bottom: 1px solid #2b2b36;
+    flex-shrink: 0;
+  }
+  .panel-header-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .panel-collapse-btn {
+    background: transparent;
+    border: none;
+    color: #777;
+    padding: 2px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .panel-collapse-btn:hover {
+    background: #282834;
+    color: #fff;
+  }
+  .floating-panel-toggle {
+    position: absolute;
+    top: 8px;
+    background: rgba(32, 32, 40, 0.92);
+    backdrop-filter: blur(6px);
+    border: 1px solid #3d3d52;
+    color: #bbb;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 60;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .floating-panel-toggle:hover {
+    background: #2e3a50;
+    border-color: #5588cc;
+    color: #fff;
+  }
+  .left-toggle {
+    left: 8px;
+  }
+  .right-toggle {
+    right: 8px;
+  }
+  .right-panel-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #38384a transparent;
+  }
+  .panel-view.is-hidden {
+    display: none !important;
+  }
+  .panel-view.is-full {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .panel-view.is-split {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+  }
   .canvas-area {
     flex: 1;
     position: relative;
     background: #1e1e24;
+    min-width: 0;
   }
   .modal-backdrop {
     position: fixed;
