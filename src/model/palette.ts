@@ -148,10 +148,17 @@ export const CGA_COOL_NAMES = ['Black', 'Cyan', 'Magenta', 'White'];
 export const CGA_WARM_NAMES = ['Black', 'Green', 'Red', 'Yellow'];
 
 export const GAMEBOY_4_COLORS: Rgb[] = [
-  rgbHex(0x0f380f), // 0: Darkest Green
-  rgbHex(0x306230), // 1: Dark Green
-  rgbHex(0x8bac0f), // 2: Light Green
-  rgbHex(0x9bbc0f), // 3: Lightest Green
+  rgbHex(0x9bbc0f), // 0 (00): Lightest Green (brightest)
+  rgbHex(0x8bac0f), // 1 (01): Light Green
+  rgbHex(0x306230), // 2 (10): Dark Green
+  rgbHex(0x0f380f), // 3 (11): Darkest Green (darkest)
+];
+
+export const GAMEBOY_COLOR_NAMES = [
+  'Lightest Green (White)',
+  'Light Green',
+  'Dark Green',
+  'Darkest Green (Black)',
 ];
 
 export const TELETEXT_8_COLORS: Rgb[] = [
@@ -332,6 +339,9 @@ export function getColorName(paletteId: string, colorIndex: number): string {
   }
   if (paletteId === 'teletext-8') {
     return TELETEXT_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
+  }
+  if (paletteId === 'gameboy-4') {
+    return GAMEBOY_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
   return `Color #${colorIndex}`;
 }

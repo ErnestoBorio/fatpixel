@@ -620,6 +620,9 @@ describe('Clipboard and Copy & Paste', () => {
     const gb = getBuiltinPalette('gameboy-4');
     expect(gb).toBeDefined();
     expect(gb?.colors.length).toBe(4);
+    // 00 is brightest (Lightest Green) and 11 is darkest (Darkest Green)
+    expect(gb?.colors[0]).toEqual({ r: 0x9b, g: 0xbc, b: 0x0f });
+    expect(gb?.colors[3]).toEqual({ r: 0x0f, g: 0x38, b: 0x0f });
 
     const teletext = getBuiltinPalette('teletext-8');
     expect(teletext).toBeDefined();
