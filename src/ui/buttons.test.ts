@@ -418,7 +418,7 @@ describe('App Graphic actions and mode switching', () => {
       flushSync();
     }
     grid = target.querySelector<HTMLElement>('.palette-grid');
-    expect(grid?.classList.contains('dense-small')).toBe(true);
+    expect(grid?.classList.contains('dense-64')).toBe(true);
     expect(target.querySelectorAll('.color-btn').length).toBe(64);
     expect(target.querySelector('.color-readout')).not.toBeNull();
 
@@ -429,7 +429,7 @@ describe('App Graphic actions and mode switching', () => {
       flushSync();
     }
     grid = target.querySelector<HTMLElement>('.palette-grid');
-    expect(grid?.classList.contains('dense-small')).toBe(true);
+    expect(grid?.classList.contains('dense-64')).toBe(true);
     expect(target.querySelectorAll('.color-btn').length).toBe(64);
     expect(target.querySelector('.color-readout')).not.toBeNull();
     const readoutRgb = target.querySelector<HTMLElement>('.readout-rgb');

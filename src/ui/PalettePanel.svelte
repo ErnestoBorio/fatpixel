@@ -322,11 +322,12 @@
     </div>
   {:else}
     {@const count = palette.colors.length}
-    {@const gridCols = count >= 64 ? 16 : count >= 32 ? 8 : Math.min(4, count)}
+    {@const gridCols = count >= 128 ? 16 : count >= 32 ? 8 : Math.min(4, count)}
     <div
       class="palette-grid"
       class:dense-32={count === 32}
-      class:dense-small={count >= 64}
+      class:dense-64={count === 64}
+      class:dense-small={count >= 128}
       style="grid-template-columns: repeat({gridCols}, 1fr);"
     >
       {#each palette.colors as col, idx}
@@ -551,27 +552,33 @@
     display: grid;
     gap: 5px;
   }
-  .palette-grid.dense-32 {
+  .palette-grid.dense-32,
+  .palette-grid.dense-64 {
     gap: 2px;
   }
-  .palette-grid.dense-32 .color-btn {
-    height: 14px;
+  .palette-grid.dense-32 .color-btn,
+  .palette-grid.dense-64 .color-btn {
+    height: 15px;
     border: 1px solid rgba(0, 0, 0, 0.45);
     border-radius: 2px;
   }
-  .palette-grid.dense-32 .color-btn.is-pri {
+  .palette-grid.dense-32 .color-btn.is-pri,
+  .palette-grid.dense-64 .color-btn.is-pri {
     box-shadow: inset 0 0 0 1.5px #00d2ff;
     z-index: 2;
   }
-  .palette-grid.dense-32 .color-btn.is-sec {
+  .palette-grid.dense-32 .color-btn.is-sec,
+  .palette-grid.dense-64 .color-btn.is-sec {
     box-shadow: inset 0 0 0 1.5px #f87171;
     z-index: 2;
   }
-  .palette-grid.dense-32 .color-btn.is-both {
+  .palette-grid.dense-32 .color-btn.is-both,
+  .palette-grid.dense-64 .color-btn.is-both {
     box-shadow: inset 0 0 0 1.5px #00d2ff, inset 0 0 0 3px #f87171;
     z-index: 2;
   }
-  .palette-grid.dense-32 .badge {
+  .palette-grid.dense-32 .badge,
+  .palette-grid.dense-64 .badge {
     font-size: 8px;
     padding: 0 2px;
     line-height: 9px;
