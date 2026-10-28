@@ -382,4 +382,55 @@ describe('App Graphic actions and mode switching', () => {
     expect(githubBadge?.rel).toContain('noopener');
     expect(githubBadge?.querySelector('svg.github-icon')).not.toBeNull();
   });
+
+  it('renders compact swatches for 32 and 64 color palettes with color readout', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
+    expect(palSelect).not.toBeNull();
+
+    // Default C64 (16 colors)
+    let grid = target.querySelector<HTMLElement>('.palette-grid');
+    expect(grid?.classList.contains('dense-32')).toBe(false);
+    expect(grid?.classList.contains('dense-small')).toBe(false);
+    expect(target.querySelectorAll('.color-btn').length).toBe(16);
+
+    // Switch to Amiga 32
+    if (palSelect) {
+      palSelect.value = 'amiga-32';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+    grid = target.querySelector<HTMLElement>('.palette-grid');
+    expect(grid?.classList.contains('dense-32')).toBe(true);
+    expect(grid?.classList.contains('dense-small')).toBe(false);
+    expect(target.querySelectorAll('.color-btn').length).toBe(32);
+    expect(target.querySelector('.color-readout')).not.toBeNull();
+
+    // Switch to NES 64
+    if (palSelect) {
+      palSelect.value = 'nes-64';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+    grid = target.querySelector<HTMLElement>('.palette-grid');
+    expect(grid?.classList.contains('dense-small')).toBe(true);
+    expect(target.querySelectorAll('.color-btn').length).toBe(64);
+    expect(target.querySelector('.color-readout')).not.toBeNull();
+
+    // Switch to SMS 64
+    if (palSelect) {
+      palSelect.value = 'sms-64';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+    grid = target.querySelector<HTMLElement>('.palette-grid');
+    expect(grid?.classList.contains('dense-small')).toBe(true);
+    expect(target.querySelectorAll('.color-btn').length).toBe(64);
+    expect(target.querySelector('.color-readout')).not.toBeNull();
+  });
 });

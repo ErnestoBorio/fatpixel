@@ -413,6 +413,41 @@ export const AMIGA_32_COLORS: Rgb[] = [
   rgbHex(0x88ff88), // 31: Pale Green
 ];
 
+export const AMIGA_COLOR_NAMES = [
+  'Workbench Blue',
+  'White',
+  'Black',
+  'Orange',
+  'Dark Gray',
+  'Light Gray',
+  'Sky Blue',
+  'Red',
+  'Green',
+  'Deep Blue',
+  'Yellow',
+  'Magenta',
+  'Cyan',
+  'Brown',
+  'Light Red',
+  'Light Green',
+  'Light Blue',
+  'Peach',
+  'Dark Brown',
+  'Charcoal',
+  'Medium Gray',
+  'Silver',
+  'Crimson',
+  'Forest Green',
+  'Navy',
+  'Olive',
+  'Purple',
+  'Teal',
+  'Amber',
+  'Coral',
+  'Pale Yellow',
+  'Pale Green',
+];
+
 export const NES_64_COLORS: Rgb[] = [
   // Row 0
   0x666666, 0x002a88, 0x1412a7, 0x3b00a4, 0x5c007e, 0x6e0040, 0x6c0600, 0x561d00,
@@ -603,6 +638,9 @@ export function getColorName(paletteId: string, colorIndex: number): string {
   }
   if (paletteId === 'teletext-8') {
     return TELETEXT_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
+  }
+  if (paletteId === 'amiga-32') {
+    return AMIGA_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
   if (paletteId === 'gameboy-4') {
     return GAMEBOY_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;

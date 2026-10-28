@@ -93,6 +93,7 @@
 
   function handlePaletteSelect(e: Event) {
     const id = (e.target as HTMLSelectElement).value;
+    hoveredColorIdx = null;
     onPaletteSelect?.(id);
   }
 
@@ -320,10 +321,12 @@
       </div>
     </div>
   {:else}
-    {@const gridCols = palette.colors.length >= 32 ? 8 : Math.min(4, palette.colors.length)}
+    {@const count = palette.colors.length}
+    {@const gridCols = count >= 64 ? 16 : count >= 32 ? 8 : Math.min(4, count)}
     <div
       class="palette-grid"
-      class:dense={palette.colors.length >= 32}
+      class:dense-32={count === 32}
+      class:dense-small={count >= 64}
       style="grid-template-columns: repeat({gridCols}, 1fr);"
     >
       {#each palette.colors as col, idx}
@@ -332,8 +335,13 @@
         {@const colorName = getColorName(palette.id, idx)}
         <button
           class="color-btn"
+          class:is-pri={isPri}
+          class:is-sec={isSec}
+          class:is-both={isPri && isSec}
           style="background-color: {getHex(col)};"
           title="#{idx}: {colorName} ({getHex(col)})"
+          onmouseenter={() => (hoveredColorIdx = idx)}
+          onmouseleave={() => (hoveredColorIdx = null)}
           onclick={() => {
             if (isDirect) {
               primary = idx;
@@ -360,6 +368,29 @@
         </button>
       {/each}
     </div>
+
+    {#if count >= 32}
+      <div class="color-readout">
+        {#if hoveredColorIdx !== null && palette.colors[hoveredColorIdx]}
+          {@const hc = palette.colors[hoveredColorIdx]}
+          <div class="readout-content">
+            <span class="readout-dot" style="background-color: {getHex(hc)};"></span>
+            <span class="readout-idx">#{hoveredColorIdx}</span>
+            <span class="readout-rgb">R:{hc.r} G:{hc.g} B:{hc.b}</span>
+            <span class="readout-hex">{getHex(hc)}</span>
+          </div>
+        {:else}
+          {@const activeIdx = isDirect ? primary : (graphicSlots[primary] ?? 0)}
+          {@const ac = palette.colors[activeIdx % palette.colors.length] ?? palette.colors[0]}
+          <div class="readout-content">
+            <span class="readout-dot" style="background-color: {getHex(ac)};"></span>
+            <span class="readout-idx">#{activeIdx}</span>
+            <span class="readout-rgb">R:{ac.r} G:{ac.g} B:{ac.b}</span>
+            <span class="readout-hex">{getHex(ac)}</span>
+          </div>
+        {/if}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -520,16 +551,54 @@
     display: grid;
     gap: 5px;
   }
-  .palette-grid.dense {
+  .palette-grid.dense-32 {
     gap: 2px;
   }
-  .palette-grid.dense .color-btn {
-    height: 18px;
+  .palette-grid.dense-32 .color-btn {
+    height: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.45);
+    border-radius: 2px;
   }
-  .palette-grid.dense .badge {
+  .palette-grid.dense-32 .color-btn.is-pri {
+    box-shadow: inset 0 0 0 1.5px #00d2ff;
+    z-index: 2;
+  }
+  .palette-grid.dense-32 .color-btn.is-sec {
+    box-shadow: inset 0 0 0 1.5px #f87171;
+    z-index: 2;
+  }
+  .palette-grid.dense-32 .color-btn.is-both {
+    box-shadow: inset 0 0 0 1.5px #00d2ff, inset 0 0 0 3px #f87171;
+    z-index: 2;
+  }
+  .palette-grid.dense-32 .badge {
     font-size: 8px;
     padding: 0 2px;
-    line-height: 10px;
+    line-height: 9px;
+    border-radius: 2px;
+  }
+  .palette-grid.dense-small {
+    gap: 1.5px;
+  }
+  .palette-grid.dense-small .color-btn {
+    height: 11px;
+    border: 1px solid rgba(0, 0, 0, 0.45);
+    border-radius: 1px;
+  }
+  .palette-grid.dense-small .color-btn.is-pri {
+    box-shadow: inset 0 0 0 1.5px #00d2ff;
+    z-index: 2;
+  }
+  .palette-grid.dense-small .color-btn.is-sec {
+    box-shadow: inset 0 0 0 1.5px #f87171;
+    z-index: 2;
+  }
+  .palette-grid.dense-small .color-btn.is-both {
+    box-shadow: inset 0 0 0 1.5px #00d2ff, inset 0 0 0 3px #f87171;
+    z-index: 2;
+  }
+  .palette-grid.dense-small .badge {
+    display: none;
   }
   .color-btn {
     height: 28px;
@@ -540,6 +609,12 @@
     align-items: center;
     justify-content: center;
     border-radius: 2px;
+    box-sizing: border-box;
+    padding: 0;
+  }
+  .color-btn:hover {
+    outline: 1px solid #ffffff;
+    z-index: 3;
   }
   .badge {
     font-size: 10px;
