@@ -320,7 +320,12 @@
       </div>
     </div>
   {:else}
-    <div class="palette-grid" style="grid-template-columns: repeat({Math.min(4, palette.colors.length)}, 1fr);">
+    {@const gridCols = palette.colors.length >= 32 ? 8 : Math.min(4, palette.colors.length)}
+    <div
+      class="palette-grid"
+      class:dense={palette.colors.length >= 32}
+      style="grid-template-columns: repeat({gridCols}, 1fr);"
+    >
       {#each palette.colors as col, idx}
         {@const isPri = isDirect ? primary === idx : graphicSlots[primary] === idx}
         {@const isSec = isDirect ? idx === 0 : graphicSlots[0] === idx}
@@ -514,6 +519,17 @@
   .palette-grid {
     display: grid;
     gap: 5px;
+  }
+  .palette-grid.dense {
+    gap: 2px;
+  }
+  .palette-grid.dense .color-btn {
+    height: 18px;
+  }
+  .palette-grid.dense .badge {
+    font-size: 8px;
+    padding: 0 2px;
+    line-height: 10px;
   }
   .color-btn {
     height: 28px;

@@ -644,6 +644,34 @@ describe('Clipboard and Copy & Paste', () => {
     expect(drean?.name).toBe('Drean 64 (16)');
     expect(drean?.colors.length).toBe(16);
 
+    const pico = getBuiltinPalette('pico-8');
+    expect(pico).toBeDefined();
+    expect(pico?.colors.length).toBe(16);
+
+    const ega = getBuiltinPalette('ega-16');
+    expect(ega).toBeDefined();
+    expect(ega?.colors.length).toBe(16);
+
+    const msx = getBuiltinPalette('msx-16');
+    expect(msx).toBeDefined();
+    expect(msx?.colors.length).toBe(16);
+
+    const apple = getBuiltinPalette('apple-ii-16');
+    expect(apple).toBeDefined();
+    expect(apple?.colors.length).toBe(16);
+
+    const amiga = getBuiltinPalette('amiga-32');
+    expect(amiga).toBeDefined();
+    expect(amiga?.colors.length).toBe(32);
+
+    const nes = getBuiltinPalette('nes-64');
+    expect(nes).toBeDefined();
+    expect(nes?.colors.length).toBe(64);
+
+    const sms = getBuiltinPalette('sms-64');
+    expect(sms).toBeDefined();
+    expect(sms?.colors.length).toBe(64);
+
     // Legacy aliases
     expect(getBuiltinPalette('cga-4')?.id).toBe('cga-cool-4');
     expect(getBuiltinPalette('zx-8')?.id).toBe('zx-16');
