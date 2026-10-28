@@ -336,4 +336,19 @@ describe('App Graphic actions and mode switching', () => {
     flushSync();
     expect(target.querySelector('.save-as-modal')).toBeNull();
   });
+
+  it('renders a github badge at the top right linking to ErnestoBorio/pixel', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const githubBadge = target.querySelector<HTMLAnchorElement>('.github-badge');
+    expect(githubBadge).not.toBeNull();
+    expect(githubBadge?.href).toBe('https://github.com/ErnestoBorio/pixel');
+    expect(githubBadge?.target).toBe('_blank');
+    expect(githubBadge?.rel).toContain('noopener');
+    expect(githubBadge?.querySelector('svg.github-icon')).not.toBeNull();
+  });
 });
