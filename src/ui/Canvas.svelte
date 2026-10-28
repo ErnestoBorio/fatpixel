@@ -57,12 +57,15 @@
   let canvasElem: HTMLCanvasElement;
   let containerElem: HTMLDivElement;
   let sheetCanvasElem: HTMLCanvasElement | null = $state(null);
+  let tileCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview1xCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview2xCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview4xCanvasElem: HTMLCanvasElement | null = $state(null);
 
-  // Charset active character (0..255)
+  // Charset active character (0..255) & tiling preview
   let sheetHoverChar = $state<number | null>(null);
+  let tileScale = $state(2);
+  let showTileGrid = $state(false);
   let showFloatingPanel = $state(typeof window !== 'undefined' ? window.innerWidth >= 1200 : true);
 
   let offsetX = 0;
@@ -254,6 +257,7 @@
     redrawMainCanvas();
     if (isCharset) {
       redrawSheetCanvas();
+      redrawTilePreview();
     } else {
       redrawSpritePreviews();
     }
@@ -360,8 +364,6 @@
 
   function redrawSheetCanvas() {
     if (!sheetCanvasElem || !isCharset || !charsetInfo) return;
-    const ctx = sheetCanvasElem.getContext('2d');
-    if (!ctx) return;
 
     const { charWidth, charHeight, charCount, columns } = charsetInfo;
     const rows = Math.ceil(charCount / columns);
@@ -377,6 +379,9 @@
       sheetCanvasElem.width = totalW;
       sheetCanvasElem.height = totalH;
     }
+
+    const ctx = sheetCanvasElem.getContext('2d');
+    if (!ctx) return;
 
     // Grid separator background
     ctx.fillStyle = '#262833';
@@ -414,6 +419,88 @@
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 1;
         ctx.strokeRect(cx - 0.5, cy - 0.5, cellW + 1, cellH + 1);
+      }
+    }
+  }
+
+  function initTileCanvas(node: HTMLCanvasElement) {
+    tileCanvasElem = node;
+    redrawTilePreview();
+  }
+
+  function redrawTilePreview() {
+    if (!tileCanvasElem || !isCharset || !charsetInfo) return;
+
+    const { charWidth, charHeight } = charsetInfo;
+    const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
+    const matrixCols = 4;
+    const matrixRows = 4;
+
+    const tileW = charWidth * aspect * tileScale;
+    const tileH = charHeight * tileScale;
+    const totalW = matrixCols * tileW;
+    const totalH = matrixRows * tileH;
+
+    if (tileCanvasElem.width !== totalW || tileCanvasElem.height !== totalH) {
+      tileCanvasElem.width = totalW;
+      tileCanvasElem.height = totalH;
+    }
+
+    const ctx = tileCanvasElem.getContext('2d');
+    if (!ctx) return;
+
+    const bg = slotColor(graphic, palette, 0);
+    ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
+    ctx.fillRect(0, 0, totalW, totalH);
+
+    // Cache current character's pixels
+    const charPixels = new Array(charWidth * charHeight);
+    for (let ly = 0; ly < charHeight; ly++) {
+      for (let lx = 0; lx < charWidth; lx++) {
+        charPixels[ly * charWidth + lx] = graphic.getCharPixel(activeCharIndex, lx, ly);
+      }
+    }
+
+    // Render 4x4 matrix of activeCharIndex
+    for (let tr = 0; tr < matrixRows; tr++) {
+      for (let tc = 0; tc < matrixCols; tc++) {
+        const originX = tc * tileW;
+        const originY = tr * tileH;
+
+        for (let ly = 0; ly < charHeight; ly++) {
+          for (let lx = 0; lx < charWidth; lx++) {
+            const val = charPixels[ly * charWidth + lx];
+            if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+            const col = slotColor(graphic, palette, val);
+            ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+            ctx.fillRect(
+              originX + lx * aspect * tileScale,
+              originY + ly * tileScale,
+              aspect * tileScale,
+              tileScale
+            );
+          }
+        }
+      }
+    }
+
+    // Optional subtle grid separating tiles
+    if (showTileGrid) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1;
+      for (let c = 1; c < matrixCols; c++) {
+        const x = c * tileW;
+        ctx.beginPath();
+        ctx.moveTo(x - 0.5, 0);
+        ctx.lineTo(x - 0.5, totalH);
+        ctx.stroke();
+      }
+      for (let r = 1; r < matrixRows; r++) {
+        const y = r * tileH;
+        ctx.beginPath();
+        ctx.moveTo(0, y - 0.5);
+        ctx.lineTo(totalW, y - 0.5);
+        ctx.stroke();
       }
     }
   }
@@ -797,6 +884,10 @@
     preview1xCanvasElem;
     preview2xCanvasElem;
     preview4xCanvasElem;
+    tileCanvasElem;
+    tileScale;
+    showTileGrid;
+    showFloatingPanel;
     recalculateOffsets();
     redraw();
   });
@@ -876,6 +967,46 @@
             onmousemove={handleSheetMouseMove}
             onmouseleave={() => { sheetHoverChar = null; redrawSheetCanvas(); }}
           ></canvas>
+        </div>
+
+        <!-- 4x4 Tiling Preview -->
+        <div class="tile-preview-section">
+          <div class="sheet-header tile-header">
+            <div class="sheet-title-group">
+              <span class="sheet-title">Tiling Preview</span>
+              <span class="sheet-meta">4×4</span>
+            </div>
+            <div class="sheet-actions">
+              <div class="tile-scale-selector">
+                {#each [1, 2, 3, 4] as s}
+                  <button
+                    type="button"
+                    class="tile-scale-btn {tileScale === s ? 'active' : ''}"
+                    onclick={() => { tileScale = s; redrawTilePreview(); }}
+                    title="{s}× Zoom"
+                  >
+                    {s}×
+                  </button>
+                {/each}
+              </div>
+              <button
+                type="button"
+                class="tile-grid-btn {showTileGrid ? 'active' : ''}"
+                onclick={() => { showTileGrid = !showTileGrid; redrawTilePreview(); }}
+                title="Toggle Tile Boundary Grid"
+                aria-label="Toggle Tile Boundary Grid"
+              >
+                ⊞
+              </button>
+            </div>
+          </div>
+          <div class="tile-preview-viewport">
+            <canvas
+              bind:this={tileCanvasElem}
+              use:initTileCanvas
+              class="tile-preview-canvas"
+            ></canvas>
+          </div>
         </div>
       </div>
     {:else}
@@ -1155,6 +1286,82 @@
     justify-content: center;
     padding: 8px;
     background: #14141b;
+    flex-shrink: 1;
+    min-height: 100px;
+  }
+  .tile-preview-section {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid #333344;
+    background: #181824;
+    flex-shrink: 0;
+  }
+  .tile-header {
+    border-bottom: 1px solid #2b2b3a;
+  }
+  .tile-scale-selector {
+    display: flex;
+    gap: 2px;
+    background: #161622;
+    padding: 2px;
+    border-radius: 4px;
+    border: 1px solid #2d2d3e;
+  }
+  .tile-scale-btn {
+    background: transparent;
+    border: none;
+    color: #8899aa;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    line-height: 1.3;
+  }
+  .tile-scale-btn:hover {
+    color: #fff;
+    background: #28283a;
+  }
+  .tile-scale-btn.active {
+    background: #3a4a66;
+    color: #70b8ff;
+  }
+  .tile-grid-btn {
+    background: #242432;
+    border: 1px solid #38384a;
+    color: #8899aa;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .tile-grid-btn:hover {
+    color: #fff;
+    background: #323246;
+  }
+  .tile-grid-btn.active {
+    background: #2a3d58;
+    color: #60aaff;
+    border-color: #4872aa;
+  }
+  .tile-preview-viewport {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: #121218;
+    overflow: auto;
+    min-height: 48px;
+  }
+  .tile-preview-canvas {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    image-rendering: pixelated;
   }
   .sprite-preview-panel {
     position: absolute;
