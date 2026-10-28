@@ -482,4 +482,41 @@ describe('App Graphic actions and mode switching', () => {
     const canvas = target.querySelector<HTMLCanvasElement>('canvas.pixel-canvas');
     expect(canvas).not.toBeNull();
   });
+
+  it('allows selecting color #00 and other colors using the right button in 4bpp direct mode', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Select 4 bpp on 16-color C64 palette
+    const bpp4Btn = Array.from(target.querySelectorAll<HTMLButtonElement>('.bpp-btn')).find(
+      (b) => b.textContent?.trim() === '4'
+    );
+    expect(bpp4Btn).toBeDefined();
+    bpp4Btn?.click();
+    flushSync();
+
+    // Verify direct mode (no slots container rendered)
+    expect(target.querySelector('.slots-container')).toBeNull();
+
+    const swatches = target.querySelectorAll<HTMLButtonElement>('.color-btn');
+    expect(swatches.length).toBe(16);
+
+    const swatch0 = swatches[0];
+    const swatch5 = swatches[5];
+
+    // Right-click on swatch 5
+    swatch5.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    flushSync();
+    expect(swatch5.classList.contains('is-sec')).toBe(true);
+    expect(swatch0.classList.contains('is-sec')).toBe(false);
+
+    // Right-click back on swatch 0 (#00 color)
+    swatch0.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    flushSync();
+    expect(swatch0.classList.contains('is-sec')).toBe(true);
+    expect(swatch5.classList.contains('is-sec')).toBe(false);
+  });
 });

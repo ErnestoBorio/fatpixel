@@ -175,7 +175,9 @@
       if (primary >= activePalette.colors.length) {
         primary = Math.max(0, activePalette.colors.length - 1);
       }
-      secondary = 0;
+      if (secondary >= activePalette.colors.length) {
+        secondary = Math.max(0, activePalette.colors.length - 1);
+      }
     } else {
       // In 1bpp mode (depth 2), slot 0 is strictly for right-button, primary must be slot 1
       if (activeGraphic.depth === 2 && primary === 0) {

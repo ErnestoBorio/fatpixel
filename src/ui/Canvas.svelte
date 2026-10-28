@@ -227,8 +227,13 @@
 
   function getEffectivePaintValue(button: number): number {
     if (tool === 'eraser') return 0;
-    // Right button ALWAYS paints color 0 (Background / eraser)
-    if (button === 2) return 0;
+    // Right button
+    if (button === 2) {
+      if (isDirect) {
+        return secondary;
+      }
+      return 0; // In slotted mode, right button paints slot 0 (BG)
+    }
 
     // Left button:
     if (isDirect) {
@@ -540,9 +545,7 @@
             primary = val;
           }
         } else if (e.button === 2) {
-          if (!isDirect) {
-            secondary = val;
-          }
+          secondary = val;
         }
       }
       return;

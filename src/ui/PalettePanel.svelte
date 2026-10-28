@@ -75,7 +75,7 @@
     projectRevision;
     graphicSlots;
     if (isDirect) {
-      return palette.colors[0] ?? palette.colors[0];
+      return palette.colors[secondary % palette.colors.length] ?? palette.colors[0];
     }
     return slotColor(graphic, palette, 0);
   });
@@ -116,7 +116,7 @@
     }
 
     const priIdx = isDirect ? primary : (graphicSlots[primary] ?? 0);
-    const secIdx = isDirect ? 0 : (graphicSlots[0] ?? 0);
+    const secIdx = isDirect ? secondary : (graphicSlots[0] ?? 0);
 
     // Secondary marker (R)
     if (secIdx >= 0 && secIdx < 256) {
@@ -194,7 +194,7 @@
     if (x >= 0 && x < 16 && y >= 0 && y < 16) {
       const idx = y * 16 + x;
       if (isDirect) {
-        secondary = 0;
+        secondary = idx;
       } else {
         setSlotColor(0, idx);
       }
@@ -223,7 +223,7 @@
       <div
         class="swatch sec-swatch"
         style="background-color: {getHex(secRgb)};"
-        title="Right click color: {isDirect ? 'Color #0 (BG)' : 'Background (Slot 0)'}"
+        title="Right click color: {isDirect ? `Color #${secondary}` : 'Background (Slot 0)'}"
       ></div>
       <div
         class="swatch pri-swatch"
@@ -233,7 +233,7 @@
     </div>
     <div class="swatch-labels">
       <div><strong>L:</strong> {isDirect ? `Color #${primary}` : `Slot ${primary}`}</div>
-      <div><strong>R:</strong> {isDirect ? 'Color #0 (BG)' : 'Slot 0 (BG)'}</div>
+      <div><strong>R:</strong> {isDirect ? `Color #${secondary}` : 'Slot 0 (BG)'}</div>
     </div>
   </div>
 
@@ -279,7 +279,7 @@
   <div class="section-label">{palette.name}</div>
   <div class="help-text">
     {#if isDirect}
-      Left-click: pick color to draw · Right-click: Color #0 (BG)
+      Left-click: select L color · Right-click: select R color
     {:else}
       Left-click: assign to Slot {primary} · Right-click: assign to Slot 0 (BG)
     {/if}
@@ -332,7 +332,7 @@
     >
       {#each palette.colors as col, idx}
         {@const isPri = isDirect ? primary === idx : graphicSlots[primary] === idx}
-        {@const isSec = isDirect ? idx === 0 : graphicSlots[0] === idx}
+        {@const isSec = isDirect ? secondary === idx : graphicSlots[0] === idx}
         {@const colorName = getColorName(palette.id, idx)}
         <button
           class="color-btn"
@@ -353,18 +353,18 @@
           oncontextmenu={(e) => {
             e.preventDefault();
             if (isDirect) {
-              secondary = 0;
+              secondary = idx;
             } else {
               setSlotColor(0, idx);
             }
           }}
         >
           {#if isPri && isSec}
-            <span class="badge pri-sec">L/0</span>
+            <span class="badge pri-sec">{isDirect ? 'L/R' : 'L/0'}</span>
           {:else if isPri}
             <span class="badge pri">L</span>
           {:else if isSec}
-            <span class="badge sec">0</span>
+            <span class="badge sec">{isDirect ? 'R' : '0'}</span>
           {/if}
         </button>
       {/each}
