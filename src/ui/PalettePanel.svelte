@@ -305,7 +305,7 @@
           <div class="readout-content">
             <span class="readout-dot" style="background-color: {getHex(hc)};"></span>
             <span class="readout-idx">#{hoveredColorIdx}</span>
-            <span class="readout-rgb">R:{hc.r} G:{hc.g} B:{hc.b}</span>
+            <span class="readout-rgb">({hc.r}, {hc.g}, {hc.b})</span>
             <span class="readout-hex">{getHex(hc)}</span>
           </div>
         {:else}
@@ -314,7 +314,7 @@
           <div class="readout-content">
             <span class="readout-dot" style="background-color: {getHex(ac)};"></span>
             <span class="readout-idx">#{activeIdx}</span>
-            <span class="readout-rgb">R:{ac.r} G:{ac.g} B:{ac.b}</span>
+            <span class="readout-rgb">({ac.r}, {ac.g}, {ac.b})</span>
             <span class="readout-hex">{getHex(ac)}</span>
           </div>
         {/if}
@@ -376,7 +376,7 @@
           <div class="readout-content">
             <span class="readout-dot" style="background-color: {getHex(hc)};"></span>
             <span class="readout-idx">#{hoveredColorIdx}</span>
-            <span class="readout-rgb">R:{hc.r} G:{hc.g} B:{hc.b}</span>
+            <span class="readout-rgb">({hc.r}, {hc.g}, {hc.b})</span>
             <span class="readout-hex">{getHex(hc)}</span>
           </div>
         {:else}
@@ -385,7 +385,7 @@
           <div class="readout-content">
             <span class="readout-dot" style="background-color: {getHex(ac)};"></span>
             <span class="readout-idx">#{activeIdx}</span>
-            <span class="readout-rgb">R:{ac.r} G:{ac.g} B:{ac.b}</span>
+            <span class="readout-rgb">({ac.r}, {ac.g}, {ac.b})</span>
             <span class="readout-hex">{getHex(ac)}</span>
           </div>
         {/if}

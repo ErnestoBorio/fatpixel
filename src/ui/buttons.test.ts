@@ -432,5 +432,18 @@ describe('App Graphic actions and mode switching', () => {
     expect(grid?.classList.contains('dense-small')).toBe(true);
     expect(target.querySelectorAll('.color-btn').length).toBe(64);
     expect(target.querySelector('.color-readout')).not.toBeNull();
+    const readoutRgb = target.querySelector<HTMLElement>('.readout-rgb');
+    expect(readoutRgb?.textContent).toMatch(/^\(\d+,\s*\d+,\s*\d+\)$/);
+
+    // Switch to VGA
+    if (palSelect) {
+      const vgaOption = Array.from(palSelect.options).find((o) => o.value === 'vga-256');
+      expect(vgaOption?.textContent).toBe('VGA');
+      palSelect.value = 'vga-256';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+    const vgaReadoutRgb = target.querySelector<HTMLElement>('.readout-rgb');
+    expect(vgaReadoutRgb?.textContent).toMatch(/^\(\d+,\s*\d+,\s*\d+\)$/);
   });
 });

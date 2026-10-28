@@ -568,7 +568,7 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'vga-256',
-    name: 'VGA Mode 13h (256)',
+    name: 'VGA',
     colors: VGA_256_COLORS,
   },
   {
