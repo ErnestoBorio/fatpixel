@@ -28,13 +28,26 @@
     onPaletteSelect?: (paletteId: string) => void;
   }>();
 
+  let colorMapCanvas: HTMLCanvasElement | undefined = $state();
+  let hoveredColorIdx = $state<number | null>(null);
+
   function getHex(rgb: { r: number; g: number; b: number }) {
     return rgbToHexStr(rgb);
   }
 
+  let isDirect = $derived.by(() => {
+    projectRevision;
+    return (
+      graphic.depth === 256 ||
+      graphic.bpp === 8 ||
+      palette.colors.length === 256 ||
+      (1 << graphic.bpp) === palette.colors.length
+    );
+  });
+
   $effect(() => {
-    // In hi-res mode (depth 2), slot 0 is strictly for right-button, primary must be slot 1
-    if (graphic.depth === 2 && primary === 0) {
+    // In 1bpp mode (depth 2) with slots, slot 0 is strictly for right-button, primary must be slot 1
+    if (!isDirect && graphic.depth === 2 && primary === 0) {
       primary = 1;
     }
   });
@@ -52,11 +65,18 @@
   let priRgb = $derived.by(() => {
     projectRevision;
     graphicSlots;
+    if (isDirect) {
+      return palette.colors[primary % palette.colors.length] ?? palette.colors[0];
+    }
     return slotColor(graphic, palette, primary);
   });
+
   let secRgb = $derived.by(() => {
     projectRevision;
     graphicSlots;
+    if (isDirect) {
+      return palette.colors[0] ?? palette.colors[0];
+    }
     return slotColor(graphic, palette, 0);
   });
 
@@ -76,12 +96,109 @@
     onPaletteSelect?.(id);
   }
 
-  const ALL_SLOTS = [
-    { idx: 0, bin: '00', name: 'Background (R-click)' },
-    { idx: 1, bin: '01', name: 'Color 1' },
-    { idx: 2, bin: '10', name: 'Color 2' },
-    { idx: 3, bin: '11', name: 'Color 3' },
-  ];
+  function drawColorMap() {
+    if (!colorMapCanvas || palette.colors.length !== 256) return;
+    const ctx = colorMapCanvas.getContext('2d');
+    if (!ctx) return;
+
+    const cellSize = 10;
+    // Draw 16x16 swatches
+    for (let row = 0; row < 16; row++) {
+      for (let col = 0; col < 16; col++) {
+        const idx = row * 16 + col;
+        const c = palette.colors[idx];
+        if (c) {
+          ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
+          ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    const priIdx = isDirect ? primary : (graphicSlots[primary] ?? 0);
+    const secIdx = isDirect ? 0 : (graphicSlots[0] ?? 0);
+
+    // Secondary marker (R)
+    if (secIdx >= 0 && secIdx < 256) {
+      const sCol = secIdx % 16;
+      const sRow = Math.floor(secIdx / 16);
+      ctx.strokeStyle = '#f87171';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sCol * cellSize + 1, sRow * cellSize + 1, cellSize - 2, cellSize - 2);
+    }
+
+    // Primary marker (L)
+    if (priIdx >= 0 && priIdx < 256) {
+      const pCol = priIdx % 16;
+      const pRow = Math.floor(priIdx / 16);
+      ctx.strokeStyle = '#00d2ff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(pCol * cellSize + 1, pRow * cellSize + 1, cellSize - 2, cellSize - 2);
+    }
+
+    // Hover marker
+    if (hoveredColorIdx !== null && hoveredColorIdx >= 0 && hoveredColorIdx < 256) {
+      const hCol = hoveredColorIdx % 16;
+      const hRow = Math.floor(hoveredColorIdx / 16);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hCol * cellSize, hRow * cellSize, cellSize, cellSize);
+    }
+  }
+
+  $effect(() => {
+    projectRevision;
+    palette;
+    primary;
+    secondary;
+    graphicSlots;
+    hoveredColorIdx;
+    if (colorMapCanvas) {
+      drawColorMap();
+    }
+  });
+
+  function handleMapMouseMove(e: MouseEvent) {
+    if (!colorMapCanvas) return;
+    const rect = colorMapCanvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / 10);
+    const y = Math.floor((e.clientY - rect.top) / 10);
+    if (x >= 0 && x < 16 && y >= 0 && y < 16) {
+      hoveredColorIdx = y * 16 + x;
+    } else {
+      hoveredColorIdx = null;
+    }
+  }
+
+  function handleMapClick(e: MouseEvent) {
+    if (!colorMapCanvas) return;
+    const rect = colorMapCanvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / 10);
+    const y = Math.floor((e.clientY - rect.top) / 10);
+    if (x >= 0 && x < 16 && y >= 0 && y < 16) {
+      const idx = y * 16 + x;
+      if (isDirect) {
+        primary = idx;
+      } else {
+        setSlotColor(primary, idx);
+      }
+    }
+  }
+
+  function handleMapContextMenu(e: MouseEvent) {
+    e.preventDefault();
+    if (!colorMapCanvas) return;
+    const rect = colorMapCanvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / 10);
+    const y = Math.floor((e.clientY - rect.top) / 10);
+    if (x >= 0 && x < 16 && y >= 0 && y < 16) {
+      const idx = y * 16 + x;
+      if (isDirect) {
+        secondary = 0;
+      } else {
+        setSlotColor(0, idx);
+      }
+    }
+  }
 </script>
 
 <div class="palette-panel">
@@ -105,94 +222,140 @@
       <div
         class="swatch sec-swatch"
         style="background-color: {getHex(secRgb)};"
-        title="Right click color: Background (Slot 0)"
+        title="Right click color: {isDirect ? 'Color #0 (BG)' : 'Background (Slot 0)'}"
       ></div>
       <div
         class="swatch pri-swatch"
         style="background-color: {getHex(priRgb)};"
-        title="Left click color: Active slot (Slot {primary})"
+        title="Left click color: {isDirect ? `Color #${primary}` : `Active slot (Slot ${primary})`}"
       ></div>
     </div>
     <div class="swatch-labels">
-      <div><strong>L:</strong> Slot {primary} (Draw)</div>
-      <div><strong>R:</strong> Slot 0 (00 BG)</div>
+      <div><strong>L:</strong> {isDirect ? `Color #${primary}` : `Slot ${primary}`}</div>
+      <div><strong>R:</strong> {isDirect ? 'Color #0 (BG)' : 'Slot 0 (BG)'}</div>
     </div>
   </div>
 
   <div class="divider"></div>
 
-  <!-- Color Slots (Fixed 4-slot single row, no layout shift) -->
-  <div class="section-label">Color Slots</div>
-  <div class="slots-container">
-    {#each ALL_SLOTS as def}
-      {@const isDisabled = def.idx >= graphicDepth}
-      {@const sRgb = !isDisabled ? getSlotColor(def.idx, graphicSlots) : null}
-      {@const isSelectedPri = primary === def.idx && !isDisabled}
-      {@const isFixedBg = graphicDepth === 2 && def.idx === 0}
-      <button
-        class="slot-card {isSelectedPri ? 'active-slot' : ''} {isFixedBg ? 'fixed-bg' : ''} {isDisabled ? 'disabled-slot' : ''}"
-        disabled={isDisabled}
-        onclick={() => {
-          if (isDisabled || isFixedBg) return;
-          primary = def.idx;
-        }}
-        title={isDisabled
-          ? `Slot ${def.bin}: Only available in Multicolor (2bpp) mode`
-          : isFixedBg
-          ? 'Slot 0 (00): Background (fixed to Right Click in Hi-Res mode)'
-          : `Slot ${def.idx} (${def.bin}): Click to select for Left Click draw`}
-      >
-        <span class="slot-bin">{def.bin}</span>
-        <div
-          class="slot-color-preview"
-          style={sRgb ? `background-color: ${getHex(sRgb)};` : 'background: #1a1a22; border-style: dashed;'}
-        ></div>
-        <div class="slot-badge-label">
-          {#if isSelectedPri}
-            <span class="slot-badge pri">L</span>
-          {:else if isFixedBg}
-            <span class="slot-badge sec">R</span>
-          {:else if !isDisabled}
-            <span class="slot-idx-num">{def.idx === 0 ? 'BG' : def.idx}</span>
-          {:else}
-            <span class="slot-idx-num dim">—</span>
-          {/if}
-        </div>
-      </button>
-    {/each}
-  </div>
-
-  <div class="divider"></div>
+  <!-- Color Slots (only for 1, 2, 3, 4 bpp; hidden in direct mode) -->
+  {#if !isDirect}
+    <div class="section-label">Color Slots ({graphicDepth})</div>
+    <div class="slots-container" class:dense={graphicDepth > 4}>
+      {#each Array.from({ length: graphicDepth }, (_, i) => i) as slotIdx}
+        {@const sRgb = getSlotColor(slotIdx, graphicSlots)}
+        {@const isSelectedPri = primary === slotIdx}
+        {@const isFixedBg = graphicDepth === 2 && slotIdx === 0}
+        <button
+          class="slot-card {isSelectedPri ? 'active-slot' : ''} {isFixedBg ? 'fixed-bg' : ''}"
+          onclick={() => {
+            if (isFixedBg) return;
+            primary = slotIdx;
+          }}
+          title={isFixedBg
+            ? 'Slot 0: Background (fixed to Right Click in 1bpp mode)'
+            : `Slot ${slotIdx}: Click to select for Left Click draw`}
+        >
+          <div
+            class="slot-color-preview"
+            style={sRgb ? `background-color: ${getHex(sRgb)};` : 'background: #1a1a22; border-style: dashed;'}
+          ></div>
+          <div class="slot-badge-label">
+            {#if isSelectedPri}
+              <span class="slot-badge pri">L</span>
+            {:else if isFixedBg}
+              <span class="slot-badge sec">R</span>
+            {:else}
+              <span class="slot-idx-num">{slotIdx === 0 ? 'BG' : slotIdx}</span>
+            {/if}
+          </div>
+        </button>
+      {/each}
+    </div>
+    <div class="divider"></div>
+  {/if}
 
   <div class="section-label">{palette.name}</div>
-  <div class="help-text">Left-click: assign to Slot {primary} · Right-click: assign to Slot 0 (00 BG)</div>
-
-  <!-- 16-color palette grid -->
-  <div class="palette-grid">
-    {#each palette.colors as col, idx}
-      {@const isPri = graphicSlots[primary] === idx}
-      {@const isSec = graphicSlots[0] === idx}
-      {@const colorName = getColorName(palette.id, idx)}
-      <button
-        class="color-btn"
-        style="background-color: {getHex(col)};"
-        title="#{idx}: {colorName} ({getHex(col)})\nLeft-click: assign to Slot {primary}\nRight-click: assign to Slot 0 (00)"
-        onclick={() => setSlotColor(primary, idx)}
-        oncontextmenu={(e) => {
-          e.preventDefault();
-          setSlotColor(0, idx);
-        }}
-      >
-        {#if isPri && isSec}
-          <span class="badge pri-sec">L/00</span>
-        {:else if isPri}
-          <span class="badge pri">L</span>
-        {:else if isSec}
-          <span class="badge sec">00</span>
-        {/if}
-      </button>
-    {/each}
+  <div class="help-text">
+    {#if isDirect}
+      Left-click: pick color to draw · Right-click: Color #0 (BG)
+    {:else}
+      Left-click: assign to Slot {primary} · Right-click: assign to Slot 0 (BG)
+    {/if}
   </div>
+
+  <!-- Palette swatches: 256-color map canvas OR standard swatch grid -->
+  {#if palette.colors.length === 256}
+    <div class="color-map-wrapper">
+      <canvas
+        bind:this={colorMapCanvas}
+        width={160}
+        height={160}
+        class="color-map-canvas"
+        onmousemove={handleMapMouseMove}
+        onmouseleave={() => (hoveredColorIdx = null)}
+        onclick={handleMapClick}
+        oncontextmenu={handleMapContextMenu}
+      ></canvas>
+
+      <div class="color-readout">
+        {#if hoveredColorIdx !== null && palette.colors[hoveredColorIdx]}
+          {@const hc = palette.colors[hoveredColorIdx]}
+          <div class="readout-content">
+            <span class="readout-dot" style="background-color: {getHex(hc)};"></span>
+            <span class="readout-idx">#{hoveredColorIdx}</span>
+            <span class="readout-rgb">R:{hc.r} G:{hc.g} B:{hc.b}</span>
+            <span class="readout-hex">{getHex(hc)}</span>
+          </div>
+        {:else}
+          {@const activeIdx = isDirect ? primary : (graphicSlots[primary] ?? 0)}
+          {@const ac = palette.colors[activeIdx % palette.colors.length] ?? palette.colors[0]}
+          <div class="readout-content">
+            <span class="readout-dot" style="background-color: {getHex(ac)};"></span>
+            <span class="readout-idx">#{activeIdx}</span>
+            <span class="readout-rgb">R:{ac.r} G:{ac.g} B:{ac.b}</span>
+            <span class="readout-hex">{getHex(ac)}</span>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {:else}
+    <div class="palette-grid" style="grid-template-columns: repeat({Math.min(4, palette.colors.length)}, 1fr);">
+      {#each palette.colors as col, idx}
+        {@const isPri = isDirect ? primary === idx : graphicSlots[primary] === idx}
+        {@const isSec = isDirect ? idx === 0 : graphicSlots[0] === idx}
+        {@const colorName = getColorName(palette.id, idx)}
+        <button
+          class="color-btn"
+          style="background-color: {getHex(col)};"
+          title="#{idx}: {colorName} ({getHex(col)})"
+          onclick={() => {
+            if (isDirect) {
+              primary = idx;
+            } else {
+              setSlotColor(primary, idx);
+            }
+          }}
+          oncontextmenu={(e) => {
+            e.preventDefault();
+            if (isDirect) {
+              secondary = 0;
+            } else {
+              setSlotColor(0, idx);
+            }
+          }}
+        >
+          {#if isPri && isSec}
+            <span class="badge pri-sec">L/0</span>
+          {:else if isPri}
+            <span class="badge pri">L</span>
+          {:else if isSec}
+            <span class="badge sec">0</span>
+          {/if}
+        </button>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -283,8 +446,10 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 4px;
-    height: 56px;
     box-sizing: border-box;
+  }
+  .slots-container.dense {
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
   }
   .slot-card {
     display: flex;
@@ -302,28 +467,16 @@
     text-align: center;
     transition: background 0.15s, border-color 0.15s;
   }
-  .slot-card:hover:not(:disabled) {
+  .slot-card:hover {
     background: #2d2d3a;
   }
   .slot-card.active-slot {
     border-color: #5882c4;
     background: #2d3b50;
   }
-  .slot-card.disabled-slot {
-    opacity: 0.28;
-    cursor: not-allowed;
-    border-style: dashed;
-  }
   .slot-card.fixed-bg {
     border-style: dashed;
     border-color: #4a4a58;
-  }
-  .slot-bin {
-    font-family: monospace;
-    font-weight: bold;
-    color: #aaa;
-    font-size: 10px;
-    line-height: 1;
   }
   .slot-color-preview {
     width: 20px;
@@ -358,12 +511,8 @@
     color: #888;
     line-height: 12px;
   }
-  .slot-idx-num.dim {
-    color: #555;
-  }
   .palette-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
     gap: 5px;
   }
   .color-btn {
@@ -398,5 +547,53 @@
   .badge.pri-sec {
     border: 1px solid #f5a623;
     color: #ffd070;
+  }
+  /* 256 Color Map */
+  .color-map-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .color-map-canvas {
+    image-rendering: pixelated;
+    border: 1px solid #383848;
+    border-radius: 4px;
+    cursor: crosshair;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+  .color-readout {
+    width: 100%;
+    background: #181822;
+    border: 1px solid #282836;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-family: monospace;
+    font-size: 10px;
+  }
+  .readout-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .readout-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid #111;
+    flex-shrink: 0;
+  }
+  .readout-idx {
+    font-weight: bold;
+    color: #60a5fa;
+  }
+  .readout-rgb {
+    color: #aaa;
+    flex: 1;
+  }
+  .readout-hex {
+    color: #fff;
+    font-weight: 600;
   }
 </style>

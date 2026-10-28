@@ -22,22 +22,25 @@
 
   let modeStr = $derived.by(() => {
     projectRevision;
-    if (graphic.isCharset()) return 'Hi-Res Charset';
-    if (graphic.depth === 2) return '1 bpp (Hi-Res)';
-    if (graphic.depth === 4 && graphic.pixelMode === 'wide') return '2 bpp (Wide)';
-    if (graphic.depth === 4) return '2 bpp';
-    return `${graphic.depth} colors`;
+    const bpp = graphic.bpp;
+    const aspect = graphic.pixelAspectRatio;
+    return `${bpp} bpp · ${aspect}`;
   });
 
   let hoverText = $derived.by(() => {
     if (!hoverPt) return '—';
     const { x, y } = hoverPt;
+    const isDirect = graphic.bpp === 8;
     if (graphic.isCharset()) {
       const v = graphic.getCharPixel(activeCharIndex, x, y) ?? 0;
-      return `Char #${activeCharIndex} · Pixel (${x}, ${y}) · slot ${v}`;
+      return isDirect
+        ? `Char #${activeCharIndex} · Pixel (${x}, ${y}) · color #${v}`
+        : `Char #${activeCharIndex} · Pixel (${x}, ${y}) · slot ${v}`;
     }
     const v = graphic.get(x, y) ?? 0;
-    return `Pixel (${x}, ${y}) · slot ${v}`;
+    return isDirect
+      ? `Pixel (${x}, ${y}) · color #${v}`
+      : `Pixel (${x}, ${y}) · slot ${v}`;
   });
 </script>
 

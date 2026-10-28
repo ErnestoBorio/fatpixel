@@ -77,9 +77,8 @@ export function pasteToGraphic(
       if (graphic.depth === 2) {
         // Converting to 1bpp: any opaque slot becomes 1, slot 0 stays 0
         destVal = srcVal > 0 ? 1 : 0;
-      } else if (graphic.depth === 4) {
-        // Converting to 2bpp: clamp to slot 0..3
-        destVal = Math.min(3, srcVal);
+      } else if (graphic.depth === 256) {
+        destVal = srcVal;
       } else {
         destVal = srcVal % graphic.depth;
       }

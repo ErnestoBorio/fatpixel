@@ -96,10 +96,6 @@
     projectRevision;
     return graphic.height;
   });
-  let graphicPixelMode = $derived.by(() => {
-    projectRevision;
-    return graphic.pixelMode;
-  });
 
   let isCharset = $derived(graphic.isCharset());
   let charsetInfo = $derived(graphic.charsetInfo());
@@ -107,7 +103,13 @@
   // Active draw bounds: 8x8 for character editing, graphic.width x graphic.height for sprite
   let drawWidth = $derived(isCharset ? (charsetInfo?.charWidth ?? 8) : graphicWidth);
   let drawHeight = $derived(isCharset ? (charsetInfo?.charHeight ?? 8) : graphicHeight);
-  let drawAspect = $derived(isCharset ? 1.0 : (graphicPixelMode === 'wide' ? 2.0 : 1.0));
+  let drawAspect = $derived(graphic.pixelAspectRatio === '2:1' ? 2.0 : 1.0);
+  let isDirect = $derived(
+    graphic.depth === 256 ||
+      graphic.bpp === 8 ||
+      palette.colors.length === 256 ||
+      (1 << graphic.bpp) === palette.colors.length
+  );
 
   export function zoomIn() {
     if (zoomIndex < ZOOM_LEVELS.length - 1) {
@@ -225,12 +227,15 @@
 
   function getEffectivePaintValue(button: number): number {
     if (tool === 'eraser') return 0;
-    // Right button ALWAYS paints Slot 0 (00 Background)
+    // Right button ALWAYS paints color 0 (Background / eraser)
     if (button === 2) return 0;
 
     // Left button:
+    if (isDirect) {
+      return primary;
+    }
     if (graphic.depth === 2) {
-      // In hi-res mode, slot 0 is strictly for right-button, primary must be slot 1
+      // In 1bpp slotted mode, slot 0 is strictly for right-button, primary must be slot 1
       return 1;
     }
     if (graphic.depth === 4) {
@@ -529,13 +534,15 @@
       const val = getPixelVal(pt.x, pt.y);
       if (val !== null) {
         if (e.button === 0) {
-          if (graphic.depth === 2 && val === 0) {
-            // In hi-res mode, slot 0 cannot be selected as primary draw slot
+          if (!isDirect && graphic.depth === 2 && val === 0) {
+            // In 1bpp slotted mode, slot 0 cannot be selected as primary draw slot
           } else {
             primary = val;
           }
         } else if (e.button === 2) {
-          secondary = val;
+          if (!isDirect) {
+            secondary = val;
+          }
         }
       }
       return;
@@ -727,12 +734,12 @@
     if (e.key === 'Shift') isShiftDown = true;
     if (e.code === 'Space') isSpaceDown = true;
 
-    // Slot selection hotkeys: 0, 1, 2, 3
-    if (!e.metaKey && !e.ctrlKey) {
-      if (e.key === '0') primary = 0;
-      if (e.key === '1') primary = 1;
-      if (e.key === '2' && graphic.depth >= 4) primary = 2;
-      if (e.key === '3' && graphic.depth >= 4) primary = 3;
+    // Slot selection hotkeys: 0..9 based on graphic depth
+    if (!e.metaKey && !e.ctrlKey && graphic.depth <= 16) {
+      const num = parseInt(e.key, 10);
+      if (!isNaN(num) && num < graphic.depth) {
+        primary = num;
+      }
     }
   }
 

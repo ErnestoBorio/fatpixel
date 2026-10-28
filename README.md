@@ -8,7 +8,7 @@ Live Demo: [https://ernestoborio.github.io/pixel/](https://ernestoborio.github.i
 
 - **C64 Sprite Modes**: 1 bpp Hi-Res (square pixels) and 2 bpp Multicolor (2× wide logical pixels).
 - **Charset Editor**: Full 256-character sheets with single-char zoom and sheet preview.
-- **Indexed Palettes**: Built-in retro palettes (C64 Pepto, Drean 16) and custom color slot mapping.
+- **Indexed Palettes**: Built-in retro palettes (C64 Pepto, Drean 64, ZX Spectrum 16, VGA 256, etc.) and custom color slot mapping.
 - **Drawing Tools**: Pencil, Line, Rectangle, Ellipse, Flood Fill, Eyedropper, Shift, Rotate, and Mirror.
 - **Project Files & Export**: Git-diffable `.pxp` JSON format, PNG export, and CSV binary tables.
 - **Photoshop-Style Layers**: Framed layer panel for organizing, reordering, and duplicating graphics.

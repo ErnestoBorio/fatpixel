@@ -1,11 +1,49 @@
 import { DEFAULT_PALETTE_ID, type PaletteRef } from './palette';
 
-export type ColorDepth = 2 | 4 | 8 | 16;
+export type ColorDepth = 2 | 4 | 8 | 16 | 256;
+
+export type Bpp = 1 | 2 | 3 | 4 | 8;
+
+export type PixelAspectRatio = '1:1' | '2:1';
 
 export type PixelMode = 'hires' | 'wide';
 
-export function pixelModeAspect(mode: PixelMode): number {
-  return mode === 'wide' ? 2.0 : 1.0;
+export function depthFromBpp(bpp: Bpp): ColorDepth {
+  switch (bpp) {
+    case 1:
+      return 2;
+    case 2:
+      return 4;
+    case 3:
+      return 8;
+    case 4:
+      return 16;
+    case 8:
+      return 256;
+    default:
+      return 2;
+  }
+}
+
+export function bppFromDepth(depth: number): Bpp {
+  switch (depth) {
+    case 2:
+      return 1;
+    case 4:
+      return 2;
+    case 8:
+      return 3;
+    case 16:
+      return 4;
+    case 256:
+      return 8;
+    default:
+      return 1;
+  }
+}
+
+export function pixelModeAspect(mode: PixelMode | PixelAspectRatio): number {
+  return mode === 'wide' || mode === '2:1' ? 2.0 : 1.0;
 }
 
 export type GraphicKind =
@@ -28,7 +66,9 @@ export interface GraphicJson {
   char_count?: number;
   columns?: number;
   depth: number;
+  bpp?: number;
   pixel_mode: 'hires' | 'wide';
+  pixel_aspect?: '1:1' | '2:1';
   palette: string;
   slots: number[];
   transparent_slot: number | null;
@@ -124,6 +164,26 @@ export class Graphic {
 
   isCharset(): boolean {
     return this.kind.kind === 'charset';
+  }
+
+  get bpp(): Bpp {
+    return bppFromDepth(this.depth);
+  }
+
+  set bpp(val: Bpp) {
+    this.setBpp(val);
+  }
+
+  get pixelAspectRatio(): PixelAspectRatio {
+    return this.pixelMode === 'wide' ? '2:1' : '1:1';
+  }
+
+  set pixelAspectRatio(val: PixelAspectRatio) {
+    this.setPixelAspectRatio(val);
+  }
+
+  setPixelAspectRatio(aspect: PixelAspectRatio): void {
+    this.pixelMode = aspect === '2:1' ? 'wide' : 'hires';
   }
 
   sheetWidth(): number {
@@ -303,31 +363,77 @@ export class Graphic {
     return false;
   }
 
-  setDepthAndMode(depth: ColorDepth, pixelMode: PixelMode): void {
-    if (this.depth === depth && this.pixelMode === pixelMode) return;
+  setBpp(newBpp: Bpp): void {
+    const newDepth = depthFromBpp(newBpp);
+    if (this.depth === newDepth) return;
     const oldDepth = this.depth;
-    this.depth = depth;
-    this.pixelMode = pixelMode;
-    while (this.slots.length < depth) {
-      this.slots.push(this.slots.length);
-    }
-    this.slots = this.slots.slice(0, depth);
+    this.depth = newDepth;
 
-    if (oldDepth === 4 && depth === 2) {
-      // When changing a multi color sprite to a hires one, turn all color slots other than 00 into the new slot 01,
-      // so all opaque pixels in the original sprite are still opaque in the changed sprite.
+    if (newDepth === 256) {
+      // Slotted (1..4 bpp) -> 8bpp direct:
+      // Map each pixel from its slot index to the palette index it currently points to
       for (let i = 0; i < this.pixels.length; i++) {
-        if (this.pixels[i] > 0) {
-          this.pixels[i] = 1;
+        const slot = this.pixels[i];
+        this.pixels[i] = this.slots[slot] ?? slot;
+      }
+      this.slots = [];
+    } else if (oldDepth === 256) {
+      // 8bpp direct -> slotted (1..4 bpp):
+      // Collect unique palette colors used
+      const uniqueColors: number[] = [];
+      const seen = new Set<number>();
+      for (let i = 0; i < this.pixels.length; i++) {
+        const c = this.pixels[i];
+        if (!seen.has(c)) {
+          seen.add(c);
+          uniqueColors.push(c);
+        }
+      }
+      const newSlots: number[] = [];
+      const colorToSlot = new Map<number, number>();
+      for (let i = 0; i < newDepth; i++) {
+        const palIdx = i < uniqueColors.length ? uniqueColors[i] : i;
+        newSlots.push(palIdx);
+        colorToSlot.set(palIdx, i);
+      }
+      this.slots = newSlots;
+      for (let i = 0; i < this.pixels.length; i++) {
+        const c = this.pixels[i];
+        if (colorToSlot.has(c)) {
+          this.pixels[i] = colorToSlot.get(c)!;
+        } else {
+          this.pixels[i] = c % newDepth;
         }
       }
     } else {
-      for (let i = 0; i < this.pixels.length; i++) {
-        if (this.pixels[i] >= depth) {
-          this.pixels[i] = 0;
+      // Slotted to Slotted (1..4 bpp):
+      while (this.slots.length < newDepth) {
+        this.slots.push(this.slots.length);
+      }
+      this.slots = this.slots.slice(0, newDepth);
+
+      if (newDepth < oldDepth) {
+        if (newDepth === 2) {
+          // Down to 1bpp: any opaque slot becomes 1, slot 0 stays 0
+          for (let i = 0; i < this.pixels.length; i++) {
+            if (this.pixels[i] > 0) {
+              this.pixels[i] = 1;
+            }
+          }
+        } else {
+          for (let i = 0; i < this.pixels.length; i++) {
+            if (this.pixels[i] >= newDepth) {
+              this.pixels[i] = this.pixels[i] % newDepth;
+            }
+          }
         }
       }
     }
+  }
+
+  setDepthAndMode(depth: ColorDepth, pixelMode: PixelMode): void {
+    this.setBpp(bppFromDepth(depth));
+    this.pixelMode = pixelMode;
   }
 
   shiftPixels(dx: number, dy: number, charIndex?: number): boolean {
@@ -524,13 +630,16 @@ export class Graphic {
   }
 
   toJson(): GraphicJson {
+    const is256 = this.depth === 256;
     const base: GraphicJson = {
       name: this.name,
       kind: this.kind.kind,
       width: this.width,
       height: this.height,
       depth: this.depth,
+      bpp: this.bpp,
       pixel_mode: this.pixelMode,
+      pixel_aspect: this.pixelAspectRatio,
       palette: `${this.palette.kind}:${this.palette.id}`,
       slots: [...this.slots],
       transparent_slot: this.transparentSlot,
@@ -548,17 +657,24 @@ export class Graphic {
         let str = '';
         for (let ly = 0; ly < this.height; ly++) {
           for (let lx = 0; lx < this.width; lx++) {
-            str += (this.getCharPixel(c, lx, ly) ?? 0).toString(16);
+            const v = this.getCharPixel(c, lx, ly) ?? 0;
+            str += is256 ? v.toString(16).padStart(2, '0') : v.toString(16);
           }
         }
         charStrings.push(str);
       }
       base.pixels = charStrings;
     } else {
-      // Sprites: entire sprite in a single line
-      base.pixels = Array.from(this.pixels)
-        .map((p) => p.toString(16))
-        .join('');
+      // Sprites: entire sprite in a single string
+      if (is256) {
+        base.pixels = Array.from(this.pixels)
+          .map((p) => p.toString(16).padStart(2, '0'))
+          .join('');
+      } else {
+        base.pixels = Array.from(this.pixels)
+          .map((p) => p.toString(16))
+          .join('');
+      }
     }
 
     return base;
@@ -593,8 +709,10 @@ export class Graphic {
         ? { kind: paletteParts[0] as 'builtin' | 'custom', id: paletteParts[1] }
         : { kind: 'builtin', id: json.palette };
 
-    const parsedDepth = (Number(json.depth) || 2) as ColorDepth;
-    const pixelMode = json.pixel_mode ?? (parsedDepth === 4 ? 'wide' : 'hires');
+    const parsedDepth = (Number(json.depth) || (json.bpp ? depthFromBpp(json.bpp as Bpp) : 2)) as ColorDepth;
+    const pixelMode = json.pixel_mode ?? (json.pixel_aspect === '2:1' ? 'wide' : 'hires');
+    const is256 = parsedDepth === 256;
+
     const graphic = new Graphic(
       json.name,
       kind,
@@ -603,26 +721,37 @@ export class Graphic {
       parsedDepth,
       pixelMode,
       paletteRef,
-      [...json.slots],
+      json.slots ? [...json.slots] : [],
       json.transparent_slot
     );
 
     if (typeof json.pixels === 'string') {
-      for (let i = 0; i < json.pixels.length && i < graphic.pixels.length; i++) {
-        graphic.pixels[i] = parseInt(json.pixels[i], 16) || 0;
+      if (is256 && json.pixels.length === graphic.pixels.length * 2) {
+        for (let i = 0; i < graphic.pixels.length; i++) {
+          graphic.pixels[i] = parseInt(json.pixels.slice(i * 2, i * 2 + 2), 16) || 0;
+        }
+      } else {
+        for (let i = 0; i < json.pixels.length && i < graphic.pixels.length; i++) {
+          graphic.pixels[i] = parseInt(json.pixels[i], 16) || 0;
+        }
       }
     } else if (Array.isArray(json.pixels)) {
       if (json.pixels.length > 0 && typeof json.pixels[0] === 'string') {
         const charStrs = json.pixels as string[];
         if (graphic.isCharset()) {
           const info = graphic.charsetInfo()!;
+          const step = is256 ? 2 : 1;
           for (let c = 0; c < charStrs.length && c < info.charCount; c++) {
             const str = charStrs[c];
             for (let ly = 0; ly < graphic.height; ly++) {
               for (let lx = 0; lx < graphic.width; lx++) {
-                const idx = ly * graphic.width + lx;
-                if (idx < str.length) {
-                  graphic.setCharPixel(c, lx, ly, parseInt(str[idx], 16) || 0);
+                const charPixelIdx = ly * graphic.width + lx;
+                const strIdx = charPixelIdx * step;
+                if (strIdx < str.length) {
+                  const val = is256
+                    ? parseInt(str.slice(strIdx, strIdx + 2), 16) || 0
+                    : parseInt(str[strIdx], 16) || 0;
+                  graphic.setCharPixel(c, lx, ly, val);
                 }
               }
             }
@@ -630,8 +759,14 @@ export class Graphic {
         } else {
           // If a sprite was stored as an array of strings
           const flatStr = charStrs.join('');
-          for (let i = 0; i < flatStr.length && i < graphic.pixels.length; i++) {
-            graphic.pixels[i] = parseInt(flatStr[i], 16) || 0;
+          if (is256 && flatStr.length === graphic.pixels.length * 2) {
+            for (let i = 0; i < graphic.pixels.length; i++) {
+              graphic.pixels[i] = parseInt(flatStr.slice(i * 2, i * 2 + 2), 16) || 0;
+            }
+          } else {
+            for (let i = 0; i < flatStr.length && i < graphic.pixels.length; i++) {
+              graphic.pixels[i] = parseInt(flatStr[i], 16) || 0;
+            }
           }
         }
       } else {

@@ -33,9 +33,13 @@
     return project.graphics[active];
   });
 
-  let activeDepth = $derived.by(() => {
+  let activeBpp = $derived.by(() => {
     projectRevision;
-    return activeGraphic?.depth;
+    return activeGraphic?.bpp;
+  });
+  let activeAspect = $derived.by(() => {
+    projectRevision;
+    return activeGraphic?.pixelAspectRatio;
   });
   let activeWidth = $derived.by(() => {
     projectRevision;
@@ -48,6 +52,10 @@
   let activeName = $derived.by(() => {
     projectRevision;
     return activeGraphic?.name;
+  });
+  let activePalette = $derived.by(() => {
+    projectRevision;
+    return activeGraphic ? project.paletteOf(activeGraphic) : undefined;
   });
 
   let draggedIdx = $state<number | null>(null);
@@ -159,9 +167,11 @@
   }
 
   function graphicSubtext(g: Graphic, _rev: number): string {
+    const bpp = g.bpp;
+    const aspect = g.pixelAspectRatio;
     return g.isSprite()
-      ? `${g.width}×${g.height} · ${g.pixelMode === 'wide' ? 'Multi' : 'Hi-Res'}`
-      : `${g.charsetInfo()?.charCount ?? 256} chars (${g.width}×${g.height})`;
+      ? `${g.width}×${g.height} · ${bpp}bpp (${aspect})`
+      : `${g.charsetInfo()?.charCount ?? 256}c · ${bpp}bpp (${aspect})`;
   }
 </script>
 
@@ -188,34 +198,55 @@
         />
       </div>
 
-      {#if activeGraphic.isSprite()}
-        <div class="field-row">
-          <span class="label">Mode:</span>
-          <div class="button-group">
+      <!-- Depth (BPP) -->
+      <div class="field-row">
+        <span class="label">Depth:</span>
+        <div class="button-group bpp-buttons">
+          {#each [1, 2, 3, 4, 8] as bppVal}
+            {@const palCount = activePalette?.colors.length ?? 16}
+            {@const reqColors = bppVal === 8 ? 256 : (1 << bppVal)}
+            {@const isDisabled = reqColors > palCount || bppVal >= palCount}
             <button
-              class="toggle-btn {activeDepth === 2 ? 'active' : ''}"
+              class="toggle-btn bpp-btn {activeBpp === bppVal ? 'active' : ''} {isDisabled ? 'disabled' : ''}"
+              disabled={isDisabled}
+              title={isDisabled
+                ? `Disabled: Requires a palette with more than ${bppVal} colors`
+                : `${bppVal} bpp (${bppVal === 8 ? '256 colors' : `${1 << bppVal} colors`})`}
               onclick={() => {
-                if (activeGraphic.depth === 2 && activeGraphic.pixelMode === 'hires') return;
+                if (isDisabled || activeGraphic.bpp === bppVal) return;
                 onBeforeChange?.();
-                activeGraphic.setDepthAndMode(2, 'hires');
+                activeGraphic.setBpp(bppVal as any);
                 onGraphicChange?.();
               }}
             >
-              Hi-Res (1bpp)
+              {bppVal}
             </button>
-            <button
-              class="toggle-btn {activeDepth === 4 ? 'active' : ''}"
-              onclick={() => {
-                if (activeGraphic.depth === 4 && activeGraphic.pixelMode === 'wide') return;
-                onBeforeChange?.();
-                activeGraphic.setDepthAndMode(4, 'wide');
-                onGraphicChange?.();
-              }}
-            >
-              Multi (2bpp)
-            </button>
-          </div>
+          {/each}
         </div>
+      </div>
+
+      <!-- Pixel Aspect Ratio -->
+      <div class="field-row">
+        <span class="label">Aspect:</span>
+        <div class="button-group aspect-buttons">
+          {#each ['1:1', '2:1'] as ratioVal}
+            <button
+              class="toggle-btn ratio-btn {activeAspect === ratioVal ? 'active' : ''}"
+              title="{ratioVal === '1:1' ? '1:1 Square pixels' : '2:1 Wide/Fat pixels'}"
+              onclick={() => {
+                if (activeGraphic.pixelAspectRatio === ratioVal) return;
+                onBeforeChange?.();
+                activeGraphic.setPixelAspectRatio(ratioVal as any);
+                onGraphicChange?.();
+              }}
+            >
+              {ratioVal}
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      {#if activeGraphic.isSprite()}
 
         <div class="field-row">
           <span class="label">Size:</span>
@@ -256,39 +287,12 @@
             />
           </div>
         </div>
-
-        <div class="presets-row">
-          <button
-            class="preset-btn"
-            onclick={() => {
-              onBeforeChange?.();
-              activeGraphic.resize(24, 21);
-              activeGraphic.setDepthAndMode(2, 'hires');
-              onGraphicChange?.();
-            }}
-            title="C64 Hi-Res 24×21"
-          >
-            24×21
-          </button>
-          <button
-            class="preset-btn"
-            onclick={() => {
-              onBeforeChange?.();
-              activeGraphic.resize(12, 21);
-              activeGraphic.setDepthAndMode(4, 'wide');
-              onGraphicChange?.();
-            }}
-            title="C64 Multicolor Wide 12×21"
-          >
-            12×21 Wide
-          </button>
-        </div>
       {:else if activeGraphic.isCharset()}
         {@const info = activeGraphic.charsetInfo()}
         {#if info}
           <div class="field-row">
-            <span class="label">Mode:</span>
-            <div class="readonly-badge">Hi-Res Charset (1bpp)</div>
+            <span class="label">Type:</span>
+            <div class="readonly-badge">Charset ({info.charCount} chars)</div>
           </div>
           <div class="field-row">
             <span class="label">Char:</span>
@@ -696,6 +700,14 @@
     border-color: #6688cc;
     color: #fff;
   }
+  .toggle-btn:hover:not(.active):not(:disabled) {
+    background: #343442;
+    color: #eee;
+  }
+  .toggle-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
   .dim-inputs {
     display: flex;
     align-items: center;
@@ -710,24 +722,6 @@
     padding: 3px 4px;
     border-radius: 3px;
     font-size: 11px;
-  }
-  .presets-row {
-    display: flex;
-    gap: 4px;
-    margin-left: 46px;
-  }
-  .preset-btn {
-    padding: 2px 6px;
-    background: #252530;
-    border: 1px solid #383842;
-    color: #bbb;
-    border-radius: 3px;
-    font-size: 10px;
-    cursor: pointer;
-  }
-  .preset-btn:hover {
-    background: #333342;
-    color: #fff;
   }
   .readonly-badge {
     flex: 1;

@@ -505,5 +505,157 @@ describe('Clipboard and Copy & Paste', () => {
     expect(hires.get(2, 2)).toBe(1);
     expect(hires.get(3, 3)).toBe(0);
   });
+
+  it('detaches bpp from pixel aspect ratio from size', () => {
+    const g = Graphic.newSprite('Test', 24, 21);
+    expect(g.bpp).toBe(1);
+    expect(g.depth).toBe(2);
+    expect(g.pixelAspectRatio).toBe('1:1');
+    expect(g.width).toBe(24);
+    expect(g.height).toBe(21);
+
+    // Change pixel aspect ratio: dimensions must NOT change
+    g.setPixelAspectRatio('2:1');
+    expect(g.pixelAspectRatio).toBe('2:1');
+    expect(g.pixelMode).toBe('wide');
+    expect(g.width).toBe(24);
+    expect(g.height).toBe(21);
+
+    // Change BPP through 1, 2, 3, 4, 8
+    g.setBpp(2);
+    expect(g.bpp).toBe(2);
+    expect(g.depth).toBe(4);
+    expect(g.slots.length).toBe(4);
+
+    g.setBpp(3);
+    expect(g.bpp).toBe(3);
+    expect(g.depth).toBe(8);
+    expect(g.slots.length).toBe(8);
+
+    g.setBpp(4);
+    expect(g.bpp).toBe(4);
+    expect(g.depth).toBe(16);
+    expect(g.slots.length).toBe(16);
+
+    // Dimensions still untouched
+    expect(g.width).toBe(24);
+    expect(g.height).toBe(21);
+    expect(g.pixelAspectRatio).toBe('2:1');
+
+    // Convert to 8bpp direct mode
+    g.slots[1] = 42; // slot 1 points to palette color 42
+    g.set(0, 0, 1);
+    g.setBpp(8);
+    expect(g.bpp).toBe(8);
+    expect(g.depth).toBe(256);
+    expect(g.slots.length).toBe(0);
+    // Pixel value converted from slot 1 to color 42
+    expect(g.get(0, 0)).toBe(42);
+
+    // Convert from 8bpp back to 2bpp
+    g.setBpp(2);
+    expect(g.bpp).toBe(2);
+    expect(g.depth).toBe(4);
+    expect(g.slots.length).toBe(4);
+    // Slot 0 holds the color 42
+    expect(g.slots[0]).toBe(42);
+    expect(g.get(0, 0)).toBe(0);
+  });
+
+  it('serializes and deserializes 8bpp graphic with 2-char hex', () => {
+    const g = Graphic.newSprite('VgaSprite', 4, 4);
+    g.setBpp(8);
+    g.setPixelAspectRatio('2:1');
+    g.set(0, 0, 0);
+    g.set(1, 0, 15);
+    g.set(2, 0, 128);
+    g.set(3, 0, 255);
+
+    const json = g.toJson();
+    expect(json.depth).toBe(256);
+    expect(json.bpp).toBe(8);
+    expect(json.pixel_aspect).toBe('2:1');
+    expect(json.pixel_mode).toBe('wide');
+    // Pixels string should have 16 pixels * 2 chars = 32 chars
+    expect(typeof json.pixels).toBe('string');
+    expect((json.pixels as string).length).toBe(32);
+    // First 4 pixels: '00', '0f', '80', 'ff'
+    expect((json.pixels as string).slice(0, 8)).toBe('000f80ff');
+
+    const restored = Graphic.fromJson(json);
+    expect(restored.bpp).toBe(8);
+    expect(restored.depth).toBe(256);
+    expect(restored.pixelAspectRatio).toBe('2:1');
+    expect(restored.get(0, 0)).toBe(0);
+    expect(restored.get(1, 0)).toBe(15);
+    expect(restored.get(2, 0)).toBe(128);
+    expect(restored.get(3, 0)).toBe(255);
+  });
+
+  it('includes all built-in palettes with power of 2 colors: VGA 256, Mono 2, CGA Cool 4, CGA Warm 4, Game Boy 4, Teletext 8, ZX 16, C64 16, Drean 16', async () => {
+    const { BUILTIN_PALETTES, getBuiltinPalette, isPowerOfTwo } = await import('./palette');
+    expect(BUILTIN_PALETTES.length).toBeGreaterThanOrEqual(9);
+
+    // Verify all built-in palettes have power-of-two color counts from 2 to 256
+    for (const pal of BUILTIN_PALETTES) {
+      expect(isPowerOfTwo(pal.colors.length)).toBe(true);
+    }
+
+    const vga = getBuiltinPalette('vga-256');
+    expect(vga).toBeDefined();
+    expect(vga?.colors.length).toBe(256);
+
+    const mono = getBuiltinPalette('mono-2');
+    expect(mono).toBeDefined();
+    expect(mono?.colors.length).toBe(2);
+
+    const cgaCool = getBuiltinPalette('cga-cool-4');
+    expect(cgaCool).toBeDefined();
+    expect(cgaCool?.colors.length).toBe(4);
+
+    const cgaWarm = getBuiltinPalette('cga-warm-4');
+    expect(cgaWarm).toBeDefined();
+    expect(cgaWarm?.colors.length).toBe(4);
+
+    const gb = getBuiltinPalette('gameboy-4');
+    expect(gb).toBeDefined();
+    expect(gb?.colors.length).toBe(4);
+
+    const teletext = getBuiltinPalette('teletext-8');
+    expect(teletext).toBeDefined();
+    expect(teletext?.colors.length).toBe(8);
+
+    const zx = getBuiltinPalette('zx-16');
+    expect(zx).toBeDefined();
+    expect(zx?.colors.length).toBe(16);
+    // Dark black and light black are just black: #000000
+    expect(zx?.colors[0]).toEqual({ r: 0, g: 0, b: 0 });
+    expect(zx?.colors[8]).toEqual({ r: 0, g: 0, b: 0 });
+    // Dark white is grey (215, 215, 215)
+    expect(zx?.colors[7]).toEqual({ r: 0xd7, g: 0xd7, b: 0xd7 });
+    // Light white is pure white (255, 255, 255)
+    expect(zx?.colors[15]).toEqual({ r: 0xff, g: 0xff, b: 0xff });
+
+    const drean = getBuiltinPalette('drean-16');
+    expect(drean).toBeDefined();
+    expect(drean?.name).toBe('Drean 64 (16)');
+    expect(drean?.colors.length).toBe(16);
+
+    // Legacy aliases
+    expect(getBuiltinPalette('cga-4')?.id).toBe('cga-cool-4');
+    expect(getBuiltinPalette('zx-8')?.id).toBe('zx-16');
+  });
+
+  it('renders direct color in slotColor when palette size matches BPP capacity', async () => {
+    const { getBuiltinPalette } = await import('./palette');
+    const { slotColor } = await import('./render');
+    const cga = getBuiltinPalette('cga-cool-4')!;
+
+    const g = Graphic.newSprite('CgaSprite', 4, 4);
+    g.setBpp(2); // 2bpp -> 4 colors, matches cga 4 colors
+    // In direct mode, slotColor(g, cga, 2) directly returns cga.colors[2]
+    const c = slotColor(g, cga, 2);
+    expect(c).toEqual(cga.colors[2]);
+  });
 });
 

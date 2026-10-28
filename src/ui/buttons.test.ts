@@ -11,37 +11,68 @@ describe('App Graphic actions and mode switching', () => {
     mount(App, { target });
     flushSync();
 
-    const buttons = target.querySelectorAll<HTMLButtonElement>('.toggle-btn');
-    const hiresBtn = Array.from(buttons).find((b) => b.textContent?.includes('Hi-Res'));
-    const multiBtn = Array.from(buttons).find((b) => b.textContent?.includes('Multi'));
+    const bppButtons = target.querySelectorAll<HTMLButtonElement>('.bpp-btn');
+    const bpp1Btn = Array.from(bppButtons).find((b) => b.textContent?.trim() === '1');
+    const bpp2Btn = Array.from(bppButtons).find((b) => b.textContent?.trim() === '2');
+    const bpp8Btn = Array.from(bppButtons).find((b) => b.textContent?.trim() === '8');
 
-    expect(hiresBtn).toBeDefined();
-    expect(multiBtn).toBeDefined();
+    const ratioButtons = target.querySelectorAll<HTMLButtonElement>('.ratio-btn');
+    const ratio1Btn = Array.from(ratioButtons).find((b) => b.textContent?.trim() === '1:1');
+    const ratio2Btn = Array.from(ratioButtons).find((b) => b.textContent?.trim() === '2:1');
+
+    expect(bpp1Btn).toBeDefined();
+    expect(bpp2Btn).toBeDefined();
+    expect(bpp8Btn).toBeDefined();
+    expect(ratio1Btn).toBeDefined();
+    expect(ratio2Btn).toBeDefined();
 
     const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
-    expect(statusDim?.textContent).toContain('1 bpp (Hi-Res)');
+    expect(statusDim?.textContent).toContain('1 bpp · 1:1');
 
-    // Initially in Hi-Res mode
-    expect(hiresBtn?.classList.contains('active')).toBe(true);
-    expect(multiBtn?.classList.contains('active')).toBe(false);
+    // Initially in 1 bpp, 1:1
+    expect(bpp1Btn?.classList.contains('active')).toBe(true);
+    expect(ratio1Btn?.classList.contains('active')).toBe(true);
 
-    // Click Multi (2bpp)
-    multiBtn?.click();
+    // Click 2 bpp
+    bpp2Btn?.click();
     flushSync();
+    expect(bpp2Btn?.classList.contains('active')).toBe(true);
+    expect(statusDim?.textContent).toContain('2 bpp · 1:1');
 
-    // Now in Multi mode
-    expect(multiBtn?.classList.contains('active')).toBe(true);
-    expect(hiresBtn?.classList.contains('active')).toBe(false);
-    expect(statusDim?.textContent).toContain('2 bpp (Wide)');
-
-    // Click Hi-Res (1bpp)
-    hiresBtn?.click();
+    // Click 2:1 aspect ratio
+    ratio2Btn?.click();
     flushSync();
+    expect(ratio2Btn?.classList.contains('active')).toBe(true);
+    expect(statusDim?.textContent).toContain('2 bpp · 2:1');
 
-    // Back to Hi-Res mode
-    expect(hiresBtn?.classList.contains('active')).toBe(true);
-    expect(multiBtn?.classList.contains('active')).toBe(false);
-    expect(statusDim?.textContent).toContain('1 bpp (Hi-Res)');
+    // On 16-color palette (C64), 8 bpp is disabled
+    expect(bpp8Btn?.disabled).toBe(true);
+
+    // Switch palette to VGA 256 so 8 bpp is enabled and active
+    const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
+    if (palSelect) {
+      palSelect.value = 'vga-256';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+    expect(bpp8Btn?.disabled).toBe(false);
+    expect(bpp8Btn?.classList.contains('active')).toBe(true);
+    expect(statusDim?.textContent).toContain('8 bpp · 2:1');
+
+    // Switch back to C64 palette (clamps BPP down to 4 on 16-color palette)
+    if (palSelect) {
+      palSelect.value = 'c64-pepto';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+
+    // Back to 1 bpp and 1:1
+    bpp1Btn?.click();
+    ratio1Btn?.click();
+    flushSync();
+    expect(bpp1Btn?.classList.contains('active')).toBe(true);
+    expect(ratio1Btn?.classList.contains('active')).toBe(true);
+    expect(statusDim?.textContent).toContain('1 bpp · 1:1');
   });
 
   it('resizes sprite via size inputs', async () => {
@@ -146,7 +177,7 @@ describe('App Graphic actions and mode switching', () => {
 
     // Active charset status bar should show 8x8 dimensions
     const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
-    expect(statusDim?.textContent).toContain('8 × 8 (Hi-Res Charset)');
+    expect(statusDim?.textContent).toContain('8 × 8 (1 bpp · 1:1)');
 
     // Properties badge should show 128x128 sheet
     const charsetBadge = target.querySelector<HTMLElement>('.charset-info-badge');

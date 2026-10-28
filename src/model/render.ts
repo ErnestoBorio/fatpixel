@@ -2,8 +2,16 @@ import type { Graphic } from './graphic';
 import type { Palette, Rgb } from './palette';
 
 export function slotColor(graphic: Graphic, palette: Palette, slotIndex: number): Rgb {
+  if (
+    graphic.depth === 256 ||
+    graphic.bpp === 8 ||
+    palette.colors.length === 256 ||
+    (1 << graphic.bpp) === palette.colors.length
+  ) {
+    return palette.colors[slotIndex % palette.colors.length] ?? palette.colors[0];
+  }
   const palIndex = graphic.slots[slotIndex] ?? 0;
-  return palette.colors[palIndex] ?? palette.colors[0];
+  return palette.colors[palIndex % palette.colors.length] ?? palette.colors[0];
 }
 
 export function renderToImageData(

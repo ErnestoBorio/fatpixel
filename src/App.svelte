@@ -143,18 +143,47 @@
     if (g) {
       pushHistorySnapshot();
       g.palette = { kind: 'builtin', id: paletteId };
+      const pal = project.paletteOf(g);
+      if (pal) {
+        const palCount = pal.colors.length;
+        const bppMax = 1 << g.bpp;
+        if (palCount === 256) {
+          g.setBpp(8);
+        } else if (palCount < bppMax) {
+          // Rule: A palette will never have the same or more slots than the color count of the palette.
+          // If the palette has fewer colors than current bpp allows, clamp bpp to match the palette count
+          let newBpp: 1 | 2 | 3 | 4 | 8 = 1;
+          if (palCount >= 16) newBpp = 4;
+          else if (palCount >= 8) newBpp = 3;
+          else if (palCount >= 4) newBpp = 2;
+          else newBpp = 1;
+          g.setBpp(newBpp);
+        }
+      }
     }
     notifyGraphicChange();
   }
 
+  let isDirect = $derived.by(() => {
+    stateVersion;
+    return activeGraphic.bpp === 8 || activePalette.colors.length === 256 || (1 << activeGraphic.bpp) === activePalette.colors.length;
+  });
+
   $effect(() => {
     stateVersion;
-    // In hi-res mode (depth 2), slot 0 is strictly for right-button, primary must be slot 1
-    if (activeGraphic.depth === 2 && primary === 0) {
-      primary = 1;
-    }
-    if (primary >= activeGraphic.depth) {
-      primary = Math.max(1, activeGraphic.depth - 1);
+    if (isDirect) {
+      if (primary >= activePalette.colors.length) {
+        primary = Math.max(0, activePalette.colors.length - 1);
+      }
+      secondary = 0;
+    } else {
+      // In 1bpp mode (depth 2), slot 0 is strictly for right-button, primary must be slot 1
+      if (activeGraphic.depth === 2 && primary === 0) {
+        primary = 1;
+      }
+      if (primary >= activeGraphic.depth) {
+        primary = Math.max(1, activeGraphic.depth - 1);
+      }
     }
   });
 
