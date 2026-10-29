@@ -165,16 +165,23 @@ describe('App Graphic actions and mode switching', () => {
     selectSpriteBtn?.click();
     flushSync();
     expect(propsSection?.querySelector('.toggle-btn')).not.toBeNull();
-    const spriteHeight = propsSection?.clientHeight ?? 0;
+    const sizeRow = Array.from(propsSection?.querySelectorAll('.field-row') ?? []).find((r) =>
+      r.textContent?.includes('Size:')
+    );
+    expect(sizeRow).not.toBeUndefined();
+    const spriteDimInputs = sizeRow?.querySelectorAll('input.num-input');
+    expect(spriteDimInputs?.length).toBe(2);
 
     // Select charset
     selectCharsetBtn?.click();
     flushSync();
     expect(propsSection?.querySelector('.readonly-badge')).not.toBeNull();
-    const charsetHeight = propsSection?.clientHeight ?? 0;
-
-    // Both should maintain the exact same height
-    expect(spriteHeight).toBe(charsetHeight);
+    const charRow = Array.from(propsSection?.querySelectorAll('.field-row') ?? []).find((r) =>
+      r.textContent?.includes('Char:')
+    );
+    expect(charRow).not.toBeUndefined();
+    const charsetDimInputs = charRow?.querySelectorAll('input.num-input');
+    expect(charsetDimInputs?.length).toBe(2);
 
     // Active charset status bar should show 8x8 dimensions
     const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
@@ -958,5 +965,47 @@ describe('App Graphic actions and mode switching', () => {
 
     const charTitle = target.querySelector('.char-title');
     expect(charTitle?.textContent).toContain('Char #26');
+  });
+
+  it('displays all graphic properties including Size W/H and allows resizing sprite', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Verify properties section exists
+    const propsSection = target.querySelector<HTMLElement>('.properties-section');
+    expect(propsSection).not.toBeNull();
+
+    // Verify all rows exist: Name, BPP, Aspect, Size
+    const labels = Array.from(propsSection!.querySelectorAll<HTMLElement>('.field-row .label')).map(
+      (l) => l.textContent?.trim()
+    );
+    expect(labels).toContain('Name:');
+    expect(labels).toContain('BPP:');
+    expect(labels).toContain('Aspect:');
+    expect(labels).toContain('Size:');
+
+    // Find W and H inputs
+    const sizeRow = Array.from(propsSection!.querySelectorAll<HTMLElement>('.field-row')).find((r) =>
+      r.textContent?.includes('Size:')
+    );
+    const numInputs = sizeRow?.querySelectorAll<HTMLInputElement>('input.num-input');
+    expect(numInputs?.length).toBe(2);
+
+    const wInput = numInputs![0];
+    const hInput = numInputs![1];
+    expect(wInput.value).toBe('24');
+    expect(hInput.value).toBe('21');
+
+    // Resize sprite using W input
+    wInput.value = '32';
+    wInput.dispatchEvent(new Event('change', { bubbles: true }));
+    flushSync();
+
+    expect(wInput.value).toBe('32');
+    const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
+    expect(statusDim?.textContent).toContain('32 × 21');
   });
 });

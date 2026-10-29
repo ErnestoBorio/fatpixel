@@ -412,12 +412,12 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    height: 126px;
-    min-height: 126px;
-    max-height: 126px;
     flex-shrink: 0;
     box-sizing: border-box;
-    overflow: hidden;
+  }
+  .presets-row {
+    display: flex;
+    margin-left: 46px;
   }
   .divider {
     height: 1px;
