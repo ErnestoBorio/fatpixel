@@ -281,19 +281,6 @@
     }
   }
 
-  function newProject() {
-    project = new Project();
-    savedFileName = '';
-    hasSavedFile = false;
-    activeGraphicIndex = 0;
-    activeCharIndex = 0;
-    history.clear();
-    isDirty = false;
-    notifyGraphicChange();
-    saveNow();
-    canvasRef?.fitToWindow();
-  }
-
   function triggerDownload(fileName: string) {
     saveNow();
     const json = project.toJson();
@@ -603,9 +590,6 @@
       } else if (e.key.toLowerCase() === 'o') {
         e.preventDefault();
         openProject();
-      } else if (e.key.toLowerCase() === 'n') {
-        e.preventDefault();
-        newProject();
       } else if (e.key.toLowerCase() === 'k') {
         e.preventDefault();
         handleClear();
@@ -777,7 +761,6 @@
     {showRightPanel}
     onToggleLeftPanel={() => (showLeftPanel = !showLeftPanel)}
     onToggleRightPanel={() => (showRightPanel = !showRightPanel)}
-    onNewProject={newProject}
     onOpenProject={openProject}
     onSaveProject={saveProject}
     onSaveProjectAs={saveProjectAs}
@@ -817,9 +800,10 @@
         type="button"
         class="floating-panel-toggle left-toggle"
         onclick={() => (showLeftPanel = true)}
-        title="Open Tools Panel (⌥1)"
+        title="Open Tools (⌥1)"
+        aria-label="Open Tools"
       >
-        🛠 Tools ▾
+        Tools
       </button>
     {/if}
 
@@ -831,8 +815,8 @@
           type="button"
           class="panel-collapse-btn"
           onclick={() => (showLeftPanel = false)}
-          title="Collapse Tools Panel (⌥1)"
-          aria-label="Collapse Tools Panel"
+          title="Collapse Tools (⌥1)"
+          aria-label="Collapse Tools"
         >
           ◀
         </button>
@@ -884,9 +868,10 @@
         type="button"
         class="floating-panel-toggle right-toggle"
         onclick={() => (showRightPanel = true)}
-        title="Open Sidebar (⌥2)"
+        title="Open Properties (⌥2)"
+        aria-label="Open Properties"
       >
-        🎨 Sidebar ▾
+        Properties
       </button>
     {/if}
 
@@ -926,8 +911,8 @@
           type="button"
           class="tab-collapse-btn"
           onclick={() => (showRightPanel = false)}
-          title="Collapse Sidebar (⌥2)"
-          aria-label="Collapse Sidebar"
+          title="Collapse Properties (⌥2)"
+          aria-label="Collapse Properties"
         >
           ▶
         </button>

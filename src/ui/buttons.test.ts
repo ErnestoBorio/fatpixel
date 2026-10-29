@@ -214,7 +214,8 @@ describe('App Graphic actions and mode switching', () => {
     flushSync();
     let dropdown = target.querySelector('.dropdown');
     expect(dropdown).not.toBeNull();
-    expect(dropdown?.textContent).toContain('New Project');
+    expect(dropdown?.textContent).not.toContain('New Project');
+    expect(dropdown?.textContent).toContain('Open…');
 
     // 3. Hovering Edit while menu is open switches to Edit dropdown
     editItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
@@ -639,5 +640,75 @@ describe('App Graphic actions and mode switching', () => {
     const nesCharH = target.querySelector<HTMLInputElement>('.dim-inputs input[title*="height"]')?.value;
     expect(nesCharW).toBe('8');
     expect(nesCharH).toBe('8');
+  });
+
+  it('verifies panel toggle buttons use text Tools and Properties, no icons, and minimized sidebar shows Properties', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Verify header toggle buttons are text "Tools" and "Properties" without icons
+    const headerToggleBtns = target.querySelectorAll<HTMLButtonElement>('.header-toggle-btn');
+    expect(headerToggleBtns.length).toBe(2);
+    const toolsBtn = headerToggleBtns[0];
+    const propertiesBtn = headerToggleBtns[1];
+
+    expect(toolsBtn.textContent?.trim()).toBe('Tools');
+    expect(propertiesBtn.textContent?.trim()).toBe('Properties');
+    expect(toolsBtn.textContent).not.toContain('🛠');
+    expect(propertiesBtn.textContent).not.toContain('🎨');
+
+    // 2. Verify View menu dropdown contains "Tools" and "Properties"
+    const menuItems = target.querySelectorAll('.menu-item');
+    const viewItem = Array.from(menuItems).find((el) => el.querySelector('.menu-btn')?.textContent?.trim() === 'View');
+    const viewBtn = viewItem?.querySelector<HTMLButtonElement>('.menu-btn');
+    viewBtn?.click();
+    flushSync();
+
+    const viewDropdown = target.querySelector('.dropdown');
+    expect(viewDropdown?.textContent).toContain('Tools');
+    expect(viewDropdown?.textContent).toContain('Properties');
+    expect(viewDropdown?.textContent).not.toContain('Tools Panel');
+    expect(viewDropdown?.textContent).not.toContain('Right Sidebar');
+
+    // Close view menu
+    viewBtn?.click();
+    flushSync();
+
+    // 3. Minimize / collapse right panel (properties) and verify minimized button shows "Properties"
+    expect(propertiesBtn.classList.contains('active')).toBe(true);
+    propertiesBtn.click();
+    flushSync();
+    expect(propertiesBtn.classList.contains('active')).toBe(false);
+
+    const rightMinimizedBtn = target.querySelector<HTMLButtonElement>('.floating-panel-toggle.right-toggle');
+    expect(rightMinimizedBtn).not.toBeNull();
+    expect(rightMinimizedBtn?.textContent?.trim()).toBe('Properties');
+    expect(rightMinimizedBtn?.textContent).not.toContain('🎨');
+    expect(rightMinimizedBtn?.textContent).not.toContain('Sidebar');
+
+    // Clicking minimized button restores the properties panel
+    rightMinimizedBtn?.click();
+    flushSync();
+    expect(propertiesBtn.classList.contains('active')).toBe(true);
+    expect(target.querySelector('.floating-panel-toggle.right-toggle')).toBeNull();
+
+    // 4. Minimize / collapse left panel (tools) and verify minimized button shows "Tools"
+    toolsBtn.click();
+    flushSync();
+    expect(toolsBtn.classList.contains('active')).toBe(false);
+
+    const leftMinimizedBtn = target.querySelector<HTMLButtonElement>('.floating-panel-toggle.left-toggle');
+    expect(leftMinimizedBtn).not.toBeNull();
+    expect(leftMinimizedBtn?.textContent?.trim()).toBe('Tools');
+    expect(leftMinimizedBtn?.textContent).not.toContain('🛠');
+
+    // Clicking minimized button restores the tools panel
+    leftMinimizedBtn?.click();
+    flushSync();
+    expect(toolsBtn.classList.contains('active')).toBe(true);
+    expect(target.querySelector('.floating-panel-toggle.left-toggle')).toBeNull();
   });
 });

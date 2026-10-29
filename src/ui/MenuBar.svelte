@@ -7,7 +7,6 @@
     canRedo = false,
     canPaste = false,
     showGrid = true,
-    onNewProject,
     onOpenProject,
     onSaveProject,
     onSaveProjectAs,
@@ -45,7 +44,6 @@
     showRightPanel?: boolean;
     onToggleLeftPanel?: () => void;
     onToggleRightPanel?: () => void;
-    onNewProject?: () => void;
     onOpenProject?: () => void;
     onSaveProject?: () => void;
     onSaveProjectAs?: () => void;
@@ -108,9 +106,6 @@
     </button>
     {#if activeMenu === 'file'}
       <div class="dropdown">
-        <button class="dropdown-item" onclick={() => { onNewProject?.(); closeMenu(); }}>
-          <span>New Project</span> <span class="shortcut">⌘N</span>
-        </button>
         <button class="dropdown-item" onclick={() => { onOpenProject?.(); closeMenu(); }}>
           <span>Open…</span> <span class="shortcut">⌘O</span>
         </button>
@@ -257,10 +252,10 @@
         </button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onToggleLeftPanel?.(); closeMenu(); }}>
-          <span>{showLeftPanel ? '✓ ' : ''}Tools Panel</span> <span class="shortcut">⌥1</span>
+          <span>{showLeftPanel ? '✓ ' : ''}Tools</span> <span class="shortcut">⌥1</span>
         </button>
         <button class="dropdown-item" onclick={() => { onToggleRightPanel?.(); closeMenu(); }}>
-          <span>{showRightPanel ? '✓ ' : ''}Right Sidebar</span> <span class="shortcut">⌥2</span>
+          <span>{showRightPanel ? '✓ ' : ''}Properties</span> <span class="shortcut">⌥2</span>
         </button>
       </div>
     {/if}
@@ -272,19 +267,19 @@
       type="button"
       class="header-toggle-btn {showLeftPanel ? 'active' : ''}"
       onclick={() => onToggleLeftPanel?.()}
-      title="Toggle Tools Panel (⌥1)"
-      aria-label="Toggle Tools Panel"
+      title="Toggle Tools (⌥1)"
+      aria-label="Toggle Tools"
     >
-      🛠
+      Tools
     </button>
     <button
       type="button"
       class="header-toggle-btn {showRightPanel ? 'active' : ''}"
       onclick={() => onToggleRightPanel?.()}
-      title="Toggle Right Sidebar (⌥2)"
-      aria-label="Toggle Right Sidebar"
+      title="Toggle Properties (⌥2)"
+      aria-label="Toggle Properties"
     >
-      🎨
+      Properties
     </button>
     <div class="header-divider"></div>
     <span class="app-title">Pixel</span>
@@ -417,10 +412,11 @@
     background: transparent;
     border: 1px solid transparent;
     color: #888;
-    padding: 2px 5px;
+    padding: 2px 7px;
     border-radius: 3px;
     cursor: pointer;
     font-size: 11px;
+    font-weight: 500;
     line-height: 1;
     display: flex;
     align-items: center;
