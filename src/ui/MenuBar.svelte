@@ -14,6 +14,7 @@
     onSaveProject,
     onSaveProjectAs,
     onImportPng,
+    onImportCsv,
     onExportPng,
     onExportCsv,
     onUndo,
@@ -52,6 +53,7 @@
     onSaveProject?: () => void;
     onSaveProjectAs?: () => void;
     onImportPng?: () => void;
+    onImportCsv?: () => void;
     onExportPng?: () => void;
     onExportCsv?: () => void;
     onUndo?: () => void;
@@ -123,6 +125,9 @@
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onImportPng?.(); closeMenu(); }}>
           <span>Import PNG…</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onImportCsv?.(); closeMenu(); }}>
+          <span>Import CSV…</span>
         </button>
         <button class="dropdown-item" onclick={() => { onExportPng?.(); closeMenu(); }}>
           <span>Export PNG…</span>

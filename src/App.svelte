@@ -25,12 +25,23 @@
   } from './model/clipboard';
   import { SYSTEM_PRESETS } from './model/presets';
   import { loadPngAsSprite } from './model/importPng';
+  import { loadCsvAsSprite } from './model/importCsv';
   import { isMac, getShortcuts } from './platform';
 
   let shortcuts = $derived(getShortcuts());
 
+  function isOldBlankProject(p: Project | null): boolean {
+    if (!p) return false;
+    if (p.graphics.length === 1) {
+      const g = p.graphics[0];
+      return g.name === 'sprite 1' && g.width === 24 && g.height === 21 && !g.hasDrawnPixels();
+    }
+    return false;
+  }
+
   const stored = loadAllFromStorage();
-  const initialProject = stored.project ?? new Project();
+  const initialProject =
+    !stored.project || isOldBlankProject(stored.project) ? new Project() : stored.project;
   const initialSettings = stored.settings ?? {};
 
   let project = $state(initialProject);
@@ -54,8 +65,10 @@
   let brushShape = $state<BrushShape>(initialSettings.brushShape ?? 'square');
   let brushSize = $state(initialSettings.brushSize ?? 1);
   let fillMode = $state(initialSettings.fillMode ?? false);
-  let primary = $state(initialSettings.primary ?? 1);
-  let secondary = $state(initialSettings.secondary ?? 0);
+  const defaultPri = initialProject.graphics[0]?.bpp === 8 ? 15 : 1;
+  const defaultSec = initialProject.graphics[0]?.bpp === 8 ? 16 : 0;
+  let primary = $state(initialSettings.primary ?? defaultPri);
+  let secondary = $state(initialSettings.secondary ?? defaultSec);
   let showGrid = $state(initialSettings.showGrid ?? true);
   let zoomIndex = $state(initialSettings.zoomIndex ?? 7);
   let isDirty = $state(false);
@@ -94,6 +107,7 @@
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
   let pngInputRef: HTMLInputElement;
+  let csvInputRef: HTMLInputElement;
 
   let activeGraphic = $derived.by(() => {
     stateVersion;
@@ -378,6 +392,29 @@
       canvasRef?.fitToWindow();
     } catch (err) {
       alert(`Failed to import PNG: ${err}`);
+    }
+  }
+
+  function importCsv() {
+    csvInputRef.click();
+  }
+
+  async function handleCsvSelect(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    try {
+      const sprite = await loadCsvAsSprite(file);
+      pushHistorySnapshot();
+      project.graphics = [...project.graphics, sprite];
+      activeGraphicIndex = project.graphics.length - 1;
+      rightTab = 'graphics';
+      userPickedTab = true;
+      notifyGraphicChange();
+      canvasRef?.fitToWindow();
+    } catch (err) {
+      alert(`Failed to import CSV: ${err}`);
     }
   }
 
@@ -787,6 +824,14 @@
   onchange={handlePngSelect}
 />
 
+<input
+  type="file"
+  accept=".csv,text/csv"
+  style="display: none;"
+  bind:this={csvInputRef}
+  onchange={handleCsvSelect}
+/>
+
 <div class="app-shell">
   <MenuBar
     canUndo={history.canUndo()}
@@ -802,6 +847,7 @@
     onSaveProject={saveProject}
     onSaveProjectAs={saveProjectAs}
     onImportPng={importPng}
+    onImportCsv={importCsv}
     onExportPng={exportPng}
     onExportCsv={exportCsv}
     onUndo={handleUndo}

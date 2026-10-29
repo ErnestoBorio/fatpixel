@@ -30,6 +30,7 @@ A lightweight, browser-based pixel art editor specifically built for retro graph
   - PNG Export (32bpp RGBA).
   - PNG Import (auto-adapts colors to 8bpp VGA sprite with nearest Euclidean RGB matching).
   - CSV Export (decimal slot index per pixel, row-major for sprites, char/sheet-major for charsets).
+  - CSV Import (sprite pixel grid import with dimension, bit depth, palette, and aspect ratio auto-detection; used for default project initialization with the FatPixel mascot).
 
 ---
 

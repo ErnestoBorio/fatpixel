@@ -28,11 +28,20 @@ describe('App Graphic actions and mode switching', () => {
     expect(ratio2Btn).toBeDefined();
 
     const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
-    expect(statusDim?.textContent).toContain('1 bpp · 1:1');
+    expect(statusDim?.textContent).toContain('8 bpp · 2:1');
 
-    // Initially in 1 bpp, 1:1
+    // Initially in 8 bpp, 2:1 (FatPixel default sprite)
+    expect(bpp8Btn?.classList.contains('active')).toBe(true);
+    expect(ratio2Btn?.classList.contains('active')).toBe(true);
+
+    // Switch to 1 bpp and 1:1
+    bpp1Btn?.click();
+    flushSync();
     expect(bpp1Btn?.classList.contains('active')).toBe(true);
+    ratio1Btn?.click();
+    flushSync();
     expect(ratio1Btn?.classList.contains('active')).toBe(true);
+    expect(statusDim?.textContent).toContain('1 bpp · 1:1');
 
     // Click 2 bpp
     bpp2Btn?.click();
@@ -46,11 +55,16 @@ describe('App Graphic actions and mode switching', () => {
     expect(ratio2Btn?.classList.contains('active')).toBe(true);
     expect(statusDim?.textContent).toContain('2 bpp · 2:1');
 
-    // On 16-color palette (C64), 8 bpp is disabled
+    // Switch palette to C64 (16-color) -> 8 bpp is disabled
+    const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
+    if (palSelect) {
+      palSelect.value = 'c64-pepto';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
     expect(bpp8Btn?.disabled).toBe(true);
 
     // Switch palette to VGA 256 so 8 bpp is enabled and active
-    const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
     if (palSelect) {
       palSelect.value = 'vga-256';
       palSelect.dispatchEvent(new Event('change', { bubbles: true }));
@@ -89,8 +103,8 @@ describe('App Graphic actions and mode switching', () => {
     const wInput = inputs[0];
     const hInput = inputs[1];
 
-    expect(wInput.value).toBe('24');
-    expect(hInput.value).toBe('21');
+    expect(wInput.value).toBe('160');
+    expect(hInput.value).toBe('200');
 
     // Change width to 16
     wInput.value = '16';
@@ -225,7 +239,9 @@ describe('App Graphic actions and mode switching', () => {
     expect(dropdown?.textContent).not.toContain('New Project');
     expect(dropdown?.textContent).toContain('Open…');
     expect(dropdown?.textContent).toContain('Import PNG…');
+    expect(dropdown?.textContent).toContain('Import CSV…');
     expect(dropdown?.textContent).toContain('Export PNG…');
+    expect(dropdown?.textContent).toContain('Export CSV…');
 
     // 3. Hovering Edit while menu is open switches to Edit dropdown
     editItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
@@ -426,7 +442,12 @@ describe('App Graphic actions and mode switching', () => {
     const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
     expect(palSelect).not.toBeNull();
 
-    // Default C64 (16 colors)
+    // Switch to C64 (16 colors)
+    if (palSelect) {
+      palSelect.value = 'c64-pepto';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
     let grid = target.querySelector<HTMLElement>('.palette-grid');
     expect(grid?.classList.contains('dense-32')).toBe(false);
     expect(grid?.classList.contains('dense-small')).toBe(false);
@@ -523,7 +544,14 @@ describe('App Graphic actions and mode switching', () => {
     mount(App, { target });
     flushSync();
 
-    // Select 4 bpp on 16-color C64 palette
+    // Switch to C64 (16 colors) and select 4 bpp
+    const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
+    if (palSelect) {
+      palSelect.value = 'c64-pepto';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+
     const bpp4Btn = Array.from(target.querySelectorAll<HTMLButtonElement>('.bpp-btn')).find(
       (b) => b.textContent?.trim() === '4'
     );
@@ -797,6 +825,18 @@ describe('App Graphic actions and mode switching', () => {
     const c64Opt = options.find((o) => o.value === 'c64-pepto');
     expect(c64Opt?.textContent).toBe('Commodore 64');
 
+    // Switch to C64 and 1 bpp to test Color Slots section labels
+    if (palSelect) {
+      palSelect.value = 'c64-pepto';
+      palSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      flushSync();
+    }
+    const bpp1Btn = Array.from(target.querySelectorAll<HTMLButtonElement>('.bpp-btn')).find((b) =>
+      b.textContent?.trim() === '1'
+    );
+    bpp1Btn?.click();
+    flushSync();
+
     // Verify section labels do not contain counts like "(16)" or "Color Slots (2)"
     const sectionLabels = target.querySelectorAll('.palette-panel .section-label');
     const labelTexts = Array.from(sectionLabels).map((el) => el.textContent?.trim());
@@ -996,8 +1036,8 @@ describe('App Graphic actions and mode switching', () => {
 
     const wInput = numInputs![0];
     const hInput = numInputs![1];
-    expect(wInput.value).toBe('24');
-    expect(hInput.value).toBe('21');
+    expect(wInput.value).toBe('160');
+    expect(hInput.value).toBe('200');
 
     // Resize sprite using W input
     wInput.value = '32';
@@ -1006,6 +1046,6 @@ describe('App Graphic actions and mode switching', () => {
 
     expect(wInput.value).toBe('32');
     const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
-    expect(statusDim?.textContent).toContain('32 × 21');
+    expect(statusDim?.textContent).toContain('32 × 200');
   });
 });

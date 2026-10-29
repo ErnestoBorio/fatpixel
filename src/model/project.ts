@@ -1,4 +1,5 @@
 import { Graphic, type GraphicJson } from './graphic';
+import { createDefaultSprite } from './defaultSprite';
 import {
   defaultPalette,
   getBuiltinPalette,
@@ -34,7 +35,7 @@ export class Project {
   ) {
     this.pixelVersion = 1;
     this.name = name;
-    this.graphics = graphics ?? [Graphic.newSprite('sprite 1')];
+    this.graphics = graphics ?? [createDefaultSprite()];
     this.customPalettes = customPalettes;
   }
 
