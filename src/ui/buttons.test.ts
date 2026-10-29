@@ -522,12 +522,19 @@ describe('App Graphic actions and mode switching', () => {
     expect(swatch5.classList.contains('is-sec')).toBe(false);
   });
 
-  it('renders a 4x4 tiling preview in the charset preview panel', async () => {
+  it('renders BPP label and a pure graphical 4x4 tiling preview in the charset preview panel', async () => {
     const target = document.createElement('div');
     document.body.appendChild(target);
 
     mount(App, { target });
     flushSync();
+
+    // Verify BPP label is used in properties panel instead of Depth
+    const labels = Array.from(target.querySelectorAll<HTMLElement>('.properties-section .label')).map(
+      (l) => l.textContent?.trim()
+    );
+    expect(labels).toContain('BPP:');
+    expect(labels).not.toContain('Depth:');
 
     // Add a charset
     const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
@@ -546,27 +553,16 @@ describe('App Graphic actions and mode switching', () => {
     const sheetPanel = target.querySelector('.charset-sheet-panel');
     expect(sheetPanel).not.toBeNull();
 
-    // Verify 4x4 tiling preview exists at the bottom
+    // Verify 4x4 tiling preview exists at the bottom with NO buttons and NO title text
     const tilePreviewSection = sheetPanel?.querySelector('.tile-preview-section');
     expect(tilePreviewSection).not.toBeNull();
-    expect(tilePreviewSection?.textContent).toContain('Tiling Preview');
-    expect(tilePreviewSection?.textContent).toContain('4×4');
+    expect(tilePreviewSection?.querySelectorAll('button').length).toBe(0);
+    expect(tilePreviewSection?.textContent?.trim()).toBe('');
 
     // Verify canvas exists with 4x4 matrix dimensions (8x8 char at 2x scale: 4 * 8 * 2 = 64)
     const tileCanvas = tilePreviewSection?.querySelector<HTMLCanvasElement>('canvas.tile-preview-canvas');
     expect(tileCanvas).not.toBeNull();
     expect(tileCanvas?.width).toBe(64);
     expect(tileCanvas?.height).toBe(64);
-
-    // Test clicking zoom scale button (e.g. 4x zoom)
-    const zoom4Btn = Array.from(tilePreviewSection?.querySelectorAll<HTMLButtonElement>('.tile-scale-btn') ?? []).find(
-      (b) => b.textContent?.trim() === '4×'
-    );
-    expect(zoom4Btn).toBeDefined();
-    zoom4Btn?.click();
-    flushSync();
-
-    expect(tileCanvas?.width).toBe(128);
-    expect(tileCanvas?.height).toBe(128);
   });
 });

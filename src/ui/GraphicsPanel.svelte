@@ -200,7 +200,7 @@
 
       <!-- Depth (BPP) -->
       <div class="field-row">
-        <span class="label">Depth:</span>
+        <span class="label">BPP:</span>
         <div class="button-group bpp-buttons">
           {#each [1, 2, 3, 4, 8] as bppVal}
             {@const palCount = activePalette?.colors.length ?? 16}

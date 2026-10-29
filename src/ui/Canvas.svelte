@@ -62,10 +62,8 @@
   let preview2xCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview4xCanvasElem: HTMLCanvasElement | null = $state(null);
 
-  // Charset active character (0..255) & tiling preview
+  // Charset active character (0..255)
   let sheetHoverChar = $state<number | null>(null);
-  let tileScale = $state(2);
-  let showTileGrid = $state(false);
   let showFloatingPanel = $state(typeof window !== 'undefined' ? window.innerWidth >= 1200 : true);
 
   let offsetX = 0;
@@ -435,6 +433,7 @@
     const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
     const matrixCols = 4;
     const matrixRows = 4;
+    const tileScale = 2;
 
     const tileW = charWidth * aspect * tileScale;
     const tileH = charHeight * tileScale;
@@ -481,26 +480,6 @@
             );
           }
         }
-      }
-    }
-
-    // Optional subtle grid separating tiles
-    if (showTileGrid) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      for (let c = 1; c < matrixCols; c++) {
-        const x = c * tileW;
-        ctx.beginPath();
-        ctx.moveTo(x - 0.5, 0);
-        ctx.lineTo(x - 0.5, totalH);
-        ctx.stroke();
-      }
-      for (let r = 1; r < matrixRows; r++) {
-        const y = r * tileH;
-        ctx.beginPath();
-        ctx.moveTo(0, y - 0.5);
-        ctx.lineTo(totalW, y - 0.5);
-        ctx.stroke();
       }
     }
   }
@@ -885,8 +864,6 @@
     preview2xCanvasElem;
     preview4xCanvasElem;
     tileCanvasElem;
-    tileScale;
-    showTileGrid;
     showFloatingPanel;
     recalculateOffsets();
     redraw();
@@ -969,37 +946,8 @@
           ></canvas>
         </div>
 
-        <!-- 4x4 Tiling Preview -->
+        <!-- 4x4 Tiling Preview (pure graphical preview) -->
         <div class="tile-preview-section">
-          <div class="sheet-header tile-header">
-            <div class="sheet-title-group">
-              <span class="sheet-title">Tiling Preview</span>
-              <span class="sheet-meta">4×4</span>
-            </div>
-            <div class="sheet-actions">
-              <div class="tile-scale-selector">
-                {#each [1, 2, 3, 4] as s}
-                  <button
-                    type="button"
-                    class="tile-scale-btn {tileScale === s ? 'active' : ''}"
-                    onclick={() => { tileScale = s; redrawTilePreview(); }}
-                    title="{s}× Zoom"
-                  >
-                    {s}×
-                  </button>
-                {/each}
-              </div>
-              <button
-                type="button"
-                class="tile-grid-btn {showTileGrid ? 'active' : ''}"
-                onclick={() => { showTileGrid = !showTileGrid; redrawTilePreview(); }}
-                title="Toggle Tile Boundary Grid"
-                aria-label="Toggle Tile Boundary Grid"
-              >
-                ⊞
-              </button>
-            </div>
-          </div>
           <div class="tile-preview-viewport">
             <canvas
               bind:this={tileCanvasElem}
@@ -1293,70 +1241,16 @@
     display: flex;
     flex-direction: column;
     border-top: 1px solid #333344;
-    background: #181824;
+    background: #14141b;
     flex-shrink: 0;
-  }
-  .tile-header {
-    border-bottom: 1px solid #2b2b3a;
-  }
-  .tile-scale-selector {
-    display: flex;
-    gap: 2px;
-    background: #161622;
-    padding: 2px;
-    border-radius: 4px;
-    border: 1px solid #2d2d3e;
-  }
-  .tile-scale-btn {
-    background: transparent;
-    border: none;
-    color: #8899aa;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 1px 5px;
-    border-radius: 3px;
-    cursor: pointer;
-    line-height: 1.3;
-  }
-  .tile-scale-btn:hover {
-    color: #fff;
-    background: #28283a;
-  }
-  .tile-scale-btn.active {
-    background: #3a4a66;
-    color: #70b8ff;
-  }
-  .tile-grid-btn {
-    background: #242432;
-    border: 1px solid #38384a;
-    color: #8899aa;
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-  }
-  .tile-grid-btn:hover {
-    color: #fff;
-    background: #323246;
-  }
-  .tile-grid-btn.active {
-    background: #2a3d58;
-    color: #60aaff;
-    border-color: #4872aa;
   }
   .tile-preview-viewport {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 10px;
     background: #121218;
     overflow: auto;
-    min-height: 48px;
   }
   .tile-preview-canvas {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
