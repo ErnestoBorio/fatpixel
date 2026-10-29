@@ -778,4 +778,35 @@ describe('App Graphic actions and mode switching', () => {
       expect(text).not.toMatch(/\(\d+\)/);
     }
   });
+
+  it('verifies charsets in the graphics list display their size e.g. 8×8 instead of 256c', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Switch to Graphics tab
+    const graphicsTabBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tab-btn')).find((b) =>
+      b.textContent?.includes('Graphics')
+    );
+    graphicsTabBtn?.click();
+    flushSync();
+
+    // Add a charset
+    const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
+    addCharsetBtn?.click();
+    flushSync();
+
+    // Find the charset item in the list
+    const graphicItems = target.querySelectorAll('.graphic-item');
+    const charsetItem = Array.from(graphicItems).find((item) =>
+      item.querySelector('.name')?.textContent?.toLowerCase().includes('charset')
+    );
+    expect(charsetItem).toBeDefined();
+
+    const subtext = charsetItem?.querySelector('.subtext')?.textContent?.trim();
+    expect(subtext).toContain('8×8');
+    expect(subtext).not.toContain('256c');
+  });
 });

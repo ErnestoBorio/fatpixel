@@ -165,9 +165,7 @@
   function graphicSubtext(g: Graphic, _rev: number): string {
     const bpp = g.bpp;
     const aspect = g.pixelAspectRatio;
-    return g.isSprite()
-      ? `${g.width}×${g.height} · ${bpp}bpp (${aspect})`
-      : `${g.charsetInfo()?.charCount ?? 256}c · ${bpp}bpp (${aspect})`;
+    return `${g.width}×${g.height} · ${bpp}bpp (${aspect})`;
   }
 </script>
 
