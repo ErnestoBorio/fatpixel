@@ -1091,4 +1091,72 @@ describe('App Graphic actions and mode switching', () => {
     expect(c3.width).toBe(960); // 160 * 2 * 3
     expect(c3.height).toBe(600); // 200 * 3
   });
+
+  it('provides the Pan tool with 4-way arrow cursor, dragging to pan view, and Spacebar hold shortcut', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Verify Pan tool button exists in Tools panel
+    const panBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tool-btn')).find(
+      (b) => b.querySelector('.tool-label')?.textContent?.trim() === 'Pan'
+    );
+    expect(panBtn).toBeDefined();
+    expect(panBtn?.querySelector('.tool-shortcut')?.textContent?.trim()).toBe('Space');
+
+    const canvasContainer = target.querySelector<HTMLElement>('.canvas-container');
+    expect(canvasContainer).not.toBeNull();
+    expect(canvasContainer?.classList.contains('tool-pan')).toBe(false);
+
+    // 2. Click Pan button to select Pan tool
+    panBtn?.click();
+    flushSync();
+
+    expect(panBtn?.classList.contains('active')).toBe(true);
+    expect(canvasContainer?.classList.contains('tool-pan')).toBe(true);
+
+    // 3. Pan on canvas by dragging: does not modify graphic pixels
+    const canvas = target.querySelector<HTMLCanvasElement>('canvas.pixel-canvas');
+    expect(canvas).not.toBeNull();
+
+    canvas?.dispatchEvent(new MouseEvent('mousedown', { clientX: 200, clientY: 200, button: 0, bubbles: true }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 250, clientY: 230, bubbles: true }));
+    window.dispatchEvent(new MouseEvent('mouseup', { clientX: 250, clientY: 230, bubbles: true }));
+    flushSync();
+
+    // 4. Select Pencil tool again
+    const pencilBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tool-btn')).find(
+      (b) => b.querySelector('.tool-label')?.textContent?.trim() === 'Pencil'
+    );
+    pencilBtn?.click();
+    flushSync();
+
+    expect(pencilBtn?.classList.contains('active')).toBe(true);
+    expect(panBtn?.classList.contains('active')).toBe(false);
+    expect(canvasContainer?.classList.contains('tool-pan')).toBe(false);
+
+    // 5. Hold Space: temporarily activates Pan tool without user selecting it
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+    flushSync();
+
+    expect(canvasContainer?.classList.contains('tool-pan')).toBe(true);
+    expect(panBtn?.classList.contains('active')).toBe(true);
+
+    // 6. Release Space: restores previously selected tool (Pencil)
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true }));
+    flushSync();
+
+    expect(canvasContainer?.classList.contains('tool-pan')).toBe(false);
+    expect(pencilBtn?.classList.contains('active')).toBe(true);
+    expect(panBtn?.classList.contains('active')).toBe(false);
+
+    // 7. Shortcut 'P' selects Pan tool
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', bubbles: true }));
+    flushSync();
+
+    expect(panBtn?.classList.contains('active')).toBe(true);
+    expect(canvasContainer?.classList.contains('tool-pan')).toBe(true);
+  });
 });

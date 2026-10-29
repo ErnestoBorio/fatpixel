@@ -4,7 +4,8 @@ export type ToolType =
   | 'rectangle'
   | 'ellipse'
   | 'fill'
-  | 'eyedropper';
+  | 'eyedropper'
+  | 'pan';
 
 export interface ToolDef {
   id: ToolType;
@@ -21,4 +22,5 @@ export const TOOLS: ToolDef[] = [
   { id: 'ellipse', label: 'Ellipse', shortcut: 'C', usesBrush: false, usesFillOption: true },
   { id: 'fill', label: 'Flood Fill', shortcut: 'F', usesBrush: false, usesFillOption: false },
   { id: 'eyedropper', label: 'Eyedropper', shortcut: 'I', usesBrush: false, usesFillOption: false },
+  { id: 'pan', label: 'Pan', shortcut: 'Space', usesBrush: false, usesFillOption: false },
 ];

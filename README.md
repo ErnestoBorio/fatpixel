@@ -2,7 +2,7 @@
 
 A lightweight, browser-based pixel art editor for old school graphics.
 
-Use the app online: [https://ernestoborio.github.io/pixel/](https://ernestoborio.github.io/pixel/)
+Use the app online: [https://ernestoborio.github.io/fatpixel/](https://ernestoborio.github.io/fatpixel/)
 
 ![FatPixel Screenshot](public/og-image.png)
 

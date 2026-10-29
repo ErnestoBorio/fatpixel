@@ -86,6 +86,9 @@
   let isAltDown = $state(false);
   let isShiftDown = $state(false);
   let isSpaceDown = $state(false);
+  let effectiveTool = $derived<ToolType>(
+    isSpaceDown || tool === 'pan' ? 'pan' : (isAltDown ? 'eyedropper' : tool)
+  );
 
   let wheelAccumulator = 0;
 
@@ -344,10 +347,9 @@
     ctx.strokeRect(offsetX - 0.5, offsetY - 0.5, imgW + 1, imgH + 1);
 
     // Hover footprint cursor
-    if (hoverPt && inDrawBounds(hoverPt.x, hoverPt.y) && !isPanning) {
+    if (hoverPt && inDrawBounds(hoverPt.x, hoverPt.y) && !isPanning && effectiveTool !== 'pan') {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.lineWidth = 1.5;
-      const effectiveTool = isAltDown ? 'eyedropper' : tool;
       if (effectiveTool === 'pencil') {
         const pts = brushPoints(brushShape, brushSize, hoverPt.x, hoverPt.y);
         for (const pt of pts) {
@@ -599,8 +601,8 @@
   }
 
   function handleMouseDown(e: MouseEvent) {
-    if (e.button === 1 || isSpaceDown) {
-      // Middle click or Space+click pan
+    if (e.button === 1 || effectiveTool === 'pan') {
+      // Middle click, Space+click pan, or Pan tool
       isPanning = true;
       panStartX = e.clientX;
       panStartY = e.clientY;
@@ -612,8 +614,6 @@
     const rect = canvasElem.getBoundingClientRect();
     const pt = screenToPixel(e.clientX - rect.left, e.clientY - rect.top);
     if (!inDrawBounds(pt.x, pt.y)) return;
-
-    const effectiveTool = isAltDown ? 'eyedropper' : tool;
 
     if (effectiveTool === 'eyedropper') {
       const val = getPixelVal(pt.x, pt.y);
@@ -829,16 +829,25 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
 
-    if (e.key === 'Alt') isAltDown = true;
+    if (e.key === 'Alt') {
+      isAltDown = true;
+      redraw();
+    }
     if (e.key === 'Shift') {
       isShiftDown = true;
       if (isPainting && dragShapeStart && hoverPt) {
         updateShapePreview(hoverPt);
       }
     }
-    if (e.code === 'Space') isSpaceDown = true;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!isSpaceDown) {
+        isSpaceDown = true;
+        redraw();
+      }
+    }
 
     // Slot selection hotkeys: 0..9 based on graphic depth
     if (!e.metaKey && !e.ctrlKey && graphic.depth <= 16) {
@@ -850,14 +859,22 @@
   }
 
   function handleKeyUp(e: KeyboardEvent) {
-    if (e.key === 'Alt') isAltDown = false;
+    if (e.key === 'Alt') {
+      isAltDown = false;
+      redraw();
+    }
     if (e.key === 'Shift') {
       isShiftDown = false;
       if (isPainting && dragShapeStart && hoverPt) {
         updateShapePreview(hoverPt);
       }
     }
-    if (e.code === 'Space') isSpaceDown = false;
+    if (e.code === 'Space') {
+      if (isSpaceDown) {
+        isSpaceDown = false;
+        redraw();
+      }
+    }
   }
 
   function prevChar() {
@@ -906,22 +923,30 @@
     });
     observer.observe(containerElem);
 
+    const handleBlur = () => {
+      isSpaceDown = false;
+      isAltDown = false;
+      isShiftDown = false;
+      redraw();
+    };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       observer.disconnect();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('blur', handleBlur);
     };
   });
 </script>
 
 <div
   bind:this={containerElem}
-  class="canvas-container"
+  class="canvas-container {effectiveTool === 'pan' || isPanning ? 'tool-pan' : ''}"
   role="region"
   aria-label="Pixel Drawing Canvas"
   oncontextmenu={(e) => e.preventDefault()}
@@ -1080,6 +1105,11 @@
     position: relative;
     cursor: crosshair;
     background: #18181e;
+  }
+  .canvas-container.tool-pan,
+  .canvas-container.tool-pan .pixel-canvas {
+    cursor: move;
+    cursor: all-scroll;
   }
   canvas {
     display: block;

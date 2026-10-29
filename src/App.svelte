@@ -66,6 +66,7 @@
       ? (initialSettings.tool as ToolType)
       : 'pencil'
   );
+  let toolBeforeSpace: ToolType | null = null;
   let brushShape = $state<BrushShape>(initialSettings.brushShape ?? 'square');
   let brushSize = $state(initialSettings.brushSize ?? 1);
   let fillMode = $state(initialSettings.fillMode ?? false);
@@ -638,7 +639,16 @@
       return;
     }
 
-    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!e.repeat && toolBeforeSpace === null && tool !== 'pan') {
+        toolBeforeSpace = tool;
+        tool = 'pan';
+      }
+      return;
+    }
 
     const isMacUser = isMac();
     const cmd = isMacUser ? (e.metaKey || e.ctrlKey) : e.ctrlKey;
@@ -761,6 +771,8 @@
         case 'F': tool = 'fill'; break;
         case 'i':
         case 'I': tool = 'eyedropper'; break;
+        case 'p':
+        case 'P': tool = 'pan'; break;
         case 'g':
         case 'G': showGrid = !showGrid; break;
         case 'x':
@@ -784,8 +796,25 @@
     }
   }
 
+  function handleKeyUp(e: KeyboardEvent) {
+    if (e.code === 'Space') {
+      if (toolBeforeSpace !== null) {
+        tool = toolBeforeSpace;
+        toolBeforeSpace = null;
+      }
+    }
+  }
+
   onMount(() => {
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    const handleBlur = () => {
+      if (toolBeforeSpace !== null) {
+        tool = toolBeforeSpace;
+        toolBeforeSpace = null;
+      }
+    };
+    window.addEventListener('blur', handleBlur);
     const handleBeforeUnload = () => {
       saveNow();
     };
@@ -802,6 +831,8 @@
     return () => {
       clearInterval(autoSaveInterval);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   });
