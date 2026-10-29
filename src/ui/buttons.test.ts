@@ -553,16 +553,16 @@ describe('App Graphic actions and mode switching', () => {
     const sheetPanel = target.querySelector('.charset-sheet-panel');
     expect(sheetPanel).not.toBeNull();
 
-    // Verify 4x4 tiling preview exists at the bottom with NO buttons and NO title text
+    // Verify 5x5 tiling preview exists at the bottom with NO buttons and NO title text
     const tilePreviewSection = sheetPanel?.querySelector('.tile-preview-section');
     expect(tilePreviewSection).not.toBeNull();
     expect(tilePreviewSection?.querySelectorAll('button').length).toBe(0);
     expect(tilePreviewSection?.textContent?.trim()).toBe('');
 
-    // Verify canvas exists with 4x4 matrix dimensions (8x8 char at 2x scale: 4 * 8 * 2 = 64)
+    // Verify canvas exists with 5x5 matrix dimensions (8x8 char at 2x scale: 5 * 8 * 2 = 80)
     const tileCanvas = tilePreviewSection?.querySelector<HTMLCanvasElement>('canvas.tile-preview-canvas');
     expect(tileCanvas).not.toBeNull();
-    expect(tileCanvas?.width).toBe(64);
-    expect(tileCanvas?.height).toBe(64);
+    expect(tileCanvas?.width).toBe(80);
+    expect(tileCanvas?.height).toBe(80);
   });
 });

@@ -431,8 +431,8 @@
 
     const { charWidth, charHeight } = charsetInfo;
     const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
-    const matrixCols = 4;
-    const matrixRows = 4;
+    const matrixCols = 5;
+    const matrixRows = 5;
     const tileScale = 2;
 
     const tileW = charWidth * aspect * tileScale;
@@ -946,7 +946,7 @@
           ></canvas>
         </div>
 
-        <!-- 4x4 Tiling Preview (pure graphical preview) -->
+        <!-- 5x5 Tiling Preview (pure graphical preview) -->
         <div class="tile-preview-section">
           <div class="tile-preview-viewport">
             <canvas
