@@ -22,6 +22,8 @@
     onRedo,
     onCopy,
     onPaste,
+    onDeselect,
+    canDeselect = false,
     onClear,
     onInvert,
     canInvert = true,
@@ -45,6 +47,7 @@
     canUndo?: boolean;
     canRedo?: boolean;
     canPaste?: boolean;
+    canDeselect?: boolean;
     canInvert?: boolean;
     showGrid?: boolean;
     showLeftPanel?: boolean;
@@ -63,6 +66,7 @@
     onRedo?: () => void;
     onCopy?: () => void;
     onPaste?: () => void;
+    onDeselect?: () => void;
     onClear?: () => void;
     onInvert?: () => void;
     onNewSprite?: () => void;
@@ -175,6 +179,13 @@
           onclick={() => { onPaste?.(); closeMenu(); }}
         >
           <span>Paste</span> <span class="shortcut">{shortcuts.paste}</span>
+        </button>
+        <button
+          class="dropdown-item"
+          disabled={!canDeselect}
+          onclick={() => { onDeselect?.(); closeMenu(); }}
+        >
+          <span>Deselect</span> <span class="shortcut">{shortcuts.deselect}</span>
         </button>
         <div class="dropdown-divider"></div>
         <button

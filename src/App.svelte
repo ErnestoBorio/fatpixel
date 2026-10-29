@@ -294,6 +294,7 @@
   }
 
   function handleUndo() {
+    canvasRef?.commitFloatingPaste();
     const current = createProjectSnapshot();
     const prev = history.undo(current);
     if (prev) {
@@ -304,6 +305,7 @@
   }
 
   function handleRedo() {
+    canvasRef?.commitFloatingPaste();
     const current = createProjectSnapshot();
     const next = history.redo(current);
     if (next) {
@@ -547,6 +549,7 @@
   }
 
   function handleClear() {
+    canvasRef?.commitFloatingPaste();
     pushHistorySnapshot();
     if (activeGraphic.isCharset()) {
       activeGraphic.clearChar(activeCharIndex);
@@ -557,19 +560,29 @@
   }
 
   function handleCopy() {
-    copyFromGraphic(activeGraphic, activeCharIndex);
+    const sel = canvasRef?.getSelection();
+    copyFromGraphic(activeGraphic, activePalette, sel, activeCharIndex);
     clipboardHasItem = true;
   }
 
   function handlePaste() {
     const item = getMemoryClipboard();
     if (!item) return;
-    pushHistorySnapshot();
-    pasteToGraphic(activeGraphic, item, activeCharIndex);
-    notifyGraphicChange();
+    if (canvasRef) {
+      canvasRef.startFloatingPaste(item);
+    } else {
+      pushHistorySnapshot();
+      pasteToGraphic(activeGraphic, item, activeCharIndex, null, activePalette);
+      notifyGraphicChange();
+    }
+  }
+
+  function handleDeselect() {
+    canvasRef?.deselect();
   }
 
   function handleInvert() {
+    canvasRef?.commitFloatingPaste();
     if (activeGraphic.depth !== 2) return;
     pushHistorySnapshot();
     if (activeGraphic.isCharset()) {
@@ -581,6 +594,7 @@
   }
 
   function handleShift(dx: number, dy: number) {
+    canvasRef?.commitFloatingPaste();
     pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
     if (activeGraphic.shiftPixels(dx, dy, charIdx)) {
@@ -589,6 +603,7 @@
   }
 
   function handleRotate(clockwise: boolean) {
+    canvasRef?.commitFloatingPaste();
     pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
     if (activeGraphic.rotate(clockwise, charIdx)) {
@@ -597,6 +612,7 @@
   }
 
   function handleMirrorH() {
+    canvasRef?.commitFloatingPaste();
     pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
     if (activeGraphic.mirrorH(charIdx)) {
@@ -605,6 +621,7 @@
   }
 
   function handleMirrorV() {
+    canvasRef?.commitFloatingPaste();
     pushHistorySnapshot();
     const charIdx = activeGraphic.isCharset() ? activeCharIndex : undefined;
     if (activeGraphic.mirrorV(charIdx)) {
@@ -710,8 +727,16 @@
       } else if (e.key.toLowerCase() === 'v') {
         e.preventDefault();
         handlePaste();
+      } else if (e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        handleDeselect();
       }
     } else {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        canvasRef?.commitFloatingPaste();
+        return;
+      }
       if (e.altKey && (e.key === '1' || e.code === 'Digit1')) {
         e.preventDefault();
         showLeftPanel = !showLeftPanel;
@@ -787,6 +812,8 @@
           e.preventDefault();
           handleMirrorV();
           break;
+        case 'm':
+        case 'M': tool = 'select'; break;
         case 'b':
         case 'B': tool = 'pencil'; break;
         case 'l':
@@ -900,6 +927,7 @@
     canUndo={history.canUndo()}
     canRedo={history.canRedo()}
     canPaste={clipboardHasItem}
+    canDeselect={canvasRef?.hasSelection?.() || canvasRef?.hasFloatingPaste?.()}
     canInvert={activeGraphic.depth === 2}
     {showGrid}
     {showLeftPanel}
@@ -917,6 +945,7 @@
     onRedo={handleRedo}
     onCopy={handleCopy}
     onPaste={handlePaste}
+    onDeselect={handleDeselect}
     onClear={handleClear}
     onInvert={handleInvert}
     onNewSprite={() => {
@@ -991,7 +1020,7 @@
         graphic={activeGraphic}
         palette={activePalette}
         projectRevision={stateVersion}
-        {tool}
+        bind:tool
         {brushShape}
         {brushSize}
         {fillMode}

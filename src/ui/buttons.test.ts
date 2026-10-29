@@ -6,6 +6,7 @@ import Canvas from './Canvas.svelte';
 import { Graphic } from '../model/graphic';
 import { defaultPalette } from '../model/palette';
 import { setPlatformOverride } from '../platform';
+import { copyFromGraphic, convertClipboardPixels } from '../model/clipboard';
 
 describe('App Graphic actions and mode switching', () => {
   it('toggles mode, updates buttons, status bar, and slot states', async () => {
@@ -277,21 +278,26 @@ describe('App Graphic actions and mode switching', () => {
     expect(target.querySelector('.dropdown')).toBeNull();
   });
 
-  it('verifies select tool and deselect are removed, and performs copy and paste', async () => {
+  it('verifies select tool, deselect in edit menu, and performs selection, copy and paste', async () => {
     const target = document.createElement('div');
     document.body.appendChild(target);
 
     mount(App, { target });
     flushSync();
 
-    // 1. Select and Eraser tool buttons are NOT present in ToolsPanel
+    // 1. Select tool button IS present in ToolsPanel, Eraser is NOT present
     const toolButtons = target.querySelectorAll<HTMLButtonElement>('.tool-btn');
     const selectToolBtn = Array.from(toolButtons).find((b) => b.textContent?.includes('Select'));
-    expect(selectToolBtn).toBeUndefined();
+    expect(selectToolBtn).toBeDefined();
     const eraserToolBtn = Array.from(toolButtons).find((b) => b.textContent?.includes('Eraser'));
     expect(eraserToolBtn).toBeUndefined();
 
-    // 2. Edit menu has Copy and Paste, but NOT Deselect
+    // 2. Click Select tool button
+    selectToolBtn?.click();
+    flushSync();
+    expect(selectToolBtn?.classList.contains('active')).toBe(true);
+
+    // 3. Edit menu has Copy, Paste, and Deselect
     const editMenuBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
       (b) => b.textContent?.trim() === 'Edit'
     );
@@ -302,17 +308,17 @@ describe('App Graphic actions and mode switching', () => {
     const dropdown = target.querySelector('.dropdown');
     expect(dropdown?.textContent).toContain('Copy');
     expect(dropdown?.textContent).toContain('Paste');
-    expect(dropdown?.textContent).not.toContain('Deselect');
+    expect(dropdown?.textContent).toContain('Deselect');
 
     // Close menu with Escape
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     flushSync();
 
-    // 3. Test Copy shortcut (⌘C)
+    // 4. Test Copy shortcut (⌘C)
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }));
     flushSync();
 
-    // 4. Add a charset and paste (⌘V) into it
+    // 5. Add a charset and paste (⌘V) into it
     const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
     addCharsetBtn?.click();
     flushSync();
@@ -324,12 +330,22 @@ describe('App Graphic actions and mode switching', () => {
     expect(charNavBar?.textContent).not.toContain('Clear');
     expect(charNavBar?.textContent).not.toContain('Invert');
 
-    // Pasting into charset replaces whatever fits, whole graphic copied & pasted (no selection badge)
+    // Pasting into charset creates floating paste layer and switches to select tool
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
     flushSync();
 
-    // No selection badge exists
-    expect(target.querySelector('.selection-badge')).toBeNull();
+    // Canvas container has tool-select-move class indicating 4-way arrow cursor
+    const canvasContainer = target.querySelector('.canvas-container');
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(true);
+
+    // Pressing Enter commits the floating paste layer
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    flushSync();
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(false);
+
+    // Deselect via ⌘D
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', metaKey: true, bubbles: true }));
+    flushSync();
   });
 
   it('verifies Save As window, direct save with last used name, and first save prompt', async () => {
@@ -1321,5 +1337,76 @@ describe('App Graphic actions and mode switching', () => {
     headerHelpBtn?.click();
     flushSync();
     expect(target.querySelector('.help-window')).not.toBeNull();
+  });
+
+  it('tests rectangular selection, copy, paste, floating layer move, Enter merge, and deselect', async () => {
+    // 1. Create a 16x16 sprite with some pixels
+    const g1 = Graphic.newSprite('Sprite 1', 16, 16, 256, 'hires');
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        g1.set(x, y, (x + y) % 16);
+      }
+    }
+    const pal = defaultPalette();
+
+    // 2. Copy a 4x4 sub-rectangle from (2, 2)
+    const item = copyFromGraphic(g1, pal, { x: 2, y: 2, w: 4, h: 4 });
+    expect(item.width).toBe(4);
+    expect(item.height).toBe(4);
+    expect(item.pixels[0]).toBe((2 + 2) % 16);
+    expect(item.pixels[15]).toBe((5 + 5) % 16);
+
+    // 3. Paste onto a 2bpp graphic (down-sampling)
+    const g2 = Graphic.newSprite('Sprite 2', 16, 16, 4, 'hires');
+    const converted = convertClipboardPixels(item, g2, pal);
+    expect(converted.length).toBe(16);
+    // Values clamped / mapped to 2bpp (depth 4 -> slots 0..3)
+    for (let i = 0; i < converted.length; i++) {
+      expect(converted[i]).toBeLessThan(4);
+    }
+
+    // 4. Mount Canvas directly to test floatingPaste, startFloatingPaste, commitFloatingPaste, deselect
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    let currentTool: any = 'pencil';
+    let selRect: any = null;
+    let floatPaste: any = null;
+
+    const comp = mount(Canvas, {
+      target,
+      props: {
+        graphic: g2,
+        palette: pal,
+        tool: currentTool,
+        brushShape: 'square',
+        brushSize: 1,
+        fillMode: false,
+        selectionRect: selRect,
+        floatingPaste: floatPaste,
+      },
+    });
+    flushSync();
+
+    // Start floating paste
+    comp.startFloatingPaste(item);
+    flushSync();
+    expect(comp.hasFloatingPaste()).toBe(true);
+
+    // Commit floating paste
+    comp.commitFloatingPaste();
+    flushSync();
+    expect(comp.hasFloatingPaste()).toBe(false);
+
+    // Test selection and deselect
+    comp.setSelection({ x: 1, y: 1, w: 5, h: 5 });
+    flushSync();
+    expect(comp.hasSelection()).toBe(true);
+    expect(comp.getSelection()).toEqual({ x: 1, y: 1, w: 5, h: 5 });
+
+    comp.deselect();
+    flushSync();
+    expect(comp.hasSelection()).toBe(false);
+    expect(comp.getSelection()).toBeNull();
   });
 });

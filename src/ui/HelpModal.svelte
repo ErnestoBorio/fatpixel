@@ -29,6 +29,7 @@
     {
       title: 'Tools & Drawing',
       items: [
+        { key: 'M', desc: 'Select tool (drag to select a rectangular area)' },
         { key: 'B', desc: 'Pencil / Brush tool' },
         { key: 'L', desc: 'Line tool' },
         { key: 'R', desc: 'Rectangle tool' },
@@ -61,8 +62,10 @@
       items: [
         { key: shortcuts.undo, desc: 'Undo last stroke or change' },
         { key: shortcuts.redo, desc: 'Redo previously undone change' },
-        { key: shortcuts.copy, desc: 'Copy current graphic or character pixels' },
-        { key: shortcuts.paste, desc: 'Paste copied pixels into active graphic/char' },
+        { key: shortcuts.copy, desc: 'Copy selected rectangular area or entire graphic' },
+        { key: shortcuts.paste, desc: 'Paste copied pixels into center as a movable floating layer' },
+        { key: 'Enter', desc: 'Merge / commit pasted floating layer onto graphic' },
+        { key: shortcuts.deselect, desc: 'Deselect active selection or commit paste layer' },
         { key: shortcuts.clear, desc: 'Clear graphic / character to background slot' },
         { key: shortcuts.invert, desc: 'Invert pixel data (1 bpp modes)' },
       ],
@@ -297,9 +300,13 @@
               </div>
 
               <div class="workflow-card">
-                <h4 class="workflow-title">4. Copying, Pasting & History</h4>
+                <h4 class="workflow-title">4. Selection, Copying, Pasting & History</h4>
                 <ul class="workflow-list">
-                  <li><strong>Copy & Paste:</strong> Press <kbd>{shortcuts.copy}</kbd> to copy the active sprite or charset character to the clipboard. Press <kbd>{shortcuts.paste}</kbd> to paste into another graphic or character.</li>
+                  <li><strong>Select Tool (<kbd>M</kbd>):</strong> Drag across the graphic to select a rectangular portion; animated marching ants outline the selection. Clicking inside the graphic or on the space around it clears the selection. You can also deselect at any time with <kbd>{shortcuts.deselect}</kbd> (or <em>Edit &gt; Deselect</em>).</li>
+                  <li><strong>Copy (<kbd>{shortcuts.copy}</kbd>):</strong> If an area is selected, copies only the selected pixels to the clipboard. If nothing is selected, copies the entire graphic or active character.</li>
+                  <li><strong>Paste & Floating Layer (<kbd>{shortcuts.paste}</kbd>):</strong> Pasting places the content in the center of the graphic on a movable floating second layer. The Select tool automatically activates and changes from a cross to a 4-way arrow cursor so you can drag and drop the pasted content to any position.</li>
+                  <li><strong>Merging to Graphic:</strong> Press <kbd>Enter</kbd>, navigate to another tool, or perform an action (such as Undo, Clear, Shift, or clicking outside) to merge the floating content onto the graphic and remove the virtual paste layer.</li>
+                  <li><strong>Smart Palette & BPP Down-Sampling:</strong> Clipboard content can be pasted repeatedly across any graphic. Palettes and bit depths (1 bpp, 2 bpp, 8 bpp) are conserved as best as possible using perceptual color distance down-sampling.</li>
                   <li><strong>Undo & Redo:</strong> Full multi-level history. Press <kbd>{shortcuts.undo}</kbd> to undo and <kbd>{shortcuts.redo}</kbd> to redo.</li>
                   <li><strong>Clear & Invert:</strong> Press <kbd>{shortcuts.clear}</kbd> to clear the canvas to background, or <kbd>{shortcuts.invert}</kbd> to invert pixels (in 1 bpp modes).</li>
                 </ul>

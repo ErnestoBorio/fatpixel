@@ -15,12 +15,13 @@
     type Point,
   } from '../raster';
   import { slotColor } from '../model/render';
+  import { convertClipboardPixels, type ClipboardItem } from '../model/clipboard';
 
   let {
     graphic,
     palette,
     projectRevision = 0,
-    tool,
+    tool = $bindable<ToolType>('pencil'),
     brushShape,
     brushSize,
     fillMode,
@@ -28,6 +29,8 @@
     secondary = $bindable(0),
     activeCharIndex = $bindable(0),
     zoomIndex = $bindable(7),
+    selectionRect = $bindable<{ x: number; y: number; w: number; h: number } | null>(null),
+    floatingPaste = $bindable<{ x: number; y: number; width: number; height: number; pixels: Uint8Array } | null>(null),
     showGrid = true,
     onSnapshot,
     onPixelChange,
@@ -37,7 +40,7 @@
     graphic: Graphic;
     palette: Palette;
     projectRevision?: number;
-    tool: ToolType;
+    tool?: ToolType;
     brushShape: BrushShape;
     brushSize: number;
     fillMode: boolean;
@@ -45,6 +48,8 @@
     secondary?: number;
     activeCharIndex?: number;
     zoomIndex?: number;
+    selectionRect?: { x: number; y: number; w: number; h: number } | null;
+    floatingPaste?: { x: number; y: number; width: number; height: number; pixels: Uint8Array } | null;
     showGrid?: boolean;
     onSnapshot?: () => void;
     onPixelChange?: () => void;
@@ -91,6 +96,51 @@
   );
 
   let wheelAccumulator = 0;
+
+  let isSelecting = $state(false);
+  let selectionStartPt: Point | null = null;
+  let hasDraggedSelection = false;
+
+  let isMovingPaste = $state(false);
+  let dragPasteStartPt: Point | null = null;
+  let origPasteX = 0;
+  let origPasteY = 0;
+
+  let marchOffset = $state(0);
+  let animFrameId: number | null = null;
+
+  function isInsideRect(
+    pt: Point,
+    rect: { x: number; y: number; width?: number; height?: number; w?: number; h?: number }
+  ): boolean {
+    const rw = rect.width ?? rect.w ?? 0;
+    const rh = rect.height ?? rect.h ?? 0;
+    return pt.x >= rect.x && pt.x < rect.x + rw && pt.y >= rect.y && pt.y < rect.y + rh;
+  }
+
+  function startMarchingAnts() {
+    if (animFrameId !== null) return;
+    let lastT = performance.now();
+    const loop = (t: number) => {
+      const dt = t - lastT;
+      lastT = t;
+      marchOffset = (marchOffset + dt * 0.02) % 10;
+      redrawMainCanvas();
+      if (selectionRect || floatingPaste) {
+        animFrameId = requestAnimationFrame(loop);
+      } else {
+        animFrameId = null;
+      }
+    };
+    animFrameId = requestAnimationFrame(loop);
+  }
+
+  function stopMarchingAnts() {
+    if (animFrameId !== null) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+  }
 
   let graphicWidth = $derived.by(() => {
     projectRevision;
@@ -140,6 +190,74 @@
 
   export function getPanOffsets(): { x: number; y: number } {
     return { x: panOffsetX, y: panOffsetY };
+  }
+
+  export function commitFloatingPaste(): boolean {
+    if (!floatingPaste) return false;
+    pushHistory();
+    let changed = false;
+    for (let ly = 0; ly < floatingPaste.height; ly++) {
+      for (let lx = 0; lx < floatingPaste.width; lx++) {
+        const gx = floatingPaste.x + lx;
+        const gy = floatingPaste.y + ly;
+        if (inDrawBounds(gx, gy)) {
+          const val = floatingPaste.pixels[ly * floatingPaste.width + lx];
+          if (setPixelVal(gx, gy, val)) {
+            changed = true;
+          }
+        }
+      }
+    }
+    floatingPaste = null;
+    if (changed) {
+      onPixelChange?.();
+    }
+    redraw();
+    return true;
+  }
+
+  export function startFloatingPaste(item: ClipboardItem): void {
+    commitFloatingPaste();
+    selectionRect = null;
+    const targetW = drawWidth;
+    const targetH = drawHeight;
+    const startX = Math.floor((targetW - item.width) / 2);
+    const startY = Math.floor((targetH - item.height) / 2);
+
+    const convertedPixels = convertClipboardPixels(item, graphic, palette);
+
+    floatingPaste = {
+      x: startX,
+      y: startY,
+      width: item.width,
+      height: item.height,
+      pixels: convertedPixels,
+    };
+    tool = 'select';
+    redraw();
+  }
+
+  export function deselect(): void {
+    commitFloatingPaste();
+    selectionRect = null;
+    redraw();
+  }
+
+  export function getSelection(): { x: number; y: number; w: number; h: number } | null {
+    return selectionRect;
+  }
+
+  export function setSelection(rect: { x: number; y: number; w: number; h: number } | null): void {
+    selectionRect = rect;
+    redraw();
+  }
+
+  export function hasFloatingPaste(): boolean {
+    return floatingPaste !== null;
+  }
+
+  export function hasSelection(): boolean {
+    return selectionRect !== null;
   }
 
   export function fitToWindow() {
@@ -310,6 +428,22 @@
       }
     }
 
+    // Floating paste layer (virtual second layer)
+    if (floatingPaste) {
+      for (let ly = 0; ly < floatingPaste.height; ly++) {
+        for (let lx = 0; lx < floatingPaste.width; lx++) {
+          const gx = floatingPaste.x + lx;
+          const gy = floatingPaste.y + ly;
+          if (!inDrawBounds(gx, gy)) continue;
+          const val = floatingPaste.pixels[ly * floatingPaste.width + lx];
+          if (val === null || graphic.transparentSlot === val) continue;
+          const col = slotColor(graphic, palette, val);
+          ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+          ctx.fillRect(offsetX + gx * pxW, offsetY + gy * pxH, pxW, pxH);
+        }
+      }
+    }
+
     // Geometry preview layer (Line, Rect, Ellipse)
     if (previewPoints.length > 0) {
       const col = slotColor(graphic, palette, paintValue);
@@ -350,8 +484,42 @@
     ctx.lineWidth = 1.5;
     ctx.strokeRect(offsetX - 0.5, offsetY - 0.5, imgW + 1, imgH + 1);
 
+    // Marching Ants for selection or floating paste layer
+    const activeBox = floatingPaste
+      ? { x: floatingPaste.x, y: floatingPaste.y, w: floatingPaste.width, h: floatingPaste.height }
+      : selectionRect;
+
+    if (activeBox) {
+      const rx = offsetX + activeBox.x * pxW;
+      const ry = offsetY + activeBox.y * pxH;
+      const rw = activeBox.w * pxW;
+      const rh = activeBox.h * pxH;
+
+      ctx.save();
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 5]);
+
+      // Outer black dashed line
+      ctx.lineDashOffset = -marchOffset;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeRect(rx - 0.5, ry - 0.5, rw + 1, rh + 1);
+
+      // Inner white dashed line
+      ctx.lineDashOffset = -marchOffset + 5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeRect(rx - 0.5, ry - 0.5, rw + 1, rh + 1);
+
+      ctx.restore();
+    }
+
     // Hover footprint cursor
-    if (hoverPt && inDrawBounds(hoverPt.x, hoverPt.y) && !isPanning && effectiveTool !== 'pan') {
+    if (
+      hoverPt &&
+      inDrawBounds(hoverPt.x, hoverPt.y) &&
+      !isPanning &&
+      effectiveTool !== 'pan' &&
+      effectiveTool !== 'select'
+    ) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.lineWidth = 1.5;
       if (effectiveTool === 'pencil') {
@@ -471,6 +639,18 @@
       }
     }
 
+    if (floatingPaste) {
+      for (let ly = 0; ly < floatingPaste.height; ly++) {
+        for (let lx = 0; lx < floatingPaste.width; lx++) {
+          const gx = floatingPaste.x + lx;
+          const gy = floatingPaste.y + ly;
+          if (gx >= 0 && gy >= 0 && gx < charWidth && gy < charHeight) {
+            charPixels[gy * charWidth + gx] = floatingPaste.pixels[ly * floatingPaste.width + lx];
+          }
+        }
+      }
+    }
+
     // Render 4x4 matrix of activeCharIndex
     for (let tr = 0; tr < matrixRows; tr++) {
       for (let tc = 0; tc < matrixCols; tc++) {
@@ -523,6 +703,20 @@
             const col = slotColor(graphic, palette, val);
             ctx1.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
             ctx1.fillRect(x * aspect, y, aspect, 1);
+          }
+        }
+        if (floatingPaste) {
+          for (let ly = 0; ly < floatingPaste.height; ly++) {
+            for (let lx = 0; lx < floatingPaste.width; lx++) {
+              const gx = floatingPaste.x + lx;
+              const gy = floatingPaste.y + ly;
+              if (gx < 0 || gy < 0 || gx >= w || gy >= h) continue;
+              const val = floatingPaste.pixels[ly * floatingPaste.width + lx];
+              if (val === null || graphic.transparentSlot === val) continue;
+              const col = slotColor(graphic, palette, val);
+              ctx1.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+              ctx1.fillRect(gx * aspect, gy, aspect, 1);
+            }
           }
         }
       }
@@ -607,7 +801,12 @@
   function handleMouseDown(e: MouseEvent) {
     const rect = canvasElem.getBoundingClientRect();
     const pt = screenToPixel(e.clientX - rect.left, e.clientY - rect.top);
-    if (!inDrawBounds(pt.x, pt.y)) return;
+    if (!inDrawBounds(pt.x, pt.y)) {
+      if (selectionRect || floatingPaste) {
+        deselect();
+      }
+      return;
+    }
 
     if (e.button === 1 || effectiveTool === 'pan') {
       // Middle click, Space+click pan, or Pan tool (only when dragging from inside image)
@@ -617,6 +816,41 @@
       panStartOffsetX = panOffsetX;
       panStartOffsetY = panOffsetY;
       return;
+    }
+
+    if (effectiveTool === 'select') {
+      if (floatingPaste) {
+        if (isInsideRect(pt, floatingPaste)) {
+          // Clicked inside the floating paste layer -> start dragging to move it
+          isMovingPaste = true;
+          dragPasteStartPt = pt;
+          origPasteX = floatingPaste.x;
+          origPasteY = floatingPaste.y;
+          return;
+        } else {
+          // Clicked outside floating paste layer -> commit/merge it
+          commitFloatingPaste();
+          isSelecting = true;
+          selectionStartPt = pt;
+          hasDraggedSelection = false;
+          selectionRect = null;
+          redraw();
+          return;
+        }
+      }
+
+      // No floating paste: start dragging selection
+      isSelecting = true;
+      selectionStartPt = pt;
+      hasDraggedSelection = false;
+      selectionRect = null;
+      redraw();
+      return;
+    }
+
+    // Navigating to any other tool commits floating paste
+    if (floatingPaste) {
+      commitFloatingPaste();
     }
 
     if (effectiveTool === 'eyedropper') {
@@ -722,6 +956,33 @@
       onHoverChange?.(null);
     }
 
+    if (isMovingPaste && floatingPaste && dragPasteStartPt) {
+      const dx = pt.x - dragPasteStartPt.x;
+      const dy = pt.y - dragPasteStartPt.y;
+      floatingPaste.x = origPasteX + dx;
+      floatingPaste.y = origPasteY + dy;
+      redraw();
+      return;
+    }
+
+    if (isSelecting && selectionStartPt) {
+      if (pt.x !== selectionStartPt.x || pt.y !== selectionStartPt.y) {
+        hasDraggedSelection = true;
+      }
+      const minX = Math.max(0, Math.min(selectionStartPt.x, pt.x));
+      const maxX = Math.min(drawWidth - 1, Math.max(selectionStartPt.x, pt.x));
+      const minY = Math.max(0, Math.min(selectionStartPt.y, pt.y));
+      const maxY = Math.min(drawHeight - 1, Math.max(selectionStartPt.y, pt.y));
+      selectionRect = {
+        x: minX,
+        y: minY,
+        w: maxX - minX + 1,
+        h: maxY - minY + 1,
+      };
+      redraw();
+      return;
+    }
+
     if (isPainting && dragShapeStart) {
       updateShapePreview(pt);
       return;
@@ -743,6 +1004,21 @@
   function handleMouseUp() {
     if (isPanning) {
       isPanning = false;
+    }
+    if (isMovingPaste) {
+      isMovingPaste = false;
+      dragPasteStartPt = null;
+      redraw();
+    }
+    if (isSelecting) {
+      isSelecting = false;
+      if (!hasDraggedSelection) {
+        // Clicking the graphic eliminates the selection and marching ants
+        selectionRect = null;
+      }
+      selectionStartPt = null;
+      hasDraggedSelection = false;
+      redraw();
     }
     const wasPainting = isPainting;
     if (isPainting && dragShapeStart && previewPoints.length > 0) {
@@ -835,6 +1111,14 @@
   function handleKeyDown(e: KeyboardEvent) {
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
 
+    if (e.key === 'Enter') {
+      if (floatingPaste) {
+        e.preventDefault();
+        commitFloatingPaste();
+        return;
+      }
+    }
+
     if (e.key === 'Alt') {
       isAltDown = true;
       redraw();
@@ -898,6 +1182,14 @@
 
 
   $effect(() => {
+    if (selectionRect || floatingPaste) {
+      startMarchingAnts();
+    } else {
+      stopMarchingAnts();
+    }
+  });
+
+  $effect(() => {
     // Redraw whenever graphic, palette, activeCharIndex or tool settings update
     projectRevision;
     graphic;
@@ -939,6 +1231,7 @@
     window.addEventListener('blur', handleBlur);
 
     return () => {
+      stopMarchingAnts();
       observer.disconnect();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
@@ -950,7 +1243,7 @@
 
 <div
   bind:this={containerElem}
-  class="canvas-container {effectiveTool === 'pan' || isPanning ? 'tool-pan' : ''} {effectiveTool === 'pan' && !isPanning && hoverPt === null ? 'pan-outside' : ''}"
+  class="canvas-container {effectiveTool === 'pan' || isPanning ? 'tool-pan' : ''} {effectiveTool === 'pan' && !isPanning && hoverPt === null ? 'pan-outside' : ''} {effectiveTool === 'select' && floatingPaste !== null ? 'tool-select-move' : ''}"
   role="region"
   aria-label="Pixel Drawing Canvas"
   oncontextmenu={(e) => e.preventDefault()}
@@ -1125,6 +1418,11 @@
   .canvas-container.tool-pan.pan-outside,
   .canvas-container.tool-pan.pan-outside .pixel-canvas {
     cursor: default;
+  }
+  .canvas-container.tool-select-move,
+  .canvas-container.tool-select-move .pixel-canvas {
+    cursor: move;
+    cursor: all-scroll;
   }
   canvas {
     display: block;

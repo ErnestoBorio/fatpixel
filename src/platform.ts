@@ -41,6 +41,7 @@ export interface PlatformShortcuts {
   paste: string;
   clear: string;
   invert: string;
+  deselect: string;
   toggleTools: string;
   toggleProperties: string;
 }
@@ -64,6 +65,7 @@ export function getShortcuts(mac = isMac()): PlatformShortcuts {
       paste: '⌘V',
       clear: '⌘K',
       invert: '⌘I',
+      deselect: '⌘D',
       toggleTools: '⌥1',
       toggleProperties: '⌥2',
     };
@@ -82,6 +84,7 @@ export function getShortcuts(mac = isMac()): PlatformShortcuts {
       paste: 'Ctrl+V',
       clear: 'Ctrl+K',
       invert: 'Ctrl+I',
+      deselect: 'Ctrl+D',
       toggleTools: 'Alt+1',
       toggleProperties: 'Alt+2',
     };
