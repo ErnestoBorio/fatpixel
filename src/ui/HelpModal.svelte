@@ -65,6 +65,7 @@
         { key: shortcuts.copy, desc: 'Copy selected rectangular area or entire graphic' },
         { key: shortcuts.paste, desc: 'Paste copied pixels into center as a movable floating layer' },
         { key: 'Enter', desc: 'Merge / commit pasted floating layer onto graphic' },
+        { key: 'Del / ⌫', desc: 'Clear selected pixels to background / Discard floating paste' },
         { key: shortcuts.deselect, desc: 'Deselect active selection or commit paste layer' },
         { key: shortcuts.clear, desc: 'Clear graphic / character to background slot' },
         { key: shortcuts.invert, desc: 'Invert pixel data (1 bpp modes)' },
@@ -91,7 +92,7 @@
         { key: shortcuts.toggleProperties, desc: 'Toggle Properties panel visibility' },
         { key: 'F1', desc: 'Open Help & User Guide' },
         { key: '?', desc: 'Open Keyboard Shortcuts' },
-        { key: 'Esc', desc: 'Close dialog, modal, or open menu' },
+        { key: 'Esc', desc: 'Discard floating paste layer, or close open modal/dialog' },
       ],
     },
   ]);
@@ -306,6 +307,7 @@
                   <li><strong>Copy (<kbd>{shortcuts.copy}</kbd>):</strong> If an area is selected, copies only the selected pixels to the clipboard. If nothing is selected, copies the entire graphic or active character.</li>
                   <li><strong>Paste & Floating Layer (<kbd>{shortcuts.paste}</kbd>):</strong> Pasting places the content in the center of the graphic on a movable floating second layer. The Select tool automatically activates and changes from a cross to a 4-way arrow cursor so you can drag and drop the pasted content to any position.</li>
                   <li><strong>Merging to Graphic:</strong> Press <kbd>Enter</kbd>, navigate to another tool, or perform an action (such as Undo, Clear, Shift, or clicking outside) to merge the floating content onto the graphic and remove the virtual paste layer.</li>
+                  <li><strong>Deleting Selection / Discarding Paste:</strong> When having a pixel selection active, pressing <kbd>Del</kbd> (or <kbd>Backspace</kbd>) turns all pixels in the selection to the graphic's background color. If content has just been pasted and is still floating, pressing <kbd>Del</kbd> or <kbd>Esc</kbd> discards the floating content immediately.</li>
                   <li><strong>Smart Palette & BPP Down-Sampling:</strong> Clipboard content can be pasted repeatedly across any graphic. Palettes and bit depths (1 bpp, 2 bpp, 8 bpp) are conserved as best as possible using perceptual color distance down-sampling.</li>
                   <li><strong>Undo & Redo:</strong> Full multi-level history. Press <kbd>{shortcuts.undo}</kbd> to undo and <kbd>{shortcuts.redo}</kbd> to redo.</li>
                   <li><strong>Clear & Invert:</strong> Press <kbd>{shortcuts.clear}</kbd> to clear the canvas to background, or <kbd>{shortcuts.invert}</kbd> to invert pixels (in 1 bpp modes).</li>

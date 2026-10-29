@@ -674,6 +674,27 @@
 
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
 
+    if (e.key === 'Escape' || e.code === 'Escape') {
+      if (canvasRef?.hasFloatingPaste()) {
+        e.preventDefault();
+        canvasRef.cancelFloatingPaste();
+        return;
+      }
+    }
+
+    if (e.key === 'Delete' || e.key === 'Backspace' || e.code === 'Delete' || e.code === 'Backspace') {
+      if (canvasRef?.hasFloatingPaste()) {
+        e.preventDefault();
+        canvasRef.cancelFloatingPaste();
+        return;
+      }
+      if (canvasRef?.hasSelection()) {
+        e.preventDefault();
+        canvasRef.deleteSelection();
+        return;
+      }
+    }
+
     if (e.key === 'F1') {
       e.preventDefault();
       openHelp('workflows');

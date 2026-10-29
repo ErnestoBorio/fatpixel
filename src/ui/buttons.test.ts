@@ -1408,5 +1408,80 @@ describe('App Graphic actions and mode switching', () => {
     flushSync();
     expect(comp.hasSelection()).toBe(false);
     expect(comp.getSelection()).toBeNull();
+
+    // 5. Test cancelFloatingPaste via Del or Esc
+    comp.startFloatingPaste(item);
+    flushSync();
+    expect(comp.hasFloatingPaste()).toBe(true);
+
+    // Press Escape to cancel floating paste
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+    expect(comp.hasFloatingPaste()).toBe(false);
+
+    // Start floating paste again and press Delete to cancel
+    comp.startFloatingPaste(item);
+    flushSync();
+    expect(comp.hasFloatingPaste()).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    flushSync();
+    expect(comp.hasFloatingPaste()).toBe(false);
+
+    // 6. Test deleteSelection: set non-zero pixels, select them, and press Delete/Backspace
+    for (let y = 1; y <= 3; y++) {
+      for (let x = 1; x <= 3; x++) {
+        g2.set(x, y, 2);
+      }
+    }
+    expect(g2.get(2, 2)).toBe(2);
+
+    comp.setSelection({ x: 1, y: 1, w: 3, h: 3 });
+    flushSync();
+    expect(comp.hasSelection()).toBe(true);
+
+    // Press Backspace / Delete
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    flushSync();
+
+    // Pixels inside selection are turned to background (0)
+    expect(g2.get(1, 1)).toBe(0);
+    expect(g2.get(2, 2)).toBe(0);
+    expect(g2.get(3, 3)).toBe(0);
+    // Selection remains active until deselected
+    expect(comp.hasSelection()).toBe(true);
+  });
+
+  it('verifies pressing del with active selection turns pixels to background color and del/esc cancels floating paste in App', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Copy full graphic
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }));
+    flushSync();
+
+    // 2. Paste it -> creates floating paste
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
+    flushSync();
+
+    const canvasContainer = target.querySelector('.canvas-container');
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(true);
+
+    // 3. Press Escape -> floating content disappears
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(false);
+
+    // 4. Paste again and press Delete -> floating content disappears
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
+    flushSync();
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    flushSync();
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(false);
   });
 });

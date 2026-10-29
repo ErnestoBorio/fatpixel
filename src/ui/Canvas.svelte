@@ -237,6 +237,38 @@
     redraw();
   }
 
+  export function cancelFloatingPaste(): boolean {
+    if (!floatingPaste) return false;
+    floatingPaste = null;
+    isMovingPaste = false;
+    dragPasteStartPt = null;
+    redraw();
+    return true;
+  }
+
+  export function deleteSelection(): boolean {
+    if (!selectionRect) return false;
+    pushHistory();
+    let changed = false;
+    for (let ly = 0; ly < selectionRect.h; ly++) {
+      for (let lx = 0; lx < selectionRect.w; lx++) {
+        const gx = selectionRect.x + lx;
+        const gy = selectionRect.y + ly;
+        if (inDrawBounds(gx, gy)) {
+          if (setPixelVal(gx, gy, 0)) {
+            changed = true;
+          }
+        }
+      }
+    }
+    if (changed) {
+      onPixelChange?.();
+      onStrokeEnd?.();
+    }
+    redraw();
+    return true;
+  }
+
   export function deselect(): void {
     commitFloatingPaste();
     selectionRect = null;
@@ -1115,6 +1147,27 @@
       if (floatingPaste) {
         e.preventDefault();
         commitFloatingPaste();
+        return;
+      }
+    }
+
+    if (e.key === 'Delete' || e.key === 'Backspace' || e.code === 'Delete' || e.code === 'Backspace') {
+      if (floatingPaste) {
+        e.preventDefault();
+        cancelFloatingPaste();
+        return;
+      }
+      if (selectionRect) {
+        e.preventDefault();
+        deleteSelection();
+        return;
+      }
+    }
+
+    if (e.key === 'Escape' || e.code === 'Escape') {
+      if (floatingPaste) {
+        e.preventDefault();
+        cancelFloatingPaste();
         return;
       }
     }
