@@ -66,7 +66,7 @@
     {/if}
     <span class="hints">Hold Alt: eyedropper · Hold Shift: snap</span>
     <span class="sep">|</span>
-    <span class="version-tag" title="Fat Pixel v{APP_VERSION}">v{APP_VERSION}</span>
+    <span class="version-tag" title="FatPixel v{APP_VERSION}">v{APP_VERSION}</span>
   </div>
 </div>
 

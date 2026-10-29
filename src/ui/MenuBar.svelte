@@ -268,7 +268,7 @@
   </div>
 
   <div class="menu-center">
-    <div class="fatpixel-logo" title="Fat Pixel">
+    <div class="fatpixel-logo" title="FatPixel">
       <svg class="logo-icon" viewBox="0 0 22 14" width="20" height="13" fill="none" aria-hidden="true">
         <rect x="0.75" y="0.75" width="20.5" height="12.5" rx="2" fill="#14151f" stroke="#2c3044" stroke-width="1.2"/>
         <rect x="3" y="3" width="7" height="3.5" rx="0.5" fill="#38bdf8"/>
@@ -300,13 +300,13 @@
       Properties
     </button>
     <div class="header-divider"></div>
-    <span class="version-badge" title="Fat Pixel v{APP_VERSION}">v{APP_VERSION}</span>
+    <span class="version-badge" title="FatPixel v{APP_VERSION}">v{APP_VERSION}</span>
     <a
       href="https://github.com/ErnestoBorio/pixel"
       target="_blank"
       rel="noopener noreferrer"
       class="github-badge"
-      title="GitHub - Fat Pixel repository"
+      title="GitHub - FatPixel repository"
       aria-label="GitHub repository"
     >
       <svg class="github-icon" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">

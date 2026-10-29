@@ -1,4 +1,4 @@
-# Fat Pixel — Development Plan
+# FatPixel — Development Plan
 
 A lightweight, browser-based pixel art editor specifically built for retro graphics (1, 2, 3, 4, 8 bpp; 1:1 and 2:1 fat pixel aspect ratios; 2–256 color palettes).
 
@@ -35,7 +35,7 @@ A lightweight, browser-based pixel art editor specifically built for retro graph
 
 ## 3. Interoperability Roadmap: Graphics, Palettes & Charsets
 
-To make Fat Pixel a seamless companion for retro platforms and modern pixel-art workflows, we support the following import and export formats organized across four pillars.
+To make FatPixel a seamless companion for retro platforms and modern pixel-art workflows, we support the following import and export formats organized across four pillars.
 
 ### Pillar 1: Palette Interop (Lospec, Aseprite, Photoshop, Retro Tools)
 
