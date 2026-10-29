@@ -388,6 +388,26 @@ describe('App Graphic actions and mode switching', () => {
     expect(githubBadge?.querySelector('svg.github-icon')).not.toBeNull();
   });
 
+  it('renders a centered FatPixel logo in the top bar and Fat Pixel version tooltip', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const menuCenter = target.querySelector('.menu-bar .menu-center');
+    expect(menuCenter).not.toBeNull();
+    const logo = menuCenter?.querySelector('.fatpixel-logo');
+    expect(logo).not.toBeNull();
+    expect(logo?.getAttribute('title')).toBe('Fat Pixel');
+    expect(logo?.querySelector('.logo-icon')).not.toBeNull();
+    expect(logo?.querySelector('.logo-fat')?.textContent).toBe('Fat');
+    expect(logo?.querySelector('.logo-pixel')?.textContent).toBe('Pixel');
+
+    const versionBadge = target.querySelector('.menu-bar .version-badge');
+    expect(versionBadge?.getAttribute('title')).toContain('Fat Pixel');
+  });
+
   it('renders compact swatches for 32 and 64 color palettes with color readout', async () => {
     const target = document.createElement('div');
     document.body.appendChild(target);

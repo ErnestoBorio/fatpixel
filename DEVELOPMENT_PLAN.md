@@ -1,4 +1,4 @@
-# Retro Pixel Editor — Development Plan
+# Fat Pixel — Development Plan
 
 ## 1. Tech Stack
 

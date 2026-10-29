@@ -267,6 +267,19 @@
   </div>
   </div>
 
+  <div class="menu-center">
+    <div class="fatpixel-logo" title="Fat Pixel">
+      <svg class="logo-icon" viewBox="0 0 22 14" width="20" height="13" fill="none" aria-hidden="true">
+        <rect x="0.75" y="0.75" width="20.5" height="12.5" rx="2" fill="#14151f" stroke="#2c3044" stroke-width="1.2"/>
+        <rect x="3" y="3" width="7" height="3.5" rx="0.5" fill="#38bdf8"/>
+        <rect x="12" y="3" width="7" height="3.5" rx="0.5" fill="#818cf8"/>
+        <rect x="3" y="7.5" width="7" height="3.5" rx="0.5" fill="#f43f5e"/>
+        <rect x="12" y="7.5" width="7" height="3.5" rx="0.5" fill="#34d399"/>
+      </svg>
+      <span class="logo-text"><span class="logo-fat">Fat</span><span class="logo-pixel">Pixel</span></span>
+    </div>
+  </div>
+
   <div class="menu-right">
     <button
       type="button"
@@ -287,14 +300,13 @@
       Properties
     </button>
     <div class="header-divider"></div>
-    <span class="app-title">Pixel</span>
-    <span class="version-badge" title="Pixel v{APP_VERSION}">v{APP_VERSION}</span>
+    <span class="version-badge" title="Fat Pixel v{APP_VERSION}">v{APP_VERSION}</span>
     <a
       href="https://github.com/ErnestoBorio/pixel"
       target="_blank"
       rel="noopener noreferrer"
       class="github-badge"
-      title="GitHub - ErnestoBorio/pixel"
+      title="GitHub - Fat Pixel repository"
       aria-label="GitHub repository"
     >
       <svg class="github-icon" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
@@ -329,11 +341,49 @@
     padding-right: 4px;
     user-select: none;
   }
-  .app-title {
+  .menu-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    user-select: none;
+    z-index: 10;
+  }
+  .fatpixel-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+    cursor: default;
+    transition: filter 0.15s ease;
+  }
+  .fatpixel-logo:hover {
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.45));
+  }
+  .logo-icon {
+    display: block;
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    line-height: 1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .logo-fat {
+    font-weight: 800;
+    color: #38bdf8;
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+  }
+  .logo-pixel {
     font-weight: 600;
-    font-size: 11px;
-    color: #e0e0e8;
-    letter-spacing: 0.5px;
+    color: #f1f5f9;
   }
   .version-badge {
     background: #252532;
@@ -471,7 +521,7 @@
     flex-shrink: 0;
   }
   @media (max-width: 650px) {
-    .app-title,
+    .menu-center,
     .version-badge {
       display: none;
     }

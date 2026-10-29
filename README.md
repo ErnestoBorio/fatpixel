@@ -1,4 +1,4 @@
-# Pixel
+# Fat Pixel
 
 A lightweight, browser-based pixel art editor for old school graphics.
 
