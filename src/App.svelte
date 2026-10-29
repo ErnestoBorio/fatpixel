@@ -24,6 +24,7 @@
     getMemoryClipboard,
   } from './model/clipboard';
   import { SYSTEM_PRESETS } from './model/presets';
+  import { loadPngAsSprite } from './model/importPng';
 
   const stored = loadAllFromStorage();
   const initialProject = stored.project ?? new Project();
@@ -89,6 +90,7 @@
 
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
+  let pngInputRef: HTMLInputElement;
 
   let activeGraphic = $derived.by(() => {
     stateVersion;
@@ -351,6 +353,29 @@
       }
     };
     reader.readAsText(file);
+  }
+
+  function importPng() {
+    pngInputRef.click();
+  }
+
+  async function handlePngSelect(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    try {
+      const sprite = await loadPngAsSprite(file);
+      pushHistorySnapshot();
+      project.graphics = [...project.graphics, sprite];
+      activeGraphicIndex = project.graphics.length - 1;
+      rightTab = 'graphics';
+      userPickedTab = true;
+      notifyGraphicChange();
+      canvasRef?.fitToWindow();
+    } catch (err) {
+      alert(`Failed to import PNG: ${err}`);
+    }
   }
 
   function exportPng() {
@@ -750,6 +775,14 @@
   onchange={handleFileSelect}
 />
 
+<input
+  type="file"
+  accept="image/png,image/*"
+  style="display: none;"
+  bind:this={pngInputRef}
+  onchange={handlePngSelect}
+/>
+
 <div class="app-shell">
   <MenuBar
     canUndo={history.canUndo()}
@@ -764,6 +797,7 @@
     onOpenProject={openProject}
     onSaveProject={saveProject}
     onSaveProjectAs={saveProjectAs}
+    onImportPng={importPng}
     onExportPng={exportPng}
     onExportCsv={exportCsv}
     onUndo={handleUndo}

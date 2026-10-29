@@ -10,6 +10,7 @@
     onOpenProject,
     onSaveProject,
     onSaveProjectAs,
+    onImportPng,
     onExportPng,
     onExportCsv,
     onUndo,
@@ -47,6 +48,7 @@
     onOpenProject?: () => void;
     onSaveProject?: () => void;
     onSaveProjectAs?: () => void;
+    onImportPng?: () => void;
     onExportPng?: () => void;
     onExportCsv?: () => void;
     onUndo?: () => void;
@@ -116,6 +118,9 @@
           <span>Save As…</span> <span class="shortcut">⇧⌘S</span>
         </button>
         <div class="dropdown-divider"></div>
+        <button class="dropdown-item" onclick={() => { onImportPng?.(); closeMenu(); }}>
+          <span>Import PNG…</span>
+        </button>
         <button class="dropdown-item" onclick={() => { onExportPng?.(); closeMenu(); }}>
           <span>Export PNG…</span>
         </button>

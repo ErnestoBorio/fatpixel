@@ -216,6 +216,8 @@ describe('App Graphic actions and mode switching', () => {
     expect(dropdown).not.toBeNull();
     expect(dropdown?.textContent).not.toContain('New Project');
     expect(dropdown?.textContent).toContain('Open…');
+    expect(dropdown?.textContent).toContain('Import PNG…');
+    expect(dropdown?.textContent).toContain('Export PNG…');
 
     // 3. Hovering Edit while menu is open switches to Edit dropdown
     editItem.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
