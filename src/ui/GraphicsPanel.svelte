@@ -162,10 +162,6 @@
     };
   }
 
-  function graphicHasPixels(g: Graphic, _rev: number): boolean {
-    return g.hasDrawnPixels();
-  }
-
   function graphicSubtext(g: Graphic, _rev: number): string {
     const bpp = g.bpp;
     const aspect = g.pixelAspectRatio;
@@ -352,7 +348,6 @@
       <div class="graphics-list" role="list">
         {#each project.graphics as g, idx (g)}
           {@const isActive = active === idx}
-          {@const hasPixels = graphicHasPixels(g, projectRevision)}
           <div
             class="graphic-item {isActive ? 'active' : ''} {draggedIdx === idx ? 'dragging' : ''} {dragOverIdx === idx ? 'drag-over' : ''}"
             draggable="true"
@@ -365,16 +360,10 @@
           >
             <button class="select-btn" onclick={() => (active = idx)} title={g.name}>
               <div class="thumb-container {isActive ? 'active-thumb' : ''}">
-                {#if hasPixels}
-                  <canvas
-                    class="thumb-canvas"
-                    use:drawThumbnail={{ graphic: g, pal: project.paletteOf(g), rev: projectRevision }}
-                  ></canvas>
-                {:else}
-                  <span class="badge {g.isSprite() ? 'sprite-badge' : 'charset-badge'}">
-                    {g.isSprite() ? 'S' : 'C'}
-                  </span>
-                {/if}
+                <canvas
+                  class="thumb-canvas"
+                  use:drawThumbnail={{ graphic: g, pal: project.paletteOf(g), rev: projectRevision }}
+                ></canvas>
               </div>
               <div class="graphic-meta">
                 <span class="name">{g.name}</span>
@@ -635,24 +624,6 @@
   .delete-btn:hover {
     color: #f87171;
     background: #3e2222;
-  }
-  .badge {
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
-  }
-  .sprite-badge {
-    background: #2a3a52;
-    color: #60a5fa;
-  }
-  .charset-badge {
-    background: #3a2a52;
-    color: #c084fc;
   }
   .section-label {
     font-weight: 600;

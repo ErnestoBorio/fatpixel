@@ -713,4 +713,32 @@ describe('App Graphic actions and mode switching', () => {
     expect(toolsBtn.classList.contains('active')).toBe(true);
     expect(target.querySelector('.floating-panel-toggle.left-toggle')).toBeNull();
   });
+
+  it('renders empty canvas thumbnail in graphics list for empty graphics instead of S / C badge', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Switch to Graphics tab
+    const graphicsTabBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tab-btn')).find((b) =>
+      b.textContent?.includes('Graphics')
+    );
+    graphicsTabBtn?.click();
+    flushSync();
+
+    // Check graphic items in the list
+    const graphicItems = target.querySelectorAll('.graphic-item');
+    expect(graphicItems.length).toBeGreaterThanOrEqual(1);
+
+    // Each empty graphic item should contain a canvas.thumb-canvas and NO .badge or S/C badges
+    for (const item of graphicItems) {
+      const thumbCanvas = item.querySelector('canvas.thumb-canvas');
+      expect(thumbCanvas).not.toBeNull();
+      expect(item.querySelector('.badge')).toBeNull();
+      expect(item.querySelector('.sprite-badge')).toBeNull();
+      expect(item.querySelector('.charset-badge')).toBeNull();
+    }
+  });
 });
