@@ -1,0 +1,28 @@
+{
+  "name": "Fatpixel - Pixel art editor",
+  "short_name": "Fatpixel",
+  "description": "Web-based pixel art editor for old school graphics. Edit sprites and charsets with different palettes, bpp and pixel aspect ratios. Import and export to raw data and .png",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1e1e24",
+  "theme_color": "#1e1e24",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
