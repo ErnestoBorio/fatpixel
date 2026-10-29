@@ -17,7 +17,7 @@ A lightweight, browser-based pixel art editor specifically built for retro graph
 
 ---
 
-## 2. Current Implementation Status (v0.5.0)
+## 2. Current Implementation Status (v0.6.0)
 
 - [x] **Data Model**: Sprites and Charsets with configurable dimensions (width, height, cell size `8×8`, `16×16`, etc.).
 - [x] **Bit Depths (BPP)**: 1, 2, 3, 4, and 8 bits per pixel.
