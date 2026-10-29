@@ -25,6 +25,9 @@
   } from './model/clipboard';
   import { SYSTEM_PRESETS } from './model/presets';
   import { loadPngAsSprite } from './model/importPng';
+  import { isMac, getShortcuts } from './platform';
+
+  let shortcuts = $derived(getShortcuts());
 
   const stored = loadAllFromStorage();
   const initialProject = stored.project ?? new Project();
@@ -596,7 +599,8 @@
 
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
-    const cmd = e.metaKey || e.ctrlKey;
+    const isMacUser = isMac();
+    const cmd = isMacUser ? (e.metaKey || e.ctrlKey) : e.ctrlKey;
 
     if (cmd) {
       if (!e.shiftKey && e.key.toLowerCase() === 'z') {
@@ -834,7 +838,7 @@
         type="button"
         class="floating-panel-toggle left-toggle"
         onclick={() => (showLeftPanel = true)}
-        title="Open Tools (⌥1)"
+        title="Open Tools ({shortcuts.toggleTools})"
         aria-label="Open Tools"
       >
         Tools
@@ -849,7 +853,7 @@
           type="button"
           class="panel-collapse-btn"
           onclick={() => (showLeftPanel = false)}
-          title="Collapse Tools (⌥1)"
+          title="Collapse Tools ({shortcuts.toggleTools})"
           aria-label="Collapse Tools"
         >
           ◀
@@ -902,7 +906,7 @@
         type="button"
         class="floating-panel-toggle right-toggle"
         onclick={() => (showRightPanel = true)}
-        title="Open Properties (⌥2)"
+        title="Open Properties ({shortcuts.toggleProperties})"
         aria-label="Open Properties"
       >
         Properties
@@ -945,7 +949,7 @@
           type="button"
           class="tab-collapse-btn"
           onclick={() => (showRightPanel = false)}
-          title="Collapse Properties (⌥2)"
+          title="Collapse Properties ({shortcuts.toggleProperties})"
           aria-label="Collapse Properties"
         >
           ▶

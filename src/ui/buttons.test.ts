@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount, flushSync } from 'svelte';
 import App from '../App.svelte';
+import { setPlatformOverride } from '../platform';
 
 describe('App Graphic actions and mode switching', () => {
   it('toggles mode, updates buttons, status bar, and slot states', async () => {
@@ -828,5 +829,75 @@ describe('App Graphic actions and mode switching', () => {
     const subtext = charsetItem?.querySelector('.subtext')?.textContent?.trim();
     expect(subtext).toContain('8×8');
     expect(subtext).not.toContain('256c');
+  });
+
+  it('displays Command and Option shortcuts on macOS', async () => {
+    setPlatformOverride(true);
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const fileBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
+      (b) => b.textContent?.trim() === 'File'
+    );
+    fileBtn?.click();
+    flushSync();
+
+    const dropdown = target.querySelector('.dropdown');
+    expect(dropdown?.textContent).toContain('⌘O');
+    expect(dropdown?.textContent).toContain('⌘S');
+    expect(dropdown?.textContent).toContain('⇧⌘S');
+
+    // Header toggle buttons
+    const toolsBtn = target.querySelector<HTMLButtonElement>('.header-toggle-btn[title*="Tools"]');
+    expect(toolsBtn?.getAttribute('title')).toContain('⌥1');
+
+    setPlatformOverride(null);
+  });
+
+  it('displays Control and Alt shortcuts on Windows/Linux', async () => {
+    setPlatformOverride(false);
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const fileBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
+      (b) => b.textContent?.trim() === 'File'
+    );
+    fileBtn?.click();
+    flushSync();
+
+    const dropdown = target.querySelector('.dropdown');
+    expect(dropdown?.textContent).toContain('Ctrl+O');
+    expect(dropdown?.textContent).toContain('Ctrl+S');
+    expect(dropdown?.textContent).toContain('Ctrl+Shift+S');
+
+    // Header toggle buttons
+    const toolsBtn = target.querySelector<HTMLButtonElement>('.header-toggle-btn[title*="Tools"]');
+    expect(toolsBtn?.getAttribute('title')).toContain('Alt+1');
+
+    setPlatformOverride(null);
+  });
+
+  it('triggers shortcuts via Ctrl key on Windows/Linux', async () => {
+    setPlatformOverride(false);
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Ctrl+S opens Save As modal on a fresh project
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+    flushSync();
+
+    const saveModal = target.querySelector('.save-as-modal');
+    expect(saveModal).not.toBeNull();
+
+    setPlatformOverride(null);
   });
 });

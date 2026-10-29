@@ -1,6 +1,9 @@
 <script lang="ts">
   import { APP_VERSION } from '../version';
   import { SYSTEM_PRESETS } from '../model/presets';
+  import { getShortcuts } from '../platform';
+
+  let shortcuts = $derived(getShortcuts());
 
   let {
     canUndo = false,
@@ -109,13 +112,13 @@
     {#if activeMenu === 'file'}
       <div class="dropdown">
         <button class="dropdown-item" onclick={() => { onOpenProject?.(); closeMenu(); }}>
-          <span>Open…</span> <span class="shortcut">⌘O</span>
+          <span>Open…</span> <span class="shortcut">{shortcuts.open}</span>
         </button>
         <button class="dropdown-item" onclick={() => { onSaveProject?.(); closeMenu(); }}>
-          <span>Save</span> <span class="shortcut">⌘S</span>
+          <span>Save</span> <span class="shortcut">{shortcuts.save}</span>
         </button>
         <button class="dropdown-item" onclick={() => { onSaveProjectAs?.(); closeMenu(); }}>
-          <span>Save As…</span> <span class="shortcut">⇧⌘S</span>
+          <span>Save As…</span> <span class="shortcut">{shortcuts.saveAs}</span>
         </button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onImportPng?.(); closeMenu(); }}>
@@ -142,42 +145,42 @@
           disabled={!canUndo}
           onclick={() => { onUndo?.(); closeMenu(); }}
         >
-          <span>Undo</span> <span class="shortcut">⌘Z</span>
+          <span>Undo</span> <span class="shortcut">{shortcuts.undo}</span>
         </button>
         <button
           class="dropdown-item"
           disabled={!canRedo}
           onclick={() => { onRedo?.(); closeMenu(); }}
         >
-          <span>Redo</span> <span class="shortcut">⇧⌘Z</span>
+          <span>Redo</span> <span class="shortcut">{shortcuts.redo}</span>
         </button>
         <div class="dropdown-divider"></div>
         <button
           class="dropdown-item"
           onclick={() => { onCopy?.(); closeMenu(); }}
         >
-          <span>Copy</span> <span class="shortcut">⌘C</span>
+          <span>Copy</span> <span class="shortcut">{shortcuts.copy}</span>
         </button>
         <button
           class="dropdown-item"
           disabled={!canPaste}
           onclick={() => { onPaste?.(); closeMenu(); }}
         >
-          <span>Paste</span> <span class="shortcut">⌘V</span>
+          <span>Paste</span> <span class="shortcut">{shortcuts.paste}</span>
         </button>
         <div class="dropdown-divider"></div>
         <button
           class="dropdown-item"
           onclick={() => { onClear?.(); closeMenu(); }}
         >
-          <span>Clear Graphic</span> <span class="shortcut">⌘K</span>
+          <span>Clear Graphic</span> <span class="shortcut">{shortcuts.clear}</span>
         </button>
         <button
           class="dropdown-item"
           disabled={!canInvert}
           onclick={() => { onInvert?.(); closeMenu(); }}
         >
-          <span>Invert Graphic</span> <span class="shortcut">⌘I</span>
+          <span>Invert Graphic</span> <span class="shortcut">{shortcuts.invert}</span>
         </button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onShift?.(-1, 0); closeMenu(); }}>
@@ -257,10 +260,10 @@
         </button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" onclick={() => { onToggleLeftPanel?.(); closeMenu(); }}>
-          <span>{showLeftPanel ? '✓ ' : ''}Tools</span> <span class="shortcut">⌥1</span>
+          <span>{showLeftPanel ? '✓ ' : ''}Tools</span> <span class="shortcut">{shortcuts.toggleTools}</span>
         </button>
         <button class="dropdown-item" onclick={() => { onToggleRightPanel?.(); closeMenu(); }}>
-          <span>{showRightPanel ? '✓ ' : ''}Properties</span> <span class="shortcut">⌥2</span>
+          <span>{showRightPanel ? '✓ ' : ''}Properties</span> <span class="shortcut">{shortcuts.toggleProperties}</span>
         </button>
       </div>
     {/if}
@@ -283,7 +286,7 @@
       type="button"
       class="header-toggle-btn {showLeftPanel ? 'active' : ''}"
       onclick={() => onToggleLeftPanel?.()}
-      title="Toggle Tools (⌥1)"
+      title="Toggle Tools ({shortcuts.toggleTools})"
       aria-label="Toggle Tools"
     >
       Tools
@@ -292,7 +295,7 @@
       type="button"
       class="header-toggle-btn {showRightPanel ? 'active' : ''}"
       onclick={() => onToggleRightPanel?.()}
-      title="Toggle Properties (⌥2)"
+      title="Toggle Properties ({shortcuts.toggleProperties})"
       aria-label="Toggle Properties"
     >
       Properties
