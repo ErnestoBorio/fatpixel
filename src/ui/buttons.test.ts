@@ -565,4 +565,79 @@ describe('App Graphic actions and mode switching', () => {
     expect(tileCanvas?.width).toBe(80);
     expect(tileCanvas?.height).toBe(80);
   });
+
+  it('applies system presets to turn current graphic into Commodore 64, Game Boy, ZX Spectrum, IBM PC, and NES settings', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const openGraphicMenu = () => {
+      const graphicMenuBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
+        (b) => b.textContent?.trim() === 'Graphic'
+      );
+      expect(graphicMenuBtn).toBeDefined();
+      graphicMenuBtn?.click();
+      flushSync();
+    };
+
+    const clickPreset = (presetName: string) => {
+      openGraphicMenu();
+      const presetBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.dropdown-item')).find(
+        (b) => b.textContent?.trim() === presetName
+      );
+      expect(presetBtn).toBeDefined();
+      presetBtn?.click();
+      flushSync();
+    };
+
+    // 1. Test Commodore 64 preset on Sprite: C64 palette, 2 bpp, 2:1 aspect, 12x21 size
+    clickPreset('Commodore 64');
+    expect(target.querySelector('.aspect-buttons .ratio-btn.active')?.textContent?.trim()).toBe('2:1');
+    expect(target.querySelector('.bpp-buttons .bpp-btn.active')?.textContent?.trim()).toBe('2');
+    const inputs = target.querySelectorAll<HTMLInputElement>('.num-input');
+    expect(inputs[0]?.value).toBe('12');
+    const getPaletteName = () => {
+      const labels = Array.from(target.querySelectorAll('.palette-panel .section-label')).map(el => el.textContent?.trim());
+      return labels[labels.length - 1];
+    };
+    expect(getPaletteName()).toContain('Commodore 64');
+
+    // 2. Test IBM PC preset on Sprite: VGA palette, 8 bpp, 1:1 aspect
+    clickPreset('IBM PC');
+    expect(target.querySelector('.aspect-buttons .ratio-btn.active')?.textContent?.trim()).toBe('1:1');
+    expect(target.querySelector('.bpp-buttons .bpp-btn.active')?.textContent?.trim()).toBe('8');
+    expect(getPaletteName()).toBe('VGA');
+
+    // 3. Test NES preset on Sprite: NES palette, 2 bpp, 1:1 aspect
+    clickPreset('NES');
+    expect(target.querySelector('.aspect-buttons .ratio-btn.active')?.textContent?.trim()).toBe('1:1');
+    expect(target.querySelector('.bpp-buttons .bpp-btn.active')?.textContent?.trim()).toBe('2');
+    expect(getPaletteName()).toBe('NES');
+
+    // 4. Test on Charset
+    const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
+    addCharsetBtn?.click();
+    flushSync();
+
+    // IBM PC on Charset: 1 bpp, 1:1, 9x14 size
+    clickPreset('IBM PC');
+    expect(target.querySelector('.bpp-buttons .bpp-btn.active')?.textContent?.trim()).toBe('1');
+    expect(target.querySelector('.aspect-buttons .ratio-btn.active')?.textContent?.trim()).toBe('1:1');
+    expect(getPaletteName()).toBe('VGA');
+    const charW = target.querySelector<HTMLInputElement>('.dim-inputs input[title*="width"]')?.value;
+    const charH = target.querySelector<HTMLInputElement>('.dim-inputs input[title*="height"]')?.value;
+    expect(charW).toBe('9');
+    expect(charH).toBe('14');
+
+    // NES on Charset: 2 bpp, 1:1, 8x8 size
+    clickPreset('NES');
+    expect(target.querySelector('.bpp-buttons .bpp-btn.active')?.textContent?.trim()).toBe('2');
+    expect(getPaletteName()).toBe('NES');
+    const nesCharW = target.querySelector<HTMLInputElement>('.dim-inputs input[title*="width"]')?.value;
+    const nesCharH = target.querySelector<HTMLInputElement>('.dim-inputs input[title*="height"]')?.value;
+    expect(nesCharW).toBe('8');
+    expect(nesCharH).toBe('8');
+  });
 });

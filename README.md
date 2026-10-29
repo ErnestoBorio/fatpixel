@@ -1,18 +1,18 @@
 # Pixel
 
-A lightweight, browser-based pixel art editor tailored for Commodore 64 sprites and charsets, built with Svelte 5 and TypeScript.
+A lightweight, browser-based pixel art editor for old school graphics.
 
-Live Demo: [https://ernestoborio.github.io/pixel/](https://ernestoborio.github.io/pixel/)
+Use the app online: [https://ernestoborio.github.io/pixel/](https://ernestoborio.github.io/pixel/)
 
 ## Features
 
-- **C64 Sprite Modes**: 1 bpp Hi-Res (square pixels) and 2 bpp Multicolor (2× wide logical pixels).
-- **Charset Editor**: Full 256-character sheets with single-char zoom and sheet preview.
-- **Indexed Palettes**: Built-in retro palettes (C64 Pepto, Drean 64, ZX Spectrum 16, VGA 256, etc.) and custom color slot mapping.
+- **Pixel bit depth**: 1, 2, 3, 4 and 8 bits per pixel.
+- **Pixel aspect ratio**: 1:1 and 2:1 (_fat pixels_).
+- **Palettes**: 2, 4, 8, 16, 32, 64, 128 and 256 colors.
+- **Built-in palettes**: C64 Pepto, Drean 64, ZX Spectrum 16, VGA 256, etc.
 - **Drawing Tools**: Pencil, Line, Rectangle, Ellipse, Flood Fill, Eyedropper, Shift, Rotate, and Mirror.
-- **Project Files & Export**: Git-diffable `.pxp` JSON format, PNG export, and CSV binary tables.
-- **Photoshop-Style Layers**: Framed layer panel for organizing, reordering, and duplicating graphics.
-- **Undo / Redo**: Multi-level snapshot history with keyboard shortcuts (`⌘Z` / `⇧⌘Z`).
+- **Project Files & Export**: Git-friendly format `.pxp` JSON based, PNG export, and CSV binary tables.
+- **Undo / Redo**: Multi-level snapshot history.
 
 ## Getting Started
 

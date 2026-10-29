@@ -260,7 +260,10 @@ export class Graphic {
   }
 
   resize(newWidth: number, newHeight: number): void {
-    if (this.isCharset()) return;
+    if (this.isCharset()) {
+      this.resizeCharset(newWidth, newHeight);
+      return;
+    }
     if (newWidth <= 0 || newHeight <= 0 || (newWidth === this.width && newHeight === this.height)) {
       return;
     }
@@ -274,6 +277,46 @@ export class Graphic {
     }
     this.width = newWidth;
     this.height = newHeight;
+    this.pixels = newPixels;
+  }
+
+  resizeCharset(newCharWidth: number, newCharHeight: number): void {
+    if (!this.isCharset() || this.kind.kind !== 'charset') return;
+    if (newCharWidth <= 0 || newCharHeight <= 0) return;
+    if (newCharWidth === this.width && newCharHeight === this.height) return;
+
+    const { charCount, columns } = this.kind;
+    const rows = Math.ceil(charCount / columns);
+    const oldW = this.width;
+    const oldH = this.height;
+    const oldSheetW = columns * oldW;
+    const newSheetW = columns * newCharWidth;
+    const newSheetH = rows * newCharHeight;
+
+    const newPixels = new Uint8Array(newSheetW * newSheetH);
+    const copyW = Math.min(oldW, newCharWidth);
+    const copyH = Math.min(oldH, newCharHeight);
+
+    for (let c = 0; c < charCount; c++) {
+      const col = c % columns;
+      const row = Math.floor(c / columns);
+      const oldOrigX = col * oldW;
+      const oldOrigY = row * oldH;
+      const newOrigX = col * newCharWidth;
+      const newOrigY = row * newCharHeight;
+
+      for (let ly = 0; ly < copyH; ly++) {
+        for (let lx = 0; lx < copyW; lx++) {
+          newPixels[(newOrigY + ly) * newSheetW + (newOrigX + lx)] =
+            this.pixels[(oldOrigY + ly) * oldSheetW + (oldOrigX + lx)];
+        }
+      }
+    }
+
+    this.width = newCharWidth;
+    this.height = newCharHeight;
+    this.kind.charWidth = newCharWidth;
+    this.kind.charHeight = newCharHeight;
     this.pixels = newPixels;
   }
 

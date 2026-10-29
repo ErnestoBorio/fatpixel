@@ -558,7 +558,7 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'nes-64',
-    name: 'NES / Famicom (64)',
+    name: 'NES',
     colors: NES_64_COLORS,
   },
   {
@@ -601,6 +601,7 @@ export const BUILTIN_PALETTES: Palette[] = [
 export function getBuiltinPalette(id: string): Palette | undefined {
   if (id === 'cga-4') return BUILTIN_PALETTES.find((p) => p.id === 'cga-cool-4');
   if (id === 'zx-8') return BUILTIN_PALETTES.find((p) => p.id === 'zx-16');
+  if (id === 'nes') return BUILTIN_PALETTES.find((p) => p.id === 'nes-64');
   return BUILTIN_PALETTES.find((p) => p.id === id);
 }
 

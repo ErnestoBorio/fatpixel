@@ -23,6 +23,7 @@
     pasteToGraphic,
     getMemoryClipboard,
   } from './model/clipboard';
+  import { SYSTEM_PRESETS } from './model/presets';
 
   const stored = loadAllFromStorage();
   const initialProject = stored.project ?? new Project();
@@ -162,6 +163,49 @@
       }
     }
     notifyGraphicChange();
+  }
+
+  function handleApplyPreset(presetId: string) {
+    const g = project.graphics[activeGraphicIndex];
+    if (!g) return;
+    const preset = SYSTEM_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    pushHistorySnapshot();
+
+    // 1. Set palette
+    g.palette = { kind: 'builtin', id: preset.paletteId };
+    const pal = project.paletteOf(g);
+    const palCount = pal?.colors.length ?? 16;
+
+    // 2. Set graphic settings based on kind (sprite vs charset)
+    if (g.isSprite()) {
+      g.setBpp(preset.sprite.bpp);
+      g.setPixelAspectRatio(preset.sprite.pixelAspectRatio);
+      if (preset.sprite.width && preset.sprite.height) {
+        g.resize(preset.sprite.width, preset.sprite.height);
+      }
+    } else if (g.isCharset()) {
+      g.setBpp(preset.charset.bpp);
+      g.setPixelAspectRatio(preset.charset.pixelAspectRatio);
+      g.resizeCharset(preset.charset.charWidth, preset.charset.charHeight);
+    }
+
+    // 3. Clamp slot colors to new palette size
+    if (g.slots && g.slots.length > 0) {
+      g.slots = g.slots.map((s) => s % palCount);
+    }
+
+    // 4. Clamp primary / secondary
+    if (primary >= palCount) {
+      primary = Math.max(0, palCount - 1);
+    }
+    if (secondary >= palCount) {
+      secondary = Math.max(0, palCount - 1);
+    }
+
+    notifyGraphicChange();
+    canvasRef?.fitToWindow();
   }
 
   let isDirect = $derived.by(() => {
@@ -755,6 +799,7 @@
       userPickedTab = true;
       addCharset();
     }}
+    onApplyPreset={handleApplyPreset}
     onZoomIn={() => canvasRef?.zoomIn()}
     onZoomOut={() => canvasRef?.zoomOut()}
     onFit={() => canvasRef?.fitToWindow()}

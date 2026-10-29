@@ -1,5 +1,6 @@
 <script lang="ts">
   import { APP_VERSION } from '../version';
+  import { SYSTEM_PRESETS } from '../model/presets';
 
   let {
     canUndo = false,
@@ -21,6 +22,7 @@
     canInvert = true,
     onNewSprite,
     onNewCharset,
+    onApplyPreset,
     onZoomIn,
     onZoomOut,
     onFit,
@@ -57,6 +59,7 @@
     onInvert?: () => void;
     onNewSprite?: () => void;
     onNewCharset?: () => void;
+    onApplyPreset?: (presetId: string) => void;
     onZoomIn?: () => void;
     onZoomOut?: () => void;
     onFit?: () => void;
@@ -219,6 +222,16 @@
         <button class="dropdown-item" onclick={() => { onNewCharset?.(); closeMenu(); }}>
           <span>New Charset</span>
         </button>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-section-title">Apply System Preset</div>
+        {#each SYSTEM_PRESETS as preset}
+          <button
+            class="dropdown-item"
+            onclick={() => { onApplyPreset?.(preset.id); closeMenu(); }}
+          >
+            <span>{preset.name}</span>
+          </button>
+        {/each}
       </div>
     {/if}
   </div>
@@ -390,6 +403,15 @@
     height: 1px;
     background: #33333d;
     margin: 4px 0;
+  }
+  .dropdown-section-title {
+    padding: 5px 12px 3px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #6a7c92;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    user-select: none;
   }
   .header-toggle-btn {
     background: transparent;
