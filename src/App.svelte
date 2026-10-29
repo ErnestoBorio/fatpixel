@@ -11,6 +11,7 @@
   import GraphicsPanel from './ui/GraphicsPanel.svelte';
   import MenuBar from './ui/MenuBar.svelte';
   import StatusBar from './ui/StatusBar.svelte';
+  import HelpModal, { type HelpTab } from './ui/HelpModal.svelte';
   import { defaultPalette, rgbToHexStr } from './model/palette';
   import { slotColor } from './model/render';
   import {
@@ -88,6 +89,13 @@
   );
   let showSaveAsModal = $state(false);
   let saveAsInputName = $state('');
+  let showHelpModal = $state(false);
+  let activeHelpTab = $state<HelpTab>('overview');
+
+  function openHelp(tab: HelpTab = 'overview') {
+    activeHelpTab = tab;
+    showHelpModal = true;
+  }
 
   let windowHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 900);
   let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1400);
@@ -631,6 +639,14 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    if (showHelpModal) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        showHelpModal = false;
+      }
+      return;
+    }
+
     if (showSaveAsModal) {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -640,6 +656,18 @@
     }
 
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+
+    if (e.key === 'F1') {
+      e.preventDefault();
+      openHelp('workflows');
+      return;
+    }
+
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      openHelp('shortcuts');
+      return;
+    }
 
     if (e.code === 'Space') {
       e.preventDefault();
@@ -910,6 +938,7 @@
     onRotate={handleRotate}
     onMirrorH={handleMirrorH}
     onMirrorV={handleMirrorV}
+    onOpenHelp={openHelp}
   />
 
   <div class="main-workspace">
@@ -1131,6 +1160,12 @@
       </div>
     </div>
   {/if}
+
+  <HelpModal
+    open={showHelpModal}
+    bind:activeTab={activeHelpTab}
+    onClose={() => (showHelpModal = false)}
+  />
 </div>
 
 <style>

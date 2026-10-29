@@ -1207,4 +1207,119 @@ describe('App Graphic actions and mode switching', () => {
     // Pan offsets must update by the drag delta (40, 50)
     expect(canvasComponent.getPanOffsets()).toEqual({ x: 40, y: 50 });
   });
+
+  it('opens and interacts with the Help window citing shortcuts, workflows, and author Drean64', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Help modal is initially closed
+    expect(target.querySelector('.help-window')).toBeNull();
+
+    // 2. Open via top menu bar Help dropdown
+    const menuButtons = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn'));
+    const helpMenuBtn = menuButtons.find((b) => b.textContent?.trim() === 'Help');
+    expect(helpMenuBtn).toBeDefined();
+
+    helpMenuBtn?.click();
+    flushSync();
+
+    const dropdownItems = Array.from(target.querySelectorAll<HTMLButtonElement>('.dropdown-item'));
+    const shortcutsItem = dropdownItems.find((item) => item.textContent?.includes('Keyboard Shortcuts'));
+    expect(shortcutsItem).toBeDefined();
+
+    // Click "Keyboard Shortcuts…"
+    shortcutsItem?.click();
+    flushSync();
+
+    // Modal is now open on top of everything
+    const helpWindow = target.querySelector<HTMLElement>('.help-window');
+    expect(helpWindow).not.toBeNull();
+    expect(helpWindow?.textContent).toContain('FatPixel Help & User Guide');
+
+    // 3. Active tab is "Shortcuts", cites key combinations
+    const activeTab = helpWindow?.querySelector<HTMLButtonElement>('.tab-btn.active');
+    expect(activeTab?.textContent).toContain('Shortcuts');
+    expect(helpWindow?.textContent).toContain('Pencil / Brush tool');
+    expect(helpWindow?.textContent).toContain('Pan tool');
+
+    // Test shortcut filtering in search bar
+    const searchInput = target.querySelector<HTMLInputElement>('.search-input');
+    expect(searchInput).not.toBeNull();
+    if (searchInput) {
+      searchInput.value = 'pan';
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      flushSync();
+      expect(helpWindow?.textContent).toContain('Pan tool');
+    }
+
+    // 4. Switch to Workflows tab
+    const tabs = Array.from(helpWindow?.querySelectorAll<HTMLButtonElement>('.tab-btn') ?? []);
+    const workflowsTab = tabs.find((t) => t.textContent?.includes('Workflows'));
+    workflowsTab?.click();
+    flushSync();
+
+    expect(helpWindow?.textContent).toContain('Creating & Ordering Graphics');
+    expect(helpWindow?.textContent).toContain('Panning & Navigating the View');
+    expect(helpWindow?.textContent).toContain('Copying, Pasting & History');
+
+    // 5. Switch to BPP & Palettes tab
+    const bppTab = tabs.find((t) => t.textContent?.includes('BPP & Palettes'));
+    bppTab?.click();
+    flushSync();
+
+    expect(helpWindow?.textContent).toContain('1 bpp');
+    expect(helpWindow?.textContent).toContain('2 bpp');
+    expect(helpWindow?.textContent).toContain('8 bpp');
+    expect(helpWindow?.textContent).toContain('2:1 Fat Pixels');
+    expect(helpWindow?.textContent).toContain('Commodore 64');
+    expect(helpWindow?.textContent).toContain('Drean 16');
+
+    // 6. Switch to About tab and verify copyright notice citing Drean64
+    const aboutTab = tabs.find((t) => t.textContent?.includes('About'));
+    aboutTab?.click();
+    flushSync();
+
+    expect(helpWindow?.textContent).toContain('Drean64');
+    expect(helpWindow?.textContent).toContain('Copyright © 2026 Drean64. All rights reserved.');
+
+    // 7. Close via close button (✕)
+    const closeBtn = target.querySelector<HTMLButtonElement>('.help-close-btn');
+    closeBtn?.click();
+    flushSync();
+
+    expect(target.querySelector('.help-window')).toBeNull();
+
+    // 8. Open via F1 keyboard shortcut
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1', bubbles: true }));
+    flushSync();
+    expect(target.querySelector('.help-window')).not.toBeNull();
+
+    // 9. Close via Escape key
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+    expect(target.querySelector('.help-window')).toBeNull();
+
+    // 10. Open via '?' keyboard shortcut
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true }));
+    flushSync();
+    expect(target.querySelector('.help-window')).not.toBeNull();
+    const shortcutsTab = target.querySelector<HTMLButtonElement>('.help-window .tab-btn.active');
+    expect(shortcutsTab?.textContent).toContain('Shortcuts');
+
+    // 11. Close via bottom Close button
+    const closeActionBtn = target.querySelector<HTMLButtonElement>('.close-action-btn');
+    closeActionBtn?.click();
+    flushSync();
+    expect(target.querySelector('.help-window')).toBeNull();
+
+    // 12. Open via top header Help button
+    const headerHelpBtn = target.querySelector<HTMLButtonElement>('.help-link-btn');
+    expect(headerHelpBtn).not.toBeNull();
+    headerHelpBtn?.click();
+    flushSync();
+    expect(target.querySelector('.help-window')).not.toBeNull();
+  });
 });

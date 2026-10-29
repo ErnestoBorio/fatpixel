@@ -2,6 +2,7 @@
   import { APP_VERSION } from '../version';
   import { SYSTEM_PRESETS } from '../model/presets';
   import { getShortcuts } from '../platform';
+  import type { HelpTab } from './HelpModal.svelte';
 
   let shortcuts = $derived(getShortcuts());
 
@@ -39,6 +40,7 @@
     showRightPanel = true,
     onToggleLeftPanel,
     onToggleRightPanel,
+    onOpenHelp,
   } = $props<{
     canUndo?: boolean;
     canRedo?: boolean;
@@ -49,6 +51,7 @@
     showRightPanel?: boolean;
     onToggleLeftPanel?: () => void;
     onToggleRightPanel?: () => void;
+    onOpenHelp?: (tab?: HelpTab) => void;
     onOpenProject?: () => void;
     onSaveProject?: () => void;
     onSaveProjectAs?: () => void;
@@ -273,6 +276,29 @@
       </div>
     {/if}
   </div>
+
+  <div class="menu-item" role="none" onmouseenter={() => handleMenuMouseEnter('help')}>
+    <button class="menu-btn {activeMenu === 'help' ? 'active' : ''}" onclick={() => handleMenuClick('help')}>
+      Help
+    </button>
+    {#if activeMenu === 'help'}
+      <div class="dropdown">
+        <button class="dropdown-item" onclick={() => { onOpenHelp?.('workflows'); closeMenu(); }}>
+          <span>User Guide & Workflows…</span> <span class="shortcut">F1</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onOpenHelp?.('shortcuts'); closeMenu(); }}>
+          <span>Keyboard Shortcuts…</span> <span class="shortcut">?</span>
+        </button>
+        <button class="dropdown-item" onclick={() => { onOpenHelp?.('palette-bpp'); closeMenu(); }}>
+          <span>BPP & Palettes Guide…</span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" onclick={() => { onOpenHelp?.('about'); closeMenu(); }}>
+          <span>About FatPixel…</span>
+        </button>
+      </div>
+    {/if}
+  </div>
   </div>
 
   <div class="menu-center">
@@ -304,6 +330,15 @@
       aria-label="Toggle Properties"
     >
       Properties
+    </button>
+    <button
+      type="button"
+      class="help-link-btn"
+      onclick={() => onOpenHelp?.('workflows')}
+      title="Help & User Guide (F1)"
+      aria-label="Help & User Guide"
+    >
+      Help
     </button>
     <div class="header-divider"></div>
     <span class="version-badge" title="FatPixel v{APP_VERSION}">v{APP_VERSION}</span>
@@ -470,7 +505,8 @@
     letter-spacing: 0.5px;
     user-select: none;
   }
-  .header-toggle-btn {
+  .header-toggle-btn,
+  .help-link-btn {
     background: transparent;
     border: 1px solid transparent;
     color: #888;
@@ -485,7 +521,8 @@
     justify-content: center;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
   }
-  .header-toggle-btn:hover {
+  .header-toggle-btn:hover,
+  .help-link-btn:hover {
     background: #2a2a34;
     color: #fff;
   }
