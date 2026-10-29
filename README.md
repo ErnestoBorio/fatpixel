@@ -4,6 +4,8 @@ A lightweight, browser-based pixel art editor for old school graphics.
 
 Use the app online: [https://ernestoborio.github.io/pixel/](https://ernestoborio.github.io/pixel/)
 
+![FatPixel Screenshot](public/og-image.png)
+
 ## Features
 
 - **Pixel bit depth**: 1, 2, 3, 4 and 8 bits per pixel.
