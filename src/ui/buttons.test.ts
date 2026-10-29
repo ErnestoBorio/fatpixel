@@ -1048,4 +1048,47 @@ describe('App Graphic actions and mode switching', () => {
     const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
     expect(statusDim?.textContent).toContain('32 × 200');
   });
+
+  it('renders 1x, 2x, and 3x zoom levels in sprite preview panel', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Ensure floating panel is open
+    const openPill = target.querySelector<HTMLButtonElement>('.floating-panel-pill');
+    if (openPill) {
+      openPill.click();
+      flushSync();
+    }
+
+    const previewPanel = target.querySelector('.sprite-preview-panel');
+    expect(previewPanel).not.toBeNull();
+
+    // Verify preview boxes and labels: 1×, 2×, 3×
+    const labels = Array.from(previewPanel!.querySelectorAll('.preview-label span')).map((s) => s.textContent?.trim());
+    expect(labels).toEqual(['1×', '2×', '3×']);
+
+    // Verify 3 preview viewports exist with canvas elements
+    const viewports = previewPanel!.querySelectorAll('.preview-viewport');
+    expect(viewports.length).toBe(3);
+
+    const canvases = Array.from(viewports).map((v) => v.querySelector('canvas'));
+    expect(canvases.every((c) => c !== null)).toBe(true);
+
+    // Initial default sprite is 160x200, 2:1 wide pixel aspect ratio (width = 160 * 2 = 320 at 1x)
+    const c1 = canvases[0] as HTMLCanvasElement;
+    const c2 = canvases[1] as HTMLCanvasElement;
+    const c3 = canvases[2] as HTMLCanvasElement;
+
+    expect(c1.width).toBe(320); // 160 * 2 * 1
+    expect(c1.height).toBe(200); // 200 * 1
+
+    expect(c2.width).toBe(640); // 160 * 2 * 2
+    expect(c2.height).toBe(400); // 200 * 2
+
+    expect(c3.width).toBe(960); // 160 * 2 * 3
+    expect(c3.height).toBe(600); // 200 * 3
+  });
 });

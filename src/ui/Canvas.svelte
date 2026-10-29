@@ -60,7 +60,7 @@
   let tileCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview1xCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview2xCanvasElem: HTMLCanvasElement | null = $state(null);
-  let preview4xCanvasElem: HTMLCanvasElement | null = $state(null);
+  let preview3xCanvasElem: HTMLCanvasElement | null = $state(null);
 
   // Charset active character (0..255)
   let sheetHoverChar = $state<number | null>(null);
@@ -534,37 +534,47 @@
       if (ctx2) {
         ctx2.fillStyle = bgCss;
         ctx2.fillRect(0, 0, targetW, targetH);
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const val = graphic.get(x, y);
-            if (val === null || val === 0 || graphic.transparentSlot === val) continue;
-            const col = slotColor(graphic, palette, val);
-            ctx2.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
-            ctx2.fillRect(x * aspect * 2, y * 2, aspect * 2, 2);
+        if (preview1xCanvasElem && ctx2.drawImage) {
+          ctx2.imageSmoothingEnabled = false;
+          ctx2.drawImage(preview1xCanvasElem, 0, 0, targetW, targetH);
+        } else {
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              const val = graphic.get(x, y);
+              if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+              const col = slotColor(graphic, palette, val);
+              ctx2.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+              ctx2.fillRect(x * aspect * 2, y * 2, aspect * 2, 2);
+            }
           }
         }
       }
     }
 
-    // 4x Preview (4x zoom)
-    if (preview4xCanvasElem) {
-      const targetW = Math.round(w * aspect * 4);
-      const targetH = h * 4;
-      if (preview4xCanvasElem.width !== targetW || preview4xCanvasElem.height !== targetH) {
-        preview4xCanvasElem.width = targetW;
-        preview4xCanvasElem.height = targetH;
+    // 3x Preview (3x zoom)
+    if (preview3xCanvasElem) {
+      const targetW = Math.round(w * aspect * 3);
+      const targetH = h * 3;
+      if (preview3xCanvasElem.width !== targetW || preview3xCanvasElem.height !== targetH) {
+        preview3xCanvasElem.width = targetW;
+        preview3xCanvasElem.height = targetH;
       }
-      const ctx4 = preview4xCanvasElem.getContext('2d');
-      if (ctx4) {
-        ctx4.fillStyle = bgCss;
-        ctx4.fillRect(0, 0, targetW, targetH);
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const val = graphic.get(x, y);
-            if (val === null || val === 0 || graphic.transparentSlot === val) continue;
-            const col = slotColor(graphic, palette, val);
-            ctx4.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
-            ctx4.fillRect(x * aspect * 4, y * 4, aspect * 4, 4);
+      const ctx3 = preview3xCanvasElem.getContext('2d');
+      if (ctx3) {
+        ctx3.fillStyle = bgCss;
+        ctx3.fillRect(0, 0, targetW, targetH);
+        if (preview1xCanvasElem && ctx3.drawImage) {
+          ctx3.imageSmoothingEnabled = false;
+          ctx3.drawImage(preview1xCanvasElem, 0, 0, targetW, targetH);
+        } else {
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              const val = graphic.get(x, y);
+              if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+              const col = slotColor(graphic, palette, val);
+              ctx3.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+              ctx3.fillRect(x * aspect * 3, y * 3, aspect * 3, 3);
+            }
           }
         }
       }
@@ -881,7 +891,7 @@
     activeCharIndex;
     preview1xCanvasElem;
     preview2xCanvasElem;
-    preview4xCanvasElem;
+    preview3xCanvasElem;
     tileCanvasElem;
     showFloatingPanel;
     recalculateOffsets();
@@ -1028,13 +1038,13 @@
             </div>
           </div>
 
-          <!-- 4x Preview (4x zoom) -->
+          <!-- 3x Preview (3x zoom) -->
           <div class="preview-box">
             <div class="preview-label">
-              <span>4×</span>
+              <span>3×</span>
             </div>
             <div class="preview-viewport">
-              <canvas bind:this={preview4xCanvasElem}></canvas>
+              <canvas bind:this={preview3xCanvasElem}></canvas>
             </div>
           </div>
         </div>
@@ -1315,18 +1325,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    height: 110px;
     background: #14141b;
     border: 1px solid #2b2b3a;
     border-radius: 5px;
-    min-height: 36px;
-    overflow: auto;
+    overflow: hidden;
+    position: relative;
   }
   .preview-viewport canvas {
+    flex-shrink: 0;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.12);
     image-rendering: pixelated;
-    max-width: 100%;
-    height: auto;
   }
 </style>
