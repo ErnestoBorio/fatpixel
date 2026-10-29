@@ -269,12 +269,10 @@
 
   <div class="menu-center">
     <div class="fatpixel-logo" title="FatPixel">
-      <svg class="logo-icon" viewBox="0 0 22 14" width="20" height="13" fill="none" aria-hidden="true">
-        <rect x="0.75" y="0.75" width="20.5" height="12.5" rx="2" fill="#14151f" stroke="#2c3044" stroke-width="1.2"/>
-        <rect x="3" y="3" width="7" height="3.5" rx="0.5" fill="#38bdf8"/>
-        <rect x="12" y="3" width="7" height="3.5" rx="0.5" fill="#818cf8"/>
-        <rect x="3" y="7.5" width="7" height="3.5" rx="0.5" fill="#f43f5e"/>
-        <rect x="12" y="7.5" width="7" height="3.5" rx="0.5" fill="#34d399"/>
+      <svg class="logo-icon" viewBox="0 0 36 17" width="34" height="16" fill="none" aria-hidden="true">
+        <path d="M16,0h4v1h-4z M24,0h2v1h-2z M2,1h2v1h-2z M16,1h2v1h-2z M22,1h2v1h-2z M0,2h2v1h-2z M16,2h2v1h-2z M22,2h2v1h-2z M0,3h2v1h-2z M16,3h10v1h-10z M0,4h2v1h-2z M12,4h4v1h-4z M18,4h2v1h-2z M26,4h2v1h-2z M0,5h2v1h-2z M10,5h6v1h-6z M20,5h2v1h-2z M24,5h4v1h-4z M2,6h10v1h-10z M14,6h2v1h-2z M20,6h2v1h-2z M24,6h2v1h-2z M28,6h2v1h-2z M4,7h2v1h-2z M14,7h2v1h-2z M30,7h2v1h-2z M4,8h2v1h-2z M14,8h2v1h-2z M30,8h4v1h-4z M4,9h2v1h-2z M14,9h4v1h-4z M30,9h6v1h-6z M4,10h2v1h-2z M8,10h14v1h-14z M28,10h8v1h-8z M4,11h6v1h-6z M16,11h2v1h-2z M20,11h8v1h-8z M32,11h2v1h-2z M2,12h4v1h-4z M8,12h2v1h-2z M16,12h2v1h-2z M20,12h2v1h-2z M2,13h2v1h-2z M8,13h2v1h-2z M16,13h2v1h-2z M20,13h2v1h-2z M2,14h2v1h-2z M8,14h4v1h-4z M14,14h4v1h-4z M22,14h2v1h-2z M0,15h4v1h-4z M10,15h2v1h-2z M14,15h2v1h-2z M22,15h2v1h-2z M0,16h2v1h-2z M10,16h2v1h-2z M14,16h2v1h-2z M22,16h2v1h-2z" fill="#000000" />
+        <path d="M16,4h2v1h-2z M20,4h6v1h-6z M16,5h2v1h-2z M12,6h2v1h-2z M16,6h2v1h-2z M26,6h2v1h-2z M6,7h8v1h-8z M16,7h14v1h-14z M6,8h8v1h-8z M16,8h14v1h-14z M6,9h8v1h-8z M18,9h12v1h-12z M6,10h2v1h-2z M22,10h6v1h-6z" fill="#8b4513" />
+        <path d="M18,5h2v1h-2z M22,5h2v1h-2z M18,6h2v1h-2z M22,6h2v1h-2z" fill="#ffffff" />
       </svg>
       <span class="logo-text"><span class="logo-fat">Fat</span><span class="logo-pixel">Pixel</span></span>
     </div>
@@ -369,6 +367,7 @@
   .logo-icon {
     display: block;
     flex-shrink: 0;
+    filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.45));
   }
   .logo-text {
     font-size: 13px;
