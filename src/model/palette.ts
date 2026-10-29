@@ -518,22 +518,22 @@ export function isPowerOfTwo(n: number): boolean {
 export const BUILTIN_PALETTES: Palette[] = [
   {
     id: DEFAULT_PALETTE_ID,
-    name: 'Commodore 64 (16)',
+    name: 'Commodore 64',
     colors: C64_PEPTO_COLORS,
   },
   {
     id: 'drean-16',
-    name: 'Drean 64 (16)',
+    name: 'Drean 64',
     colors: DREAN_16_COLORS,
   },
   {
     id: 'zx-16',
-    name: 'ZX Spectrum (16)',
+    name: 'ZX Spectrum',
     colors: ZX_16_COLORS,
   },
   {
     id: 'pico-8',
-    name: 'PICO-8 (16)',
+    name: 'PICO-8',
     colors: PICO_8_COLORS,
   },
   {
@@ -548,12 +548,12 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'apple-ii-16',
-    name: 'Apple II (16)',
+    name: 'Apple II',
     colors: APPLE_II_16_COLORS,
   },
   {
     id: 'amiga-32',
-    name: 'Commodore Amiga (32)',
+    name: 'Commodore Amiga',
     colors: AMIGA_32_COLORS,
   },
   {
@@ -563,7 +563,7 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'sms-64',
-    name: 'Sega Master System (64)',
+    name: 'Sega Master System',
     colors: SEGA_MASTER_SYSTEM_64_COLORS,
   },
   {
@@ -578,22 +578,22 @@ export const BUILTIN_PALETTES: Palette[] = [
   },
   {
     id: 'cga-cool-4',
-    name: 'CGA Cool (4)',
+    name: 'CGA Cool',
     colors: CGA_COOL_COLORS,
   },
   {
     id: 'cga-warm-4',
-    name: 'CGA Warm (4)',
+    name: 'CGA Warm',
     colors: CGA_WARM_COLORS,
   },
   {
     id: 'gameboy-4',
-    name: 'Game Boy (4)',
+    name: 'Game Boy',
     colors: GAMEBOY_4_COLORS,
   },
   {
     id: 'mono-2',
-    name: 'Monochrome (2)',
+    name: 'Monochrome',
     colors: MONO_2_COLORS,
   },
 ];

@@ -241,7 +241,7 @@
 
   <!-- Color Slots (only for 1, 2, 3, 4 bpp; hidden in direct mode) -->
   {#if !isDirect}
-    <div class="section-label">Color Slots ({graphicDepth})</div>
+    <div class="section-label">Color Slots</div>
     <div class="slots-container" class:dense={graphicDepth > 4}>
       {#each Array.from({ length: graphicDepth }, (_, i) => i) as slotIdx}
         {@const sRgb = getSlotColor(slotIdx, graphicSlots)}

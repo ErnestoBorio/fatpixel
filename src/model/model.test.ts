@@ -641,7 +641,7 @@ describe('Clipboard and Copy & Paste', () => {
 
     const drean = getBuiltinPalette('drean-16');
     expect(drean).toBeDefined();
-    expect(drean?.name).toBe('Drean 64 (16)');
+    expect(drean?.name).toBe('Drean 64');
     expect(drean?.colors.length).toBe(16);
 
     const pico = getBuiltinPalette('pico-8');

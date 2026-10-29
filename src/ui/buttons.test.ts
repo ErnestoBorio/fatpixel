@@ -741,4 +741,41 @@ describe('App Graphic actions and mode switching', () => {
       expect(item.querySelector('.charset-badge')).toBeNull();
     }
   });
+
+  it('verifies palette names and palette panel titles do not state the color count', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Switch to Palette tab
+    const paletteTabBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tab-btn')).find((b) =>
+      b.textContent?.includes('Palette')
+    );
+    paletteTabBtn?.click();
+    flushSync();
+
+    // Verify all options in the palette select do NOT contain (16), (32), (64), (4), (2)
+    const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
+    expect(palSelect).not.toBeNull();
+    const options = Array.from(palSelect?.options ?? []);
+    expect(options.length).toBeGreaterThan(0);
+    for (const opt of options) {
+      expect(opt.textContent).not.toMatch(/\(\d+\)/);
+    }
+
+    // Verify default C64 option text is "Commodore 64" without "(16)"
+    const c64Opt = options.find((o) => o.value === 'c64-pepto');
+    expect(c64Opt?.textContent).toBe('Commodore 64');
+
+    // Verify section labels do not contain counts like "(16)" or "Color Slots (2)"
+    const sectionLabels = target.querySelectorAll('.palette-panel .section-label');
+    const labelTexts = Array.from(sectionLabels).map((el) => el.textContent?.trim());
+    expect(labelTexts).toContain('Color Slots');
+    expect(labelTexts).not.toContain('Color Slots (2)');
+    for (const text of labelTexts) {
+      expect(text).not.toMatch(/\(\d+\)/);
+    }
+  });
 });
