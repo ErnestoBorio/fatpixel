@@ -138,6 +138,10 @@
     redraw();
   }
 
+  export function getPanOffsets(): { x: number; y: number } {
+    return { x: panOffsetX, y: panOffsetY };
+  }
+
   export function fitToWindow() {
     if (!containerElem) return;
     panOffsetX = 0;
@@ -601,8 +605,12 @@
   }
 
   function handleMouseDown(e: MouseEvent) {
+    const rect = canvasElem.getBoundingClientRect();
+    const pt = screenToPixel(e.clientX - rect.left, e.clientY - rect.top);
+    if (!inDrawBounds(pt.x, pt.y)) return;
+
     if (e.button === 1 || effectiveTool === 'pan') {
-      // Middle click, Space+click pan, or Pan tool
+      // Middle click, Space+click pan, or Pan tool (only when dragging from inside image)
       isPanning = true;
       panStartX = e.clientX;
       panStartY = e.clientY;
@@ -610,10 +618,6 @@
       panStartOffsetY = panOffsetY;
       return;
     }
-
-    const rect = canvasElem.getBoundingClientRect();
-    const pt = screenToPixel(e.clientX - rect.left, e.clientY - rect.top);
-    if (!inDrawBounds(pt.x, pt.y)) return;
 
     if (effectiveTool === 'eyedropper') {
       const val = getPixelVal(pt.x, pt.y);
@@ -946,7 +950,7 @@
 
 <div
   bind:this={containerElem}
-  class="canvas-container {effectiveTool === 'pan' || isPanning ? 'tool-pan' : ''}"
+  class="canvas-container {effectiveTool === 'pan' || isPanning ? 'tool-pan' : ''} {effectiveTool === 'pan' && !isPanning && hoverPt === null ? 'pan-outside' : ''}"
   role="region"
   aria-label="Pixel Drawing Canvas"
   oncontextmenu={(e) => e.preventDefault()}
@@ -957,6 +961,13 @@
     bind:this={canvasElem}
     onmousedown={handleMouseDown}
     onmousemove={handleMouseMove}
+    onmouseleave={() => {
+      if (!isPanning) {
+        hoverPt = null;
+        onHoverChange?.(null);
+        redraw();
+      }
+    }}
     onwheel={handleWheel}
   ></canvas>
 
@@ -1110,6 +1121,10 @@
   .canvas-container.tool-pan .pixel-canvas {
     cursor: move;
     cursor: all-scroll;
+  }
+  .canvas-container.tool-pan.pan-outside,
+  .canvas-container.tool-pan.pan-outside .pixel-canvas {
+    cursor: default;
   }
   canvas {
     display: block;

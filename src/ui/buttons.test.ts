@@ -2,6 +2,9 @@
 import { describe, it, expect } from 'vitest';
 import { mount, flushSync } from 'svelte';
 import App from '../App.svelte';
+import Canvas from './Canvas.svelte';
+import { Graphic } from '../model/graphic';
+import { defaultPalette } from '../model/palette';
 import { setPlatformOverride } from '../platform';
 
 describe('App Graphic actions and mode switching', () => {
@@ -1158,5 +1161,50 @@ describe('App Graphic actions and mode switching', () => {
 
     expect(panBtn?.classList.contains('active')).toBe(true);
     expect(canvasContainer?.classList.contains('tool-pan')).toBe(true);
+  });
+
+  it('paning should be done dragging from inside the image, not on the outside', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    const graphic = Graphic.newSprite('spr 1'); // 24x21
+    const palette = defaultPalette();
+
+    const canvasComponent = mount(Canvas, {
+      target,
+      props: {
+        graphic,
+        palette,
+        tool: 'pan',
+        brushShape: 'square',
+        brushSize: 1,
+        fillMode: false,
+      },
+    }) as any;
+    flushSync();
+
+    const canvas = target.querySelector<HTMLCanvasElement>('canvas.pixel-canvas');
+    expect(canvas).not.toBeNull();
+
+    // Initial pan offset is (0, 0)
+    expect(canvasComponent.getPanOffsets()).toEqual({ x: 0, y: 0 });
+
+    // 1. Mouse down OUTSIDE the image (e.g. clientX: -100, clientY: -100) and drag:
+    canvas?.dispatchEvent(new MouseEvent('mousedown', { clientX: -100, clientY: -100, button: 0, bubbles: true }));
+    canvas?.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 50, bubbles: true }));
+    window.dispatchEvent(new MouseEvent('mouseup', { clientX: 50, clientY: 50, bubbles: true }));
+    flushSync();
+
+    // Pan offsets must remain (0, 0) because panning cannot start outside image
+    expect(canvasComponent.getPanOffsets()).toEqual({ x: 0, y: 0 });
+
+    // 2. Mouse down INSIDE the image (e.g. clientX: 20, clientY: 20) and drag:
+    canvas?.dispatchEvent(new MouseEvent('mousedown', { clientX: 20, clientY: 20, button: 0, bubbles: true }));
+    canvas?.dispatchEvent(new MouseEvent('mousemove', { clientX: 60, clientY: 70, bubbles: true }));
+    window.dispatchEvent(new MouseEvent('mouseup', { clientX: 60, clientY: 70, bubbles: true }));
+    flushSync();
+
+    // Pan offsets must update by the drag delta (40, 50)
+    expect(canvasComponent.getPanOffsets()).toEqual({ x: 40, y: 50 });
   });
 });
