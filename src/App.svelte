@@ -30,18 +30,22 @@
 
   let shortcuts = $derived(getShortcuts());
 
-  function isOldBlankProject(p: Project | null): boolean {
-    if (!p) return false;
+  function migrateInitialProject(p: Project | null): Project {
+    if (!p) return new Project();
     if (p.graphics.length === 1) {
       const g = p.graphics[0];
-      return g.name === 'sprite 1' && g.width === 24 && g.height === 21 && !g.hasDrawnPixels();
+      if (g.name === 'sprite 1' && g.width === 24 && g.height === 21 && !g.hasDrawnPixels()) {
+        return new Project();
+      }
+      if (g.name === 'FatPixel' && g.width === 160 && g.height === 200) {
+        g.name = "Ghosts 'n' Goblins";
+      }
     }
-    return false;
+    return p;
   }
 
   const stored = loadAllFromStorage();
-  const initialProject =
-    !stored.project || isOldBlankProject(stored.project) ? new Project() : stored.project;
+  const initialProject = migrateInitialProject(stored.project);
   const initialSettings = stored.settings ?? {};
 
   let project = $state(initialProject);

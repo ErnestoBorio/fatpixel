@@ -41,7 +41,7 @@ describe('importCsv', () => {
 
   it('parses the default FatPixel sprite correctly', () => {
     const sprite = createDefaultSprite();
-    expect(sprite.name).toBe('FatPixel');
+    expect(sprite.name).toBe("Ghosts 'n' Goblins");
     expect(sprite.width).toBe(160);
     expect(sprite.height).toBe(200);
     expect(sprite.bpp).toBe(8);
@@ -59,7 +59,7 @@ describe('importCsv', () => {
     const project = new Project();
     expect(project.graphics.length).toBe(1);
     const initialGraphic = project.graphics[0];
-    expect(initialGraphic.name).toBe('FatPixel');
+    expect(initialGraphic.name).toBe("Ghosts 'n' Goblins");
     expect(initialGraphic.width).toBe(160);
     expect(initialGraphic.height).toBe(200);
     expect(initialGraphic.bpp).toBe(8);
