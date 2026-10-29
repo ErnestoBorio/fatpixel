@@ -105,6 +105,7 @@
   let drawWidth = $derived(isCharset ? (charsetInfo?.charWidth ?? 8) : graphicWidth);
   let drawHeight = $derived(isCharset ? (charsetInfo?.charHeight ?? 8) : graphicHeight);
   let drawAspect = $derived(graphic.pixelAspectRatio === '2:1' ? 2.0 : 1.0);
+  let isWide = $derived(graphic.pixelAspectRatio === '2:1' || graphic.pixelMode === 'wide');
   let isDirect = $derived(
     graphic.depth === 256 ||
       graphic.bpp === 8 ||
@@ -364,13 +365,17 @@
     if (!sheetCanvasElem || !isCharset || !charsetInfo) return;
 
     const { charWidth, charHeight, charCount, columns } = charsetInfo;
-    const rows = Math.ceil(charCount / columns);
+    const wide = isWide;
+    const sheetCols = wide ? 8 : columns;
+    const rows = Math.ceil(charCount / sheetCols);
     const scale = 2; // 2x scale for clear display
-    const cellW = charWidth * scale;
-    const cellH = charHeight * scale;
+    const pixelW = wide ? scale * 2 : scale;
+    const pixelH = scale;
+    const cellW = charWidth * pixelW;
+    const cellH = charHeight * pixelH;
     const gap = 1; // 1 virtual pixel separation
 
-    const totalW = columns * (cellW + gap) + gap;
+    const totalW = sheetCols * (cellW + gap) + gap;
     const totalH = rows * (cellH + gap) + gap;
 
     if (sheetCanvasElem.width !== totalW || sheetCanvasElem.height !== totalH) {
@@ -388,8 +393,8 @@
     const bgRgb = slotColor(graphic, palette, 0);
 
     for (let c = 0; c < charCount; c++) {
-      const col = c % columns;
-      const row = Math.floor(c / columns);
+      const col = c % sheetCols;
+      const row = Math.floor(c / sheetCols);
       const cx = gap + col * (cellW + gap);
       const cy = gap + row * (cellH + gap);
 
@@ -404,7 +409,7 @@
           if (val === null || val === 0 || graphic.transparentSlot === val) continue;
           const colRgb = slotColor(graphic, palette, val);
           ctx.fillStyle = `rgb(${colRgb.r},${colRgb.g},${colRgb.b})`;
-          ctx.fillRect(cx + lx * scale, cy + ly * scale, scale, scale);
+          ctx.fillRect(cx + lx * pixelW, cy + ly * pixelH, pixelW, pixelH);
         }
       }
 
@@ -430,7 +435,7 @@
     if (!tileCanvasElem || !isCharset || !charsetInfo) return;
 
     const { charWidth, charHeight } = charsetInfo;
-    const aspect = graphic.pixelMode === 'wide' ? 2 : 1;
+    const aspect = isWide ? 2 : 1;
     const matrixCols = 5;
     const matrixRows = 5;
     const tileScale = 2;
@@ -759,16 +764,19 @@
     const my = e.clientY - rect.top;
 
     const { charWidth, charHeight, columns, charCount } = charsetInfo;
+    const wide = isWide;
+    const sheetCols = wide ? 8 : columns;
     const scale = 2;
-    const cellW = charWidth * scale;
+    const pixelW = wide ? scale * 2 : scale;
+    const cellW = charWidth * pixelW;
     const cellH = charHeight * scale;
     const gap = 1;
 
     const col = Math.floor((mx - gap) / (cellW + gap));
     const row = Math.floor((my - gap) / (cellH + gap));
 
-    if (col >= 0 && col < columns) {
-      const idx = row * columns + col;
+    if (col >= 0 && col < sheetCols) {
+      const idx = row * sheetCols + col;
       if (idx >= 0 && idx < charCount) {
         activeCharIndex = idx;
         redraw();
@@ -783,24 +791,31 @@
     const my = e.clientY - rect.top;
 
     const { charWidth, charHeight, columns, charCount } = charsetInfo;
+    const wide = isWide;
+    const sheetCols = wide ? 8 : columns;
     const scale = 2;
-    const cellW = charWidth * scale;
+    const pixelW = wide ? scale * 2 : scale;
+    const cellW = charWidth * pixelW;
     const cellH = charHeight * scale;
     const gap = 1;
 
     const col = Math.floor((mx - gap) / (cellW + gap));
     const row = Math.floor((my - gap) / (cellH + gap));
 
-    if (col >= 0 && col < columns) {
-      const idx = row * columns + col;
+    if (col >= 0 && col < sheetCols) {
+      const idx = row * sheetCols + col;
       if (idx >= 0 && idx < charCount) {
-        sheetHoverChar = idx;
-        redrawSheetCanvas();
+        if (sheetHoverChar !== idx) {
+          sheetHoverChar = idx;
+          redrawSheetCanvas();
+        }
         return;
       }
     }
-    sheetHoverChar = null;
-    redrawSheetCanvas();
+    if (sheetHoverChar !== null) {
+      sheetHoverChar = null;
+      redrawSheetCanvas();
+    }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -855,6 +870,10 @@
     // Redraw whenever graphic, palette, activeCharIndex or tool settings update
     projectRevision;
     graphic;
+    graphic.pixelAspectRatio;
+    graphic.pixelMode;
+    isWide;
+    drawAspect;
     palette;
     showGrid;
     secondary;
@@ -1230,7 +1249,7 @@
   .sheet-canvas-wrapper {
     overflow: auto;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 8px;
     background: #14141b;

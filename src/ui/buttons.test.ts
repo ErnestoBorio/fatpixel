@@ -900,4 +900,63 @@ describe('App Graphic actions and mode switching', () => {
 
     setPlatformOverride(null);
   });
+
+  it('reflects 2:1 aspect ratio in charset sheet by rendering 8 chars per row instead of 16', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Add a charset
+    const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
+    addCharsetBtn?.click();
+    flushSync();
+
+    // If floating panel is minimized, open it
+    const openPill = target.querySelector<HTMLButtonElement>('.floating-panel-pill');
+    if (openPill) {
+      openPill.click();
+      flushSync();
+    }
+
+    // 2. Locate the sheet canvas
+    const sheetCanvas = target.querySelector<HTMLCanvasElement>('.sheet-canvas-wrapper canvas');
+    expect(sheetCanvas).not.toBeNull();
+
+    // Initially 1:1 mode -> 16 columns per row
+    // cellW = 8*2 = 16, cellH = 8*2 = 16
+    // totalW = 16 * (16 + 1) + 1 = 273, totalH = 16 * (16 + 1) + 1 = 273
+    expect(sheetCanvas?.width).toBe(273);
+    expect(sheetCanvas?.height).toBe(273);
+
+    // 3. Switch aspect ratio to 2:1
+    const ratio21Btn = Array.from(target.querySelectorAll<HTMLButtonElement>('.ratio-btn')).find(
+      (b) => b.textContent?.trim() === '2:1'
+    );
+    expect(ratio21Btn).toBeDefined();
+    ratio21Btn?.click();
+    flushSync();
+
+    // 4. In 2:1 mode -> 8 columns per row, each char cell is 32x16
+    // cellW = 8 * 4 = 32, cellH = 8 * 2 = 16
+    // totalW = 8 * (32 + 1) + 1 = 265 (does not grow horizontally)
+    // totalH = 32 * (16 + 1) + 1 = 545 (grows vertically)
+    expect(sheetCanvas?.width).toBe(265);
+    expect(sheetCanvas?.height).toBe(545);
+
+    // 5. Clicking on col 2, row 3 should select char # (3 * 8 + 2) = 26
+    const rect = sheetCanvas!.getBoundingClientRect();
+    sheetCanvas?.dispatchEvent(
+      new MouseEvent('mousedown', {
+        clientX: rect.left + 72,
+        clientY: rect.top + 57,
+        bubbles: true,
+      })
+    );
+    flushSync();
+
+    const charTitle = target.querySelector('.char-title');
+    expect(charTitle?.textContent).toContain('Char #26');
+  });
 });
