@@ -75,14 +75,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #18181e;
-    border-top: 1px solid #282832;
-    padding: 0 10px;
-    height: 24px;
+    background: rgba(22, 22, 26, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 12px;
+    height: 25px;
     font-size: 11px;
-    color: #999;
+    color: #8e8e93;
     white-space: nowrap;
     overflow: hidden;
+    user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   }
   .left-section,
   .right-section {
@@ -91,36 +93,46 @@
     gap: 8px;
     min-width: 0;
   }
+  .dim-text {
+    color: #e5e5ea;
+    font-weight: 500;
+  }
+  .zoom-text {
+    font-family: ui-monospace, monospace;
+    color: #a1a1a6;
+  }
   .hover-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: #a1a1a6;
   }
   .sep {
-    color: #333;
+    color: rgba(255, 255, 255, 0.12);
   }
   .saved-badge {
-    color: #4ade80;
+    color: #30d158;
     font-weight: 500;
   }
   .saving-badge {
-    color: #60a5fa;
+    color: #0a84ff;
+    font-weight: 500;
   }
   .dirty-badge {
-    color: #ffaa55;
+    color: #ff9f0a;
     font-weight: 500;
   }
   .hints {
-    color: #666;
+    color: #6e6e73;
   }
   .version-tag {
-    color: #778899;
-    font-family: monospace;
+    color: #8e8e93;
+    font-family: ui-monospace, monospace;
     font-size: 10px;
-    padding: 1px 4px;
-    background: #202028;
-    border-radius: 3px;
-    border: 1px solid #2d2d3a;
+    padding: 1px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
   @media (max-width: 900px) {
     .hints {

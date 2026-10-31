@@ -397,12 +397,13 @@
 
 <style>
   .palette-panel {
-    padding: 10px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    color: #ccc;
+    color: #e5e5ea;
     font-size: 12px;
+    user-select: none;
   }
   .header {
     display: flex;
@@ -410,23 +411,31 @@
     gap: 4px;
   }
   .title {
-    font-weight: bold;
-    font-size: 14px;
-    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    color: #ffffff;
+    letter-spacing: -0.1px;
   }
   .palette-select {
     width: 100%;
-    background: #181820;
-    color: #eee;
-    border: 1px solid #3d3d4e;
-    border-radius: 4px;
-    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #f5f5f7;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 5px 8px;
     font-size: 11px;
+    font-weight: 500;
     cursor: pointer;
+    outline: none;
+    transition: all 0.12s ease;
+  }
+  .palette-select:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(0, 0, 0, 0.45);
   }
   .palette-select:focus {
-    outline: none;
-    border-color: #5588cc;
+    border-color: #0a84ff;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
   }
   .active-swatches {
     display: flex;
@@ -442,9 +451,9 @@
     position: absolute;
     width: 28px;
     height: 28px;
-    border: 1px solid #111;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+    border-radius: 6px;
   }
   .sec-swatch {
     right: 0;
@@ -458,16 +467,20 @@
   .swatch-labels {
     font-size: 11px;
     line-height: 1.4;
+    color: #a1a1a6;
+  }
+  .swatch-labels strong {
+    color: #f5f5f7;
   }
   .divider {
     height: 1px;
-    background: #333;
+    background: rgba(255, 255, 255, 0.08);
     margin: 4px 0;
   }
   .section-label {
     font-weight: 600;
-    font-size: 11px;
-    color: #bbb;
+    font-size: 10px;
+    color: #8e8e93;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
@@ -476,7 +489,7 @@
   }
   .help-text {
     font-size: 10px;
-    color: #888;
+    color: #8e8e93;
     line-height: 1.3;
   }
   .slots-container {
@@ -493,33 +506,35 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    padding: 3px 2px;
-    background: #252530;
-    border: 1px solid #383848;
-    border-radius: 4px;
-    color: #eee;
+    gap: 3px;
+    padding: 4px 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #e5e5ea;
     cursor: pointer;
     position: relative;
     text-align: center;
-    transition: background 0.15s, border-color 0.15s;
+    transition: all 0.12s ease;
   }
   .slot-card:hover {
-    background: #2d2d3a;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.16);
   }
   .slot-card.active-slot {
-    border-color: #5882c4;
-    background: #2d3b50;
+    border-color: #0a84ff;
+    background: rgba(10, 132, 255, 0.22);
+    box-shadow: 0 0 0 1px #0a84ff;
   }
   .slot-card.fixed-bg {
     border-style: dashed;
-    border-color: #4a4a58;
+    border-color: rgba(255, 255, 255, 0.18);
   }
   .slot-color-preview {
     width: 20px;
     height: 20px;
-    border: 1px solid #111;
-    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
     flex-shrink: 0;
   }
   .slot-badge-label {
@@ -532,25 +547,25 @@
     font-size: 9px;
     font-weight: bold;
     padding: 0 4px;
-    border-radius: 2px;
+    border-radius: 3px;
     line-height: 12px;
   }
   .slot-badge.pri {
-    background: #5882c4;
-    color: #fff;
+    background: #0a84ff;
+    color: #ffffff;
   }
   .slot-badge.sec {
-    background: #444455;
-    color: #bbb;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
   }
   .slot-idx-num {
     font-size: 9px;
-    color: #888;
+    color: #8e8e93;
     line-height: 12px;
   }
   .palette-grid {
     display: grid;
-    gap: 5px;
+    gap: 4px;
   }
   .palette-grid.dense-32,
   .palette-grid.dense-64 {
@@ -558,23 +573,23 @@
   }
   .palette-grid.dense-32 .color-btn,
   .palette-grid.dense-64 .color-btn {
-    height: 15px;
+    height: 16px;
     border: 1px solid rgba(0, 0, 0, 0.45);
-    border-radius: 2px;
+    border-radius: 3px;
   }
   .palette-grid.dense-32 .color-btn.is-pri,
   .palette-grid.dense-64 .color-btn.is-pri {
-    box-shadow: inset 0 0 0 1.5px #00d2ff;
+    box-shadow: inset 0 0 0 2px #00d2ff;
     z-index: 2;
   }
   .palette-grid.dense-32 .color-btn.is-sec,
   .palette-grid.dense-64 .color-btn.is-sec {
-    box-shadow: inset 0 0 0 1.5px #f87171;
+    box-shadow: inset 0 0 0 2px #ff453a;
     z-index: 2;
   }
   .palette-grid.dense-32 .color-btn.is-both,
   .palette-grid.dense-64 .color-btn.is-both {
-    box-shadow: inset 0 0 0 1.5px #00d2ff, inset 0 0 0 3px #f87171;
+    box-shadow: inset 0 0 0 2px #00d2ff, inset 0 0 0 4px #ff453a;
     z-index: 2;
   }
   .palette-grid.dense-32 .badge,
@@ -588,20 +603,20 @@
     gap: 1.5px;
   }
   .palette-grid.dense-small .color-btn {
-    height: 11px;
+    height: 12px;
     border: 1px solid rgba(0, 0, 0, 0.45);
-    border-radius: 1px;
+    border-radius: 2px;
   }
   .palette-grid.dense-small .color-btn.is-pri {
     box-shadow: inset 0 0 0 1.5px #00d2ff;
     z-index: 2;
   }
   .palette-grid.dense-small .color-btn.is-sec {
-    box-shadow: inset 0 0 0 1.5px #f87171;
+    box-shadow: inset 0 0 0 1.5px #ff453a;
     z-index: 2;
   }
   .palette-grid.dense-small .color-btn.is-both {
-    box-shadow: inset 0 0 0 1.5px #00d2ff, inset 0 0 0 3px #f87171;
+    box-shadow: inset 0 0 0 1.5px #00d2ff, inset 0 0 0 3px #ff453a;
     z-index: 2;
   }
   .palette-grid.dense-small .badge {
@@ -609,25 +624,27 @@
   }
   .color-btn {
     height: 28px;
-    border: 1px solid #222;
+    border: 1px solid rgba(0, 0, 0, 0.35);
     cursor: pointer;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 2px;
+    border-radius: 4px;
     box-sizing: border-box;
     padding: 0;
+    transition: transform 0.08s ease;
   }
   .color-btn:hover {
-    outline: 1px solid #ffffff;
+    outline: 2px solid #ffffff;
     z-index: 3;
+    transform: scale(1.05);
   }
   .badge {
     font-size: 10px;
     font-weight: 700;
     color: #ffffff;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.7);
     padding: 1px 4px;
     border-radius: 3px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
@@ -635,16 +652,16 @@
     letter-spacing: 0.5px;
   }
   .badge.pri {
-    border: 1px solid #4a90e2;
-    color: #90c2ff;
+    border: 1px solid #0a84ff;
+    color: #70b4ff;
   }
   .badge.sec {
-    border: 1px solid #e0e0e0;
-    color: #ffffff;
+    border: 1px solid #ff453a;
+    color: #ff9f9a;
   }
   .badge.pri-sec {
-    border: 1px solid #f5a623;
-    color: #ffd070;
+    border: 1px solid #ff9f0a;
+    color: #ffd60a;
   }
   /* 256 Color Map */
   .color-map-wrapper {
@@ -656,18 +673,18 @@
   }
   .color-map-canvas {
     image-rendering: pixelated;
-    border: 1px solid #383848;
-    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
     cursor: crosshair;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
   }
   .color-readout {
     width: 100%;
-    background: #181822;
-    border: 1px solid #282836;
-    border-radius: 4px;
-    padding: 4px 6px;
-    font-family: monospace;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-family: ui-monospace, monospace;
     font-size: 10px;
   }
   .readout-content {
@@ -678,20 +695,20 @@
   .readout-dot {
     width: 12px;
     height: 12px;
-    border-radius: 2px;
-    border: 1px solid #111;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.4);
     flex-shrink: 0;
   }
   .readout-idx {
-    font-weight: bold;
-    color: #60a5fa;
+    font-weight: 600;
+    color: #0a84ff;
   }
   .readout-rgb {
-    color: #aaa;
+    color: #8e8e93;
     flex: 1;
   }
   .readout-hex {
-    color: #fff;
+    color: #f5f5f7;
     font-weight: 600;
   }
 </style>

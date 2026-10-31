@@ -114,6 +114,12 @@
 
 <div class="menu-bar" role="menubar" tabindex="0">
   <div class="menu-left">
+    <div class="window-controls" aria-hidden="true">
+      <span class="window-dot dot-close"></span>
+      <span class="window-dot dot-minimize"></span>
+      <span class="window-dot dot-zoom"></span>
+    </div>
+
     <div class="menu-item" role="none" onmouseenter={() => handleMenuMouseEnter('file')}>
     <button class="menu-btn {activeMenu === 'file' ? 'active' : ''}" onclick={() => handleMenuClick('file')}>
       File
@@ -374,10 +380,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #18181e;
-    border-bottom: 1px solid #282832;
-    padding: 2px 8px;
-    height: 30px;
+    background: rgba(24, 24, 28, 0.88);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 10px;
+    height: 32px;
     font-size: 12px;
     position: relative;
     z-index: 100;
@@ -385,6 +393,38 @@
   .menu-left {
     display: flex;
     align-items: center;
+  }
+  .window-controls {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-right: 14px;
+    padding-left: 2px;
+  }
+  .window-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: filter 0.15s ease, transform 0.1s ease;
+  }
+  .dot-close {
+    background: #ff5f56;
+    border: 0.5px solid rgba(0, 0, 0, 0.25);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
+  .dot-minimize {
+    background: #ffbd2e;
+    border: 0.5px solid rgba(0, 0, 0, 0.25);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
+  .dot-zoom {
+    background: #27c93f;
+    border: 0.5px solid rgba(0, 0, 0, 0.25);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
+  .window-controls:hover .window-dot {
+    filter: brightness(1.08);
   }
   .menu-right {
     display: flex;
@@ -409,14 +449,15 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
     line-height: 1;
     cursor: default;
-    transition: filter 0.15s ease;
+    transition: all 0.15s ease;
   }
   .fatpixel-logo:hover {
-    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.45));
+    background: rgba(255, 255, 255, 0.05);
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.4));
   }
   .logo-icon {
     display: block;
@@ -425,9 +466,9 @@
   }
   .logo-text {
     font-size: 13px;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.4px;
     line-height: 1;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
   }
   .logo-fat {
     font-weight: 800;
@@ -436,16 +477,16 @@
   }
   .logo-pixel {
     font-weight: 600;
-    color: #f1f5f9;
+    color: #f5f5f7;
   }
   .version-badge {
-    background: #252532;
-    border: 1px solid #3d3d4e;
-    color: #88aacc;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #8e8e93;
     font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 10px;
-    font-family: monospace;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-weight: 500;
   }
   .menu-item {
@@ -454,27 +495,35 @@
   .menu-btn {
     background: none;
     border: none;
-    color: #ccc;
-    padding: 4px 8px;
-    border-radius: 3px;
+    color: #d1d1d6;
+    padding: 4px 9px;
+    border-radius: 5px;
     cursor: pointer;
     font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    transition: background 0.1s ease, color 0.1s ease;
   }
-  .menu-btn:hover,
+  .menu-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+  }
   .menu-btn.active {
-    background: #2a2a34;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
   }
   .dropdown {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 4px);
     left: 0;
-    background: #22222a;
-    border: 1px solid #383844;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    min-width: 170px;
-    padding: 4px 0;
+    background: rgba(32, 32, 38, 0.94);
+    backdrop-filter: blur(25px) saturate(190%);
+    -webkit-backdrop-filter: blur(25px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 0.5px 0.5px rgba(255, 255, 255, 0.15);
+    min-width: 190px;
+    padding: 5px;
     z-index: 200;
   }
   .dropdown-item {
@@ -482,47 +531,56 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 5px 12px;
+    padding: 5px 10px;
     background: none;
     border: none;
-    color: #ddd;
-    font-size: 11px;
+    color: #e5e5ea;
+    font-size: 12px;
+    font-weight: 400;
     cursor: pointer;
     text-align: left;
+    border-radius: 5px;
+    transition: background 0.08s ease, color 0.08s ease;
   }
   .dropdown-item:hover:not(:disabled) {
-    background: #354562;
-    color: #fff;
+    background: #0a84ff;
+    color: #ffffff;
+  }
+  .dropdown-item:hover:not(:disabled) .shortcut {
+    color: rgba(255, 255, 255, 0.85);
   }
   .dropdown-item:disabled {
-    color: #555;
+    color: rgba(255, 255, 255, 0.28);
     cursor: default;
   }
   .shortcut {
-    color: #888;
-    font-size: 10px;
+    color: #8e8e93;
+    font-size: 11px;
+    font-weight: 400;
+    margin-left: 16px;
+    letter-spacing: 0.2px;
   }
   .dropdown-divider {
     height: 1px;
-    background: #33333d;
-    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 5px 4px;
   }
   .dropdown-section-title {
-    padding: 5px 12px 3px;
-    font-size: 9px;
-    font-weight: 700;
-    color: #6a7c92;
+    padding: 6px 10px 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #8e8e93;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     user-select: none;
   }
   .header-toggle-btn,
   .help-link-btn {
-    background: transparent;
-    border: 1px solid transparent;
-    color: #888;
-    padding: 2px 7px;
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #c7c7cc;
+    padding: 3px 9px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 11px;
     font-weight: 500;
@@ -530,44 +588,47 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
   .header-toggle-btn:hover,
   .help-link-btn:hover {
-    background: #2a2a34;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.18);
   }
   .header-toggle-btn.active {
-    color: #60a5fa;
-    border-color: #384860;
-    background: #1e2838;
+    color: #ffffff;
+    border-color: rgba(10, 132, 255, 0.5);
+    background: rgba(10, 132, 255, 0.3);
+    box-shadow: 0 0 8px rgba(10, 132, 255, 0.25);
   }
   .header-divider {
     width: 1px;
     height: 14px;
-    background: #333342;
+    background: rgba(255, 255, 255, 0.1);
     margin: 0 2px;
   }
   .github-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    background: #20202a;
-    border: 1px solid #363646;
-    color: #c0c0d0;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #d1d1d6;
     text-decoration: none;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
-    padding: 2px 7px;
-    border-radius: 12px;
+    padding: 3px 9px;
+    border-radius: 999px;
     line-height: 1;
-    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    transition: all 0.15s ease;
   }
   .github-badge:hover {
-    background: #2a2a38;
-    border-color: #60a5fa;
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
     color: #fff;
-    box-shadow: 0 0 6px rgba(96, 165, 250, 0.25);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
   }
   .github-icon {
     width: 13px;

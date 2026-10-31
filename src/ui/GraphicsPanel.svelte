@@ -398,15 +398,16 @@
 
 <style>
   .graphics-panel {
-    padding: 8px 10px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
     overflow: hidden;
     gap: 8px;
-    color: #ccc;
+    color: #e5e5ea;
     font-size: 12px;
+    user-select: none;
   }
   .properties-section {
     display: flex;
@@ -421,7 +422,7 @@
   }
   .divider {
     height: 1px;
-    background: #2b2b36;
+    background: rgba(255, 255, 255, 0.08);
     margin: 2px 0;
     flex-shrink: 0;
   }
@@ -445,50 +446,50 @@
     gap: 6px;
   }
   .title {
-    font-weight: bold;
+    font-weight: 600;
     font-size: 12px;
-    color: #eee;
+    color: #ffffff;
+    letter-spacing: -0.1px;
   }
   .count-pill {
-    background: #252532;
-    color: #88aacc;
+    background: rgba(255, 255, 255, 0.08);
+    color: #a1a1a6;
     font-size: 9px;
     font-weight: 600;
-    padding: 1px 5px;
-    border-radius: 8px;
-    border: 1px solid #36364a;
-    font-family: monospace;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-family: ui-monospace, monospace;
   }
   .add-buttons {
     display: flex;
     gap: 4px;
   }
   .add-btn {
-    padding: 3px 6px;
-    background: #282834;
-    border: 1px solid #3d3d4e;
-    color: #60a5fa;
-    border-radius: 4px;
+    padding: 3px 8px;
+    background: rgba(10, 132, 255, 0.12);
+    border: 1px solid rgba(10, 132, 255, 0.3);
+    color: #5ac8fa;
+    border-radius: 999px;
     font-size: 10px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    transition: all 0.12s ease;
   }
   .add-btn:hover {
-    background: #343444;
-    color: #93c5fd;
-    border-color: #60a5fa;
+    background: rgba(10, 132, 255, 0.25);
+    color: #ffffff;
+    border-color: rgba(10, 132, 255, 0.5);
   }
-  /* Photoshop Layers Frame */
+  /* macOS Frame / Sidebar List */
   .graphics-frame {
     flex: 1;
     min-height: 80px;
     display: flex;
     flex-direction: column;
-    background: #14141c;
-    border: 1px solid #282836;
-    border-radius: 6px;
-    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
     overflow: hidden;
   }
   .graphics-list {
@@ -498,29 +499,32 @@
     display: flex;
     flex-direction: column;
     scrollbar-width: thin;
-    scrollbar-color: #38384a transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+    padding: 3px 0;
   }
   .graphic-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #171720;
-    border-bottom: 1px solid #21212c;
-    border-left: 3px solid transparent;
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     padding: 5px 8px;
+    margin: 1px 3px;
+    border-radius: 6px;
     cursor: grab;
-    transition: background 0.1s, border-color 0.1s;
+    transition: all 0.12s ease;
     user-select: none;
   }
   .graphic-item:last-child {
     border-bottom: none;
   }
   .graphic-item:hover:not(.active) {
-    background: #1e1e28;
+    background: rgba(255, 255, 255, 0.06);
   }
   .graphic-item.active {
-    background: #23344a;
-    border-left-color: #00d2ff;
+    background: #0a84ff;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   }
   .graphic-item.dragging {
     opacity: 0.35;
@@ -528,7 +532,7 @@
   }
   .graphic-item.drag-over {
     border-top: 2px solid #00d2ff;
-    background: #283446;
+    background: rgba(10, 132, 255, 0.25);
   }
   .select-btn {
     display: flex;
@@ -549,8 +553,8 @@
     height: 28px;
     min-width: 28px;
     background: #0d0d12;
-    border: 1px solid #282836;
-    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -558,7 +562,7 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
   .thumb-container.active-thumb {
-    border-color: #4a6fa5;
+    border-color: rgba(255, 255, 255, 0.4);
   }
   .thumb-canvas {
     max-width: 26px;
@@ -574,26 +578,26 @@
   }
   .name {
     font-weight: 500;
-    color: #e0e0ea;
+    color: #e5e5ea;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 11px;
   }
   .graphic-item.active .name {
-    color: #fff;
+    color: #ffffff;
     font-weight: 600;
   }
   .subtext {
     font-size: 9px;
-    color: #778899;
-    font-family: monospace;
+    color: #8e8e93;
+    font-family: ui-monospace, monospace;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .graphic-item.active .subtext {
-    color: #9bbcd8;
+    color: rgba(255, 255, 255, 0.85);
   }
   .actions {
     display: flex;
@@ -608,25 +612,28 @@
   .icon-btn {
     background: none;
     border: none;
-    color: #888;
+    color: #a1a1a6;
     cursor: pointer;
     font-size: 12px;
     padding: 2px 4px;
-    border-radius: 3px;
-    transition: background 0.1s, color 0.1s;
+    border-radius: 4px;
+    transition: all 0.12s ease;
+  }
+  .graphic-item.active .icon-btn {
+    color: rgba(255, 255, 255, 0.9);
   }
   .icon-btn:hover {
     color: #fff;
-    background: #2f2f3e;
+    background: rgba(255, 255, 255, 0.15);
   }
   .delete-btn:hover {
-    color: #f87171;
-    background: #3e2222;
+    color: #ff453a;
+    background: rgba(255, 69, 58, 0.2);
   }
   .section-label {
     font-weight: 600;
     font-size: 10px;
-    color: #aaa;
+    color: #8e8e93;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -636,45 +643,59 @@
     gap: 6px;
   }
   .label {
-    color: #888;
+    color: #8e8e93;
     font-size: 11px;
     width: 40px;
   }
   .text-input {
     flex: 1;
-    background: #22222a;
-    border: 1px solid #383844;
-    color: #fff;
-    padding: 3px 6px;
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    padding: 4px 7px;
+    border-radius: 6px;
     font-size: 11px;
+    outline: none;
+    transition: all 0.12s ease;
   }
+  .text-input:focus {
+    border-color: #0a84ff;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+  }
+  /* macOS Segmented Control */
   .button-group {
     display: flex;
-    gap: 3px;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 2px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 2px;
     flex: 1;
   }
   .toggle-btn {
     flex: 1;
-    padding: 3px;
-    background: #2a2a32;
-    border: 1px solid #383842;
-    color: #bbb;
-    border-radius: 3px;
+    padding: 3px 2px;
+    background: transparent;
+    border: none;
+    color: #a1a1a6;
+    border-radius: 5px;
     font-size: 10px;
+    font-weight: 500;
     cursor: pointer;
+    transition: all 0.12s ease;
   }
   .toggle-btn.active {
-    background: #445577;
-    border-color: #6688cc;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.2);
   }
   .toggle-btn:hover:not(.active):not(:disabled) {
-    background: #343442;
-    color: #eee;
+    background: rgba(255, 255, 255, 0.06);
+    color: #f5f5f7;
   }
   .toggle-btn:disabled {
-    opacity: 0.3;
+    opacity: 0.25;
     cursor: not-allowed;
   }
   .dim-inputs {
@@ -682,23 +703,30 @@
     align-items: center;
     gap: 4px;
     font-size: 11px;
+    color: #8e8e93;
   }
   .num-input {
     width: 50px;
-    background: #22222a;
-    border: 1px solid #383844;
-    color: #fff;
-    padding: 3px 4px;
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    padding: 4px 6px;
+    border-radius: 6px;
     font-size: 11px;
+    outline: none;
+    transition: all 0.12s ease;
+  }
+  .num-input:focus {
+    border-color: #0a84ff;
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
   }
   .readonly-badge {
     flex: 1;
-    padding: 3px 6px;
-    background: #1e1e26;
-    border: 1px solid #2e2e38;
-    color: #a0a0b0;
-    border-radius: 3px;
+    padding: 4px 7px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #8e8e93;
+    border-radius: 6px;
     font-size: 10px;
     line-height: 14px;
     white-space: nowrap;
@@ -706,15 +734,15 @@
     text-overflow: ellipsis;
   }
   .num-input:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: default;
-    background: #1c1c22;
-    border-color: #2b2b36;
-    color: #888;
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #6e6e73;
   }
   .charset-info-badge {
     font-size: 10px;
-    color: #888;
+    color: #8e8e93;
     line-height: 18px;
     white-space: nowrap;
     overflow: hidden;
@@ -725,7 +753,7 @@
   }
   .empty-hint {
     font-size: 11px;
-    color: #666;
+    color: #6e6e73;
     font-style: italic;
     padding: 10px 0;
   }

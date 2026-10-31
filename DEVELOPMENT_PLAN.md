@@ -24,6 +24,8 @@ A lightweight, browser-based pixel art editor specifically built for retro graph
 - [x] **Pixel Aspect Ratios**: 1:1 (square) and 2:1 (wide *fat pixels*).
 - [x] **Palettes**: 2, 4, 8, 16, 32, 64, 128, and 256 colors. Pre-loaded with C64 Pepto, Drean 64, ZX Spectrum, Amstrad CPC, MSX, VGA 256, Game Boy, NES, etc.
 - [x] **Drawing & Geometry**: Pencil, Line (Bresenham), Rectangle, Ellipse, Flood Fill, Eyedropper, Shift, Rotate 90°, Flip H/V.
+- [x] **Selection, Copy & Paste**: Marching ants marquee selection, floating movable paste layer, crosshair/4-way drag cursor, merge on Enter or tool switch, clipboard color/bpp matching.
+- [x] **macOS Pro App GUI Design**: Translucent frosted glass navigation, window traffic lights, macOS segmented controls, tactile buttons, SF Pro typography, slim floating scrollbars, and floating HUD toolbars.
 - [x] **Navigation & Viewport**: Infinite zoom (1×–64×), pan, pixel grid toggle.
 - [x] **Project File (`.pxp`)**: Save, Save As, Open, auto-persisted local browser state.
 - [x] **Current I/O**:

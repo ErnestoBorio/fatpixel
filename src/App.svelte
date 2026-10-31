@@ -1224,40 +1224,42 @@
     flex-direction: column;
     width: 100vw;
     height: 100vh;
-    background: #18181e;
-    color: #ddd;
+    background: var(--color-bg-base);
+    color: var(--color-text-primary);
     overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
   }
   .main-workspace {
     display: flex;
     flex: 1;
     overflow: hidden;
     position: relative;
+    background: #141418;
   }
   .panel {
-    background: #202028;
-    border-color: #2b2b36;
+    background: #19191f;
+    border-color: rgba(255, 255, 255, 0.08);
     z-index: 10;
   }
   .left-panel {
-    flex: 0 0 125px;
-    width: 125px;
-    min-width: 125px;
-    border-right: 1px solid #2b2b36;
+    flex: 0 0 132px;
+    width: 132px;
+    min-width: 132px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #38384a transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
   }
   .left-panel.collapsed {
     display: none;
   }
   .right-panel {
-    flex: 0 0 215px;
-    width: 215px;
-    min-width: 215px;
-    border-left: 1px solid #2b2b36;
+    flex: 0 0 225px;
+    width: 225px;
+    min-width: 225px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1267,17 +1269,17 @@
   }
   .panel-divider {
     height: 1px;
-    background: #2b2b36;
+    background: rgba(255, 255, 255, 0.08);
     margin: 2px 0;
     flex-shrink: 0;
   }
   .right-panel-tabs {
     display: flex;
     align-items: center;
-    background: #1a1a22;
-    border-bottom: 1px solid #2b2b36;
-    padding: 3px 4px;
-    gap: 2px;
+    background: rgba(18, 18, 22, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 6px;
+    gap: 3px;
     flex-shrink: 0;
   }
   .tab-btn {
@@ -1285,26 +1287,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 5px 3px;
+    gap: 5px;
+    padding: 5px 6px;
     background: transparent;
     border: 1px solid transparent;
-    color: #999;
+    color: #a1a1a6;
     font-size: 11px;
     font-weight: 500;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    transition: all 0.12s ease;
   }
   .tab-btn:hover {
-    background: #252530;
-    color: #eee;
+    background: rgba(255, 255, 255, 0.06);
+    color: #f5f5f7;
   }
   .tab-btn.active {
-    background: #2a374c;
-    border-color: #4a6fa5;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
     font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.2);
   }
   .tab-icon {
     font-size: 11px;
@@ -1319,92 +1322,96 @@
     flex-shrink: 0;
   }
   .tab-badge {
-    background: #36364a;
-    color: #bbb;
+    background: rgba(255, 255, 255, 0.12);
+    color: #d1d1d6;
     font-size: 9px;
-    padding: 0 4px;
-    border-radius: 8px;
-    font-family: monospace;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-family: ui-monospace, monospace;
     line-height: 13px;
   }
   .tab-btn.active .tab-badge {
-    background: #4a6fa5;
-    color: #fff;
+    background: #0a84ff;
+    color: #ffffff;
   }
   .tab-collapse-btn {
     background: transparent;
     border: none;
-    color: #777;
-    padding: 4px 5px;
-    border-radius: 3px;
+    color: #8e8e93;
+    padding: 4px 6px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.12s ease;
   }
   .tab-collapse-btn:hover {
-    background: #282834;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
   }
   .panel-header-compact {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 8px;
-    background: #1a1a22;
-    border-bottom: 1px solid #2b2b36;
+    padding: 5px 8px;
+    background: rgba(18, 18, 22, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
   }
   .panel-header-title {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    color: #aaa;
+    color: #8e8e93;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   .panel-collapse-btn {
     background: transparent;
     border: none;
-    color: #777;
-    padding: 2px 5px;
-    border-radius: 3px;
+    color: #8e8e93;
+    padding: 2px 6px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.12s ease;
   }
   .panel-collapse-btn:hover {
-    background: #282834;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
   }
   .floating-panel-toggle {
     position: absolute;
-    top: 8px;
-    background: rgba(32, 32, 40, 0.92);
-    backdrop-filter: blur(6px);
-    border: 1px solid #3d3d52;
-    color: #bbb;
+    top: 10px;
+    background: rgba(30, 30, 38, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f5f5f7;
     font-size: 11px;
     font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 5px 11px;
+    border-radius: 999px;
     cursor: pointer;
     z-index: 60;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    transition: all 0.15s ease;
   }
   .floating-panel-toggle:hover {
-    background: #2e3a50;
-    border-color: #5588cc;
-    color: #fff;
+    background: rgba(45, 45, 56, 0.95);
+    border-color: rgba(10, 132, 255, 0.5);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   }
   .left-toggle {
-    left: 8px;
+    left: 10px;
   }
   .right-toggle {
-    right: 8px;
+    right: 10px;
   }
   .right-panel-content {
     flex: 1;
@@ -1413,7 +1420,7 @@
     min-height: 0;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #38384a transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
   }
   .panel-view.is-hidden {
     display: none !important;
@@ -1434,124 +1441,133 @@
   .canvas-area {
     flex: 1;
     position: relative;
-    background: #1e1e24;
+    background: #141418;
     min-width: 0;
   }
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(10, 10, 14, 0.75);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
   }
   .modal-card {
-    background: #202028;
-    border: 1px solid #363646;
-    border-radius: 8px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    background: rgba(36, 36, 44, 0.94);
+    backdrop-filter: blur(30px) saturate(190%);
+    -webkit-backdrop-filter: blur(30px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.3);
     width: 380px;
     max-width: 90vw;
     overflow: hidden;
-    color: #eee;
+    color: #f5f5f7;
   }
   .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    background: #262632;
-    border-bottom: 1px solid #363646;
+    padding: 12px 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .modal-title {
     margin: 0;
     font-size: 13px;
     font-weight: 600;
-    color: #fff;
+    color: #ffffff;
+    letter-spacing: -0.1px;
   }
   .modal-close-btn {
     background: transparent;
     border: none;
-    color: #888;
+    color: #8e8e93;
     font-size: 14px;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 3px 6px;
     border-radius: 4px;
+    transition: all 0.12s ease;
   }
   .modal-close-btn:hover {
-    color: #fff;
+    color: #ffffff;
     background: rgba(255, 255, 255, 0.1);
   }
   .modal-body {
-    padding: 18px 16px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
   .modal-label {
     font-size: 12px;
-    color: #aaa;
+    color: #a1a1a6;
+    font-weight: 500;
   }
   .input-with-ext {
     display: flex;
     align-items: center;
-    background: #16161c;
-    border: 1px solid #363646;
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 6px;
     overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
   .input-with-ext:focus-within {
-    border-color: #5577aa;
+    border-color: #0a84ff;
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
   }
   .modal-input {
     flex: 1;
     background: transparent;
     border: none;
-    padding: 8px 10px;
-    color: #fff;
+    padding: 8px 12px;
+    color: #ffffff;
     font-size: 13px;
     outline: none;
   }
   .file-ext {
-    padding-right: 10px;
-    color: #778899;
+    padding-right: 12px;
+    color: #8e8e93;
     font-size: 12px;
-    font-family: monospace;
+    font-family: ui-monospace, monospace;
     user-select: none;
   }
   .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    padding: 12px 16px;
-    background: #1c1c24;
-    border-top: 1px solid #2b2b36;
+    padding: 12px 18px;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
   .dialog-btn {
-    padding: 6px 14px;
-    border-radius: 4px;
+    padding: 6px 16px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     border: 1px solid transparent;
+    transition: all 0.15s ease;
   }
   .dialog-btn-secondary {
-    background: #2a2a34;
-    border-color: #383848;
-    color: #ccc;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f5f5f7;
   }
   .dialog-btn-secondary:hover {
-    background: #343442;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
   }
   .dialog-btn-primary {
-    background: #3b5a8c;
-    border-color: #4c70aa;
-    color: #fff;
+    background: #0a84ff;
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   .dialog-btn-primary:hover {
-    background: #466ca6;
+    background: #0071e3;
   }
 </style>
