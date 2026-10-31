@@ -114,12 +114,6 @@
 
 <div class="menu-bar" role="menubar" tabindex="0">
   <div class="menu-left">
-    <div class="window-controls" aria-hidden="true">
-      <span class="window-dot dot-close"></span>
-      <span class="window-dot dot-minimize"></span>
-      <span class="window-dot dot-zoom"></span>
-    </div>
-
     <div class="menu-item" role="none" onmouseenter={() => handleMenuMouseEnter('file')}>
     <button class="menu-btn {activeMenu === 'file' ? 'active' : ''}" onclick={() => handleMenuClick('file')}>
       File
@@ -393,38 +387,6 @@
   .menu-left {
     display: flex;
     align-items: center;
-  }
-  .window-controls {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin-right: 14px;
-    padding-left: 2px;
-  }
-  .window-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-    transition: filter 0.15s ease, transform 0.1s ease;
-  }
-  .dot-close {
-    background: #ff5f56;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  }
-  .dot-minimize {
-    background: #ffbd2e;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  }
-  .dot-zoom {
-    background: #27c93f;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  }
-  .window-controls:hover .window-dot {
-    filter: brightness(1.08);
   }
   .menu-right {
     display: flex;

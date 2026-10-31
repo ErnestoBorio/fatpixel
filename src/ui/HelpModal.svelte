@@ -129,11 +129,6 @@
       <!-- Header -->
       <div class="help-header">
         <div class="header-left">
-          <div class="modal-traffic-lights" aria-hidden="true">
-            <button type="button" class="window-dot dot-close" onclick={onClose} aria-label="Close"></button>
-            <span class="window-dot dot-minimize"></span>
-            <span class="window-dot dot-zoom"></span>
-          </div>
           <div class="help-badge-icon" aria-hidden="true">
             <svg viewBox="0 0 36 17" width="28" height="13" fill="none">
               <path d="M16,0h4v1h-4z M24,0h2v1h-2z M2,1h2v1h-2z M16,1h2v1h-2z M22,1h2v1h-2z M0,2h2v1h-2z M16,2h2v1h-2z M22,2h2v1h-2z M0,3h2v1h-2z M16,3h10v1h-10z M0,4h2v1h-2z M12,4h4v1h-4z M18,4h2v1h-2z M26,4h2v1h-2z M0,5h2v1h-2z M10,5h6v1h-6z M20,5h2v1h-2z M24,5h4v1h-4z M2,6h10v1h-10z M14,6h2v1h-2z M20,6h2v1h-2z M24,6h2v1h-2z M28,6h2v1h-2z M4,7h2v1h-2z M14,7h2v1h-2z M30,7h2v1h-2z M4,8h2v1h-2z M14,8h2v1h-2z M30,8h4v1h-4z M4,9h2v1h-2z M14,9h4v1h-4z M30,9h6v1h-6z M4,10h2v1h-2z M8,10h14v1h-14z M28,10h8v1h-8z M4,11h6v1h-6z M16,11h2v1h-2z M20,11h8v1h-8z M32,11h2v1h-2z M2,12h4v1h-4z M8,12h2v1h-2z M16,12h2v1h-2z M20,12h2v1h-2z M2,13h2v1h-2z M8,13h2v1h-2z M16,13h2v1h-2z M20,13h2v1h-2z M2,14h2v1h-2z M8,14h4v1h-4z M14,14h4v1h-4z M22,14h2v1h-2z M0,15h4v1h-4z M10,15h2v1h-2z M14,15h2v1h-2z M22,15h2v1h-2z M0,16h2v1h-2z M10,16h2v1h-2z M14,16h2v1h-2z M22,16h2v1h-2z" fill="#ffaa33" />
@@ -581,47 +576,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-  }
-
-  .modal-traffic-lights {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin-right: 4px;
-  }
-
-  .window-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-    padding: 0;
-    border: none;
-    cursor: default;
-    transition: filter 0.15s ease;
-  }
-
-  .dot-close {
-    background: #ff5f56;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
-    cursor: pointer;
-  }
-
-  .dot-minimize {
-    background: #ffbd2e;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  }
-
-  .dot-zoom {
-    background: #27c93f;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  }
-
-  .modal-traffic-lights:hover .window-dot {
-    filter: brightness(1.08);
   }
 
   .help-badge-icon {
