@@ -1256,9 +1256,9 @@
     display: none;
   }
   .right-panel {
-    flex: 0 0 225px;
-    width: 225px;
-    min-width: 225px;
+    flex: 0 0 275px;
+    width: 275px;
+    min-width: 275px;
     border-left: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
@@ -1278,16 +1278,17 @@
     align-items: center;
     background: rgba(18, 18, 22, 0.95);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 6px 6px;
+    padding: 5px 6px;
     gap: 3px;
     flex-shrink: 0;
   }
   .tab-btn {
     flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
     padding: 5px 6px;
     background: transparent;
     border: 1px solid transparent;
@@ -1297,6 +1298,7 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.12s ease;
+    white-space: nowrap;
   }
   .tab-btn:hover {
     background: rgba(255, 255, 255, 0.06);
@@ -1312,6 +1314,7 @@
   .tab-icon {
     font-size: 11px;
     line-height: 1;
+    flex-shrink: 0;
   }
   .tab-dot {
     width: 7px;
@@ -1329,6 +1332,7 @@
     border-radius: 999px;
     font-family: ui-monospace, monospace;
     line-height: 13px;
+    flex-shrink: 0;
   }
   .tab-btn.active .tab-badge {
     background: #0a84ff;
@@ -1346,6 +1350,7 @@
     align-items: center;
     justify-content: center;
     transition: all 0.12s ease;
+    flex-shrink: 0;
   }
   .tab-collapse-btn:hover {
     background: rgba(255, 255, 255, 0.08);
