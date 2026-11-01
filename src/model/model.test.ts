@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Graphic } from './graphic';
 import { Project } from './project';
 import { History } from './history';
-import { hexStrToRgb, rgbToHexStr, rgbHex } from './palette';
+import { hexStrToRgb, rgbToHexStr, rgbHex, getColorName } from './palette';
 
 describe('Palette & RGB', () => {
   it('converts hex to RGB and back', () => {
@@ -643,6 +643,8 @@ describe('Clipboard and Copy & Paste', () => {
     expect(drean).toBeDefined();
     expect(drean?.name).toBe('Drean 64');
     expect(drean?.colors.length).toBe(16);
+    expect(drean?.colors[13]).toEqual({ r: 255, g: 128, b: 0 });
+    expect(getColorName('drean-16', 13)).toBe('Orange');
 
     const pico = getBuiltinPalette('pico-8');
     expect(pico).toBeDefined();

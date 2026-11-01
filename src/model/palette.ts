@@ -98,7 +98,7 @@ export const DREAN_16_COLORS: Rgb[] = [
   rgbHex(0x008080), // 10: Teal
   rgbHex(0x8a2be2), // 11: Violet
   rgbHex(0x87ceeb), // 12: Sky Blue
-  rgbHex(0xff8080), // 13: Light Red
+  rgbHex(0xff8000), // 13: Orange
   rgbHex(0xababab), // 14: Light Gray
   rgbHex(0x575757), // 15: Dark Gray
 ];
@@ -117,7 +117,7 @@ export const DREAN_COLOR_NAMES = [
   'Teal',
   'Violet',
   'Sky Blue',
-  'Light Red',
+  'Orange',
   'Light Gray',
   'Dark Gray',
 ];
