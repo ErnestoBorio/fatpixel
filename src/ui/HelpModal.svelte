@@ -337,7 +337,7 @@
                 <ul class="workflow-list">
                   <li><strong>Project (.pxp):</strong> Save complete projects (<kbd>{shortcuts.save}</kbd>) with all sprites, charsets, custom palettes, and configurations.</li>
                   <li><strong>PNG Export:</strong> Export high-resolution PNG images with pixel scaling and optional transparent backgrounds.</li>
-                  <li><strong>CSV Export & Import:</strong> Export or import raw pixel data in CSV format for integration into retro assemblers, cross-compilers, and custom engines.</li>
+                  <li><strong>CSV Export & Import:</strong> Export or import pixel data in CSV format. Sprites export as 2D pixel grids; Charsets export in sequential ROM order (all scanlines for Char 0, then Char 1, etc., with one palette index per pixel). Also auto-detects and imports petscii.krissz.hu packed byte charsets.</li>
                 </ul>
               </div>
             </section>

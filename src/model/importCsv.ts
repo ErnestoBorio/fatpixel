@@ -15,9 +15,13 @@ export interface CsvImportOptions {
 }
 
 /**
- * Parses comma-separated decimal pixel values into a Graphic sprite.
- * Detects dimensions from the number of columns and rows.
- * Automatically determines BPP and palette based on the maximum pixel index.
+ * Parses comma-separated decimal pixel values into a Graphic (Sprite or Charset).
+ *
+ * Supports:
+ * 1. Sequential ROM order Charsets (all scanlines for Char 0, then Char 1, ...,
+ *    with 1 value per pixel, e.g. 2048 lines of 8 values for a 256-char 8x8 font).
+ * 2. petscii.krissz.hu packed 1bpp byte format (e.g. 256 lines of 8 byte values).
+ * 3. Standard 2D Sprite pixel grids (e.g. 160x200 or custom width x height).
  */
 export function parseCsvToGraphic(
   csvText: string,
@@ -32,28 +36,112 @@ export function parseCsvToGraphic(
     throw new Error('CSV content is empty');
   }
 
-  const height = lines.length;
-  const row0 = lines[0].split(',').map((v) => parseInt(v.trim(), 10));
-  const width = row0.length;
-  if (width === 0) {
+  const rawRows: number[][] = [];
+  let maxVal = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i]
+      .split(',')
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0);
+    if (parts.length === 0) continue;
+    const rowVals = parts.map((v) => {
+      const n = parseInt(v, 10);
+      return isNaN(n) ? 0 : Math.max(0, n);
+    });
+    for (const val of rowVals) {
+      if (val > maxVal) maxVal = val;
+    }
+    rawRows.push(rowVals);
+  }
+
+  if (rawRows.length === 0 || rawRows[0].length === 0) {
     throw new Error('Invalid CSV: first row has 0 columns');
   }
 
+  const numRows = rawRows.length;
+  const numCols = rawRows[0].length;
+  const name = options?.name ?? 'imported_graphic';
+
+  // Detection 1: petscii.hu packed 1bpp bytes format (256 or 128 rows x 8 cols with byte values > 1)
+  // Each line is a character with 8 byte values (each byte packs 8 pixels MSB-first)
+  if (numCols === 8 && (numRows === 256 || numRows === 128) && maxVal > 1) {
+    const charCount = numRows;
+    const charWidth = 8;
+    const charHeight = 8;
+    const columns = 16;
+    const g = Graphic.newCharset(name, charWidth, charHeight, charCount, columns);
+    g.bpp = 1;
+    g.depth = 2;
+    g.palette = { kind: 'builtin', id: options?.paletteId ?? DEFAULT_PALETTE_ID };
+    g.slots = [0, 1];
+
+    for (let c = 0; c < charCount; c++) {
+      const row = rawRows[c];
+      for (let ly = 0; ly < 8; ly++) {
+        const byteVal = ly < row.length ? row[ly] : 0;
+        for (let lx = 0; lx < 8; lx++) {
+          const bit = (byteVal >> (7 - lx)) & 1;
+          g.setCharPixel(c, lx, ly, bit);
+        }
+      }
+    }
+    return g;
+  }
+
+  // Detection 2: Sequential unpacked Charset format (one value per pixel, sequence like ROMs: Char 0 row 0..ch-1, Char 1 row 0..ch-1, ...)
+  // Criteria: 8 columns wide and rows count is a multiple of 8, with at least 64 rows (8 characters)
+  if (numCols === 8 && numRows >= 64 && numRows % 8 === 0) {
+    const charWidth = 8;
+    const charHeight = 8;
+    const charCount = numRows / 8;
+    const columns = 16;
+    const g = Graphic.newCharset(name, charWidth, charHeight, charCount, columns);
+
+    let bpp: Bpp = options?.bpp ?? 1;
+    if (!options?.bpp) {
+      if (maxVal > 15) bpp = 8;
+      else if (maxVal > 7) bpp = 4;
+      else if (maxVal > 3) bpp = 3;
+      else if (maxVal > 1) bpp = 2;
+      else bpp = 1;
+    }
+    const depth = depthFromBpp(bpp);
+    const paletteId =
+      options?.paletteId ?? (bpp === 8 || maxVal > 16 ? 'vga-256' : DEFAULT_PALETTE_ID);
+
+    g.bpp = bpp;
+    g.depth = depth;
+    g.palette = { kind: 'builtin', id: paletteId };
+    g.slots = Array.from({ length: depth }, (_, i) => i);
+
+    for (let c = 0; c < charCount; c++) {
+      for (let ly = 0; ly < charHeight; ly++) {
+        const lineIdx = c * charHeight + ly;
+        const row = rawRows[lineIdx];
+        for (let lx = 0; lx < charWidth; lx++) {
+          const val = lx < row.length ? row[lx] : 0;
+          g.setCharPixel(c, lx, ly, val);
+        }
+      }
+    }
+    return g;
+  }
+
+  // Detection 3: Standard Sprite (2D pixel grid)
+  const width = numCols;
+  const height = numRows;
   const totalPixels = width * height;
   const pixels = new Uint8Array(totalPixels);
-  let maxVal = 0;
 
   for (let y = 0; y < height; y++) {
-    const vals = lines[y].split(',');
+    const row = rawRows[y];
     for (let x = 0; x < width; x++) {
-      const v = x < vals.length ? parseInt(vals[x].trim(), 10) : 0;
-      const num = isNaN(v) ? 0 : Math.max(0, Math.min(255, v));
-      pixels[y * width + x] = num;
-      if (num > maxVal) maxVal = num;
+      const v = x < row.length ? row[x] : 0;
+      pixels[y * width + x] = Math.max(0, Math.min(255, v));
     }
   }
 
-  // Determine BPP and Depth
   let bpp: Bpp = options?.bpp ?? 1;
   if (!options?.bpp) {
     if (maxVal > 15) bpp = 8;
@@ -64,21 +152,15 @@ export function parseCsvToGraphic(
   }
   const depth = depthFromBpp(bpp);
 
-  // Aspect ratio: if 160x200 or explicitly specified, use 2:1
   let aspect: PixelAspectRatio = options?.pixelAspectRatio ?? '1:1';
-  if (!options?.pixelAspectRatio) {
-    if (width === 160 && height === 200) {
-      aspect = '2:1';
-    }
+  if (!options?.pixelAspectRatio && width === 160 && height === 200) {
+    aspect = '2:1';
   }
   const pixelMode: PixelMode = aspect === '2:1' ? 'wide' : 'hires';
-
-  // Palette: default to vga-256 for 8bpp, otherwise default c64-pepto
   const paletteId =
     options?.paletteId ?? (bpp === 8 || maxVal > 16 ? 'vga-256' : DEFAULT_PALETTE_ID);
 
   const slots = Array.from({ length: depth }, (_, i) => i);
-  const name = options?.name ?? 'imported_sprite';
 
   return new Graphic(
     name,
@@ -95,9 +177,9 @@ export function parseCsvToGraphic(
 }
 
 /**
- * Loads a File object as a Graphic sprite from its CSV text content.
+ * Loads a File object as a Graphic (Sprite or Charset) from its CSV text content.
  */
-export async function loadCsvAsSprite(
+export async function loadCsvGraphic(
   file: File,
   options?: CsvImportOptions
 ): Promise<Graphic> {
@@ -105,3 +187,6 @@ export async function loadCsvAsSprite(
   const name = options?.name ?? file.name.replace(/\.[^/.]+$/, '');
   return parseCsvToGraphic(text, { ...options, name });
 }
+
+// Backward-compatible alias
+export const loadCsvAsSprite = loadCsvGraphic;

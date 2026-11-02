@@ -26,7 +26,8 @@
   } from './model/clipboard';
   import { SYSTEM_PRESETS } from './model/presets';
   import { loadPngAsSprite } from './model/importPng';
-  import { loadCsvAsSprite } from './model/importCsv';
+  import { loadCsvGraphic } from './model/importCsv';
+  import { exportGraphicToCsv } from './model/exportCsv';
   import { isMac, getShortcuts } from './platform';
 
   let shortcuts = $derived(getShortcuts());
@@ -420,9 +421,9 @@
     if (!file) return;
     input.value = '';
     try {
-      const sprite = await loadCsvAsSprite(file);
+      const graphic = await loadCsvGraphic(file);
       pushHistorySnapshot();
-      project.graphics = [...project.graphics, sprite];
+      project.graphics = [...project.graphics, graphic];
       activeGraphicIndex = project.graphics.length - 1;
       rightTab = 'graphics';
       userPickedTab = true;
@@ -459,17 +460,7 @@
   }
 
   function exportCsv() {
-    const w = activeGraphic.sheetWidth();
-    const h = activeGraphic.sheetHeight();
-    let csv = '';
-    for (let y = 0; y < h; y++) {
-      const row: number[] = [];
-      for (let x = 0; x < w; x++) {
-        row.push(activeGraphic.get(x, y) ?? 0);
-      }
-      csv += row.join(',') + '\n';
-    }
-
+    const csv = exportGraphicToCsv(activeGraphic);
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
