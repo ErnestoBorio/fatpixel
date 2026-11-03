@@ -9,7 +9,7 @@ import type { Graphic } from './graphic';
 export function createDefaultSprite(): Graphic {
   return parseCsvToGraphic(defaultSpriteCsv, {
     name: "Ghosts 'n' Goblins",
-    paletteId: 'vga-256',
+    paletteId: 'vga',
     pixelAspectRatio: '2:1',
     bpp: 8,
   });

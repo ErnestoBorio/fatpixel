@@ -5,7 +5,7 @@ import {
   type PixelAspectRatio,
   type PixelMode,
 } from './graphic';
-import { BUILTIN_PALETTES, DEFAULT_PALETTE_ID } from './palette';
+import { BUILTIN_PALETTES, DEFAULT_PALETTE_ID, getBuiltinPalette } from './palette';
 
 export interface CsvImportOptions {
   name?: string;
@@ -52,9 +52,11 @@ export function parseFatpixelCsvHeader(line: string): FatpixelCsvHeader | null {
   const pixelAspectRatio: PixelAspectRatio = parts[5].trim() === '2:1' ? '2:1' : '1:1';
 
   const palStr = parts[6].trim().toLowerCase();
-  const foundPal = BUILTIN_PALETTES.find(
-    (p) => p.name.toLowerCase() === palStr || p.id.toLowerCase() === palStr
-  );
+  const foundPal =
+    getBuiltinPalette(palStr) ??
+    BUILTIN_PALETTES.find(
+      (p) => p.name.toLowerCase() === palStr || p.id.toLowerCase() === palStr
+    );
   const paletteId = foundPal ? foundPal.id : DEFAULT_PALETTE_ID;
 
   return {

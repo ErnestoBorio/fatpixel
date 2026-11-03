@@ -39,7 +39,7 @@ export const SYSTEM_PRESETS: SystemPreset[] = [
   {
     id: 'gameboy',
     name: 'Game Boy',
-    paletteId: 'gameboy-4',
+    paletteId: 'gameboy',
     sprite: {
       bpp: 2,
       pixelAspectRatio: '1:1',
@@ -54,7 +54,7 @@ export const SYSTEM_PRESETS: SystemPreset[] = [
   {
     id: 'zx-spectrum',
     name: 'ZX Spectrum',
-    paletteId: 'zx-16',
+    paletteId: 'zx',
     sprite: {
       bpp: 4,
       pixelAspectRatio: '1:1',
@@ -69,7 +69,7 @@ export const SYSTEM_PRESETS: SystemPreset[] = [
   {
     id: 'ibm-pc',
     name: 'IBM PC',
-    paletteId: 'vga-256',
+    paletteId: 'vga',
     sprite: {
       bpp: 8,
       pixelAspectRatio: '1:1',
@@ -84,7 +84,7 @@ export const SYSTEM_PRESETS: SystemPreset[] = [
   {
     id: 'nes',
     name: 'NES',
-    paletteId: 'nes-64',
+    paletteId: 'nes',
     sprite: {
       bpp: 2,
       pixelAspectRatio: '1:1',

@@ -601,34 +601,34 @@ describe('Clipboard and Copy & Paste', () => {
       expect(isPowerOfTwo(pal.colors.length)).toBe(true);
     }
 
-    const vga = getBuiltinPalette('vga-256');
+    const vga = getBuiltinPalette('vga');
     expect(vga).toBeDefined();
     expect(vga?.colors.length).toBe(256);
 
-    const mono = getBuiltinPalette('mono-2');
+    const mono = getBuiltinPalette('mono');
     expect(mono).toBeDefined();
     expect(mono?.colors.length).toBe(2);
 
-    const cgaCool = getBuiltinPalette('cga-cool-4');
+    const cgaCool = getBuiltinPalette('cga-cool');
     expect(cgaCool).toBeDefined();
     expect(cgaCool?.colors.length).toBe(4);
 
-    const cgaWarm = getBuiltinPalette('cga-warm-4');
+    const cgaWarm = getBuiltinPalette('cga-warm');
     expect(cgaWarm).toBeDefined();
     expect(cgaWarm?.colors.length).toBe(4);
 
-    const gb = getBuiltinPalette('gameboy-4');
+    const gb = getBuiltinPalette('gameboy');
     expect(gb).toBeDefined();
     expect(gb?.colors.length).toBe(4);
     // 00 is brightest (Lightest Green) and 11 is darkest (Darkest Green)
     expect(gb?.colors[0]).toEqual({ r: 0x9b, g: 0xbc, b: 0x0f });
     expect(gb?.colors[3]).toEqual({ r: 0x0f, g: 0x38, b: 0x0f });
 
-    const teletext = getBuiltinPalette('teletext-8');
+    const teletext = getBuiltinPalette('teletext');
     expect(teletext).toBeDefined();
     expect(teletext?.colors.length).toBe(8);
 
-    const zx = getBuiltinPalette('zx-16');
+    const zx = getBuiltinPalette('zx');
     expect(zx).toBeDefined();
     expect(zx?.colors.length).toBe(16);
     // Dark black and light black are just black: #000000
@@ -639,50 +639,56 @@ describe('Clipboard and Copy & Paste', () => {
     // Light white is pure white (255, 255, 255)
     expect(zx?.colors[15]).toEqual({ r: 0xff, g: 0xff, b: 0xff });
 
-    const drean = getBuiltinPalette('drean-16');
+    const drean = getBuiltinPalette('drean-64');
     expect(drean).toBeDefined();
     expect(drean?.name).toBe('Drean 64');
     expect(drean?.colors.length).toBe(16);
     expect(drean?.colors[13]).toEqual({ r: 255, g: 128, b: 0 });
-    expect(getColorName('drean-16', 13)).toBe('Orange');
+    expect(getColorName('drean-64', 13)).toBe('Orange');
 
-    const pico = getBuiltinPalette('pico-8');
+    const pico = getBuiltinPalette('pico');
     expect(pico).toBeDefined();
     expect(pico?.colors.length).toBe(16);
 
-    const ega = getBuiltinPalette('ega-16');
+    const ega = getBuiltinPalette('ega');
     expect(ega).toBeDefined();
     expect(ega?.colors.length).toBe(16);
 
-    const msx = getBuiltinPalette('msx-16');
+    const msx = getBuiltinPalette('msx');
     expect(msx).toBeDefined();
     expect(msx?.colors.length).toBe(16);
 
-    const apple = getBuiltinPalette('apple-ii-16');
+    const apple = getBuiltinPalette('apple-ii');
     expect(apple).toBeDefined();
     expect(apple?.colors.length).toBe(16);
 
-    const amiga = getBuiltinPalette('amiga-32');
+    const amiga = getBuiltinPalette('amiga');
     expect(amiga).toBeDefined();
     expect(amiga?.colors.length).toBe(32);
 
-    const nes = getBuiltinPalette('nes-64');
+    const nes = getBuiltinPalette('nes');
     expect(nes).toBeDefined();
     expect(nes?.colors.length).toBe(64);
 
-    const sms = getBuiltinPalette('sms-64');
+    const sms = getBuiltinPalette('sms');
     expect(sms).toBeDefined();
     expect(sms?.colors.length).toBe(64);
 
     // Legacy aliases
-    expect(getBuiltinPalette('cga-4')?.id).toBe('cga-cool-4');
-    expect(getBuiltinPalette('zx-8')?.id).toBe('zx-16');
+    expect(getBuiltinPalette('cga-4')?.id).toBe('cga-cool');
+    expect(getBuiltinPalette('cga-cool-4')?.id).toBe('cga-cool');
+    expect(getBuiltinPalette('zx-8')?.id).toBe('zx');
+    expect(getBuiltinPalette('zx-16')?.id).toBe('zx');
+    expect(getBuiltinPalette('drean-16')?.id).toBe('drean-64');
+    expect(getBuiltinPalette('vga-256')?.id).toBe('vga');
+    expect(getBuiltinPalette('pico-8')?.id).toBe('pico');
+    expect(getBuiltinPalette('nes-64')?.id).toBe('nes');
   });
 
   it('renders direct color in slotColor when palette size matches BPP capacity', async () => {
     const { getBuiltinPalette } = await import('./palette');
     const { slotColor } = await import('./render');
-    const cga = getBuiltinPalette('cga-cool-4')!;
+    const cga = getBuiltinPalette('cga-cool')!;
 
     const g = Graphic.newSprite('CgaSprite', 4, 4);
     g.setBpp(2); // 2bpp -> 4 colors, matches cga 4 colors

@@ -1,5 +1,5 @@
 import type { Graphic } from './graphic';
-import { BUILTIN_PALETTES } from './palette';
+import { BUILTIN_PALETTES, getBuiltinPalette } from './palette';
 
 /**
  * Formats the standard FatPixel metadata header for CSV exports.
@@ -19,7 +19,9 @@ export function formatFatpixelCsvHeader(graphic: Graphic): string {
 
   let paletteName = 'Commodore 64';
   if (graphic.palette.kind === 'builtin') {
-    const found = BUILTIN_PALETTES.find((p) => p.id === graphic.palette.id);
+    const found =
+      getBuiltinPalette(graphic.palette.id) ??
+      BUILTIN_PALETTES.find((p) => p.id === graphic.palette.id);
     paletteName = found ? found.name : graphic.palette.id;
   } else {
     paletteName = 'Custom';

@@ -43,7 +43,7 @@ export function createGraphicFromRgba(
   height: number,
   rgbaData: Uint8ClampedArray | Uint8Array,
   palette: Rgb[] = VGA_256_COLORS,
-  paletteId = 'vga-256',
+  paletteId = 'vga',
   aspect: PixelAspectRatio = '1:1'
 ): Graphic {
   const totalPixels = width * height;
@@ -100,7 +100,7 @@ export function createCharsetFromRgbaSheet(
   charHeight: number,
   rgbaData: Uint8ClampedArray | Uint8Array,
   palette: Rgb[] = VGA_256_COLORS,
-  paletteId = 'vga-256',
+  paletteId = 'vga',
   aspect: PixelAspectRatio = '1:1'
 ): Graphic {
   const columns = Math.max(1, Math.floor(sheetWidth / charWidth));

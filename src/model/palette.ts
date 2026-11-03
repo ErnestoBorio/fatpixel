@@ -522,86 +522,99 @@ export const BUILTIN_PALETTES: Palette[] = [
     colors: C64_PEPTO_COLORS,
   },
   {
-    id: 'drean-16',
+    id: 'drean-64',
     name: 'Drean 64',
     colors: DREAN_16_COLORS,
   },
   {
-    id: 'zx-16',
+    id: 'zx',
     name: 'ZX Spectrum',
     colors: ZX_16_COLORS,
   },
   {
-    id: 'pico-8',
+    id: 'pico',
     name: 'PICO-8',
     colors: PICO_8_COLORS,
   },
   {
-    id: 'ega-16',
+    id: 'ega',
     name: 'EGA',
     colors: EGA_16_COLORS,
   },
   {
-    id: 'msx-16',
+    id: 'msx',
     name: 'MSX',
     colors: MSX_16_COLORS,
   },
   {
-    id: 'apple-ii-16',
+    id: 'apple-ii',
     name: 'Apple II',
     colors: APPLE_II_16_COLORS,
   },
   {
-    id: 'amiga-32',
+    id: 'amiga',
     name: 'Commodore Amiga',
     colors: AMIGA_32_COLORS,
   },
   {
-    id: 'nes-64',
+    id: 'nes',
     name: 'NES',
     colors: NES_64_COLORS,
   },
   {
-    id: 'sms-64',
+    id: 'sms',
     name: 'Sega Master System',
     colors: SEGA_MASTER_SYSTEM_64_COLORS,
   },
   {
-    id: 'vga-256',
+    id: 'vga',
     name: 'VGA',
     colors: VGA_256_COLORS,
   },
   {
-    id: 'teletext-8',
+    id: 'teletext',
     name: 'Teletext',
     colors: TELETEXT_8_COLORS,
   },
   {
-    id: 'cga-cool-4',
+    id: 'cga-cool',
     name: 'CGA Cool',
     colors: CGA_COOL_COLORS,
   },
   {
-    id: 'cga-warm-4',
+    id: 'cga-warm',
     name: 'CGA Warm',
     colors: CGA_WARM_COLORS,
   },
   {
-    id: 'gameboy-4',
+    id: 'gameboy',
     name: 'Game Boy',
     colors: GAMEBOY_4_COLORS,
   },
   {
-    id: 'mono-2',
+    id: 'mono',
     name: 'Monochrome',
     colors: MONO_2_COLORS,
   },
 ];
 
 export function getBuiltinPalette(id: string): Palette | undefined {
-  if (id === 'cga-4') return BUILTIN_PALETTES.find((p) => p.id === 'cga-cool-4');
-  if (id === 'zx-8') return BUILTIN_PALETTES.find((p) => p.id === 'zx-16');
-  if (id === 'nes') return BUILTIN_PALETTES.find((p) => p.id === 'nes-64');
+  if (id === 'drean-16') return BUILTIN_PALETTES.find((p) => p.id === 'drean-64');
+  if (id === 'zx-16' || id === 'zx-8' || id === 'zx-spectrum') return BUILTIN_PALETTES.find((p) => p.id === 'zx');
+  if (id === 'pico-8') return BUILTIN_PALETTES.find((p) => p.id === 'pico');
+  if (id === 'ega-16') return BUILTIN_PALETTES.find((p) => p.id === 'ega');
+  if (id === 'msx-16') return BUILTIN_PALETTES.find((p) => p.id === 'msx');
+  if (id === 'apple-ii-16') return BUILTIN_PALETTES.find((p) => p.id === 'apple-ii');
+  if (id === 'amiga-32') return BUILTIN_PALETTES.find((p) => p.id === 'amiga');
+  if (id === 'nes-64') return BUILTIN_PALETTES.find((p) => p.id === 'nes');
+  if (id === 'sms-64') return BUILTIN_PALETTES.find((p) => p.id === 'sms');
+  if (id === 'vga-256') return BUILTIN_PALETTES.find((p) => p.id === 'vga');
+  if (id === 'teletext-8') return BUILTIN_PALETTES.find((p) => p.id === 'teletext');
+  if (id === 'cga-cool-4' || id === 'cga-4') return BUILTIN_PALETTES.find((p) => p.id === 'cga-cool');
+  if (id === 'cga-warm-4') return BUILTIN_PALETTES.find((p) => p.id === 'cga-warm');
+  if (id === 'gameboy-4') return BUILTIN_PALETTES.find((p) => p.id === 'gameboy');
+  if (id === 'mono-2') return BUILTIN_PALETTES.find((p) => p.id === 'mono');
+  if (id === 'c64') return BUILTIN_PALETTES.find((p) => p.id === DEFAULT_PALETTE_ID);
   return BUILTIN_PALETTES.find((p) => p.id === id);
 }
 
@@ -610,40 +623,40 @@ export function defaultPalette(): Palette {
 }
 
 export function getColorName(paletteId: string, colorIndex: number): string {
-  if (paletteId === 'drean-16') {
+  if (paletteId === 'drean-64' || paletteId === 'drean-16') {
     return DREAN_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === DEFAULT_PALETTE_ID) {
+  if (paletteId === DEFAULT_PALETTE_ID || paletteId === 'c64') {
     return C64_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'zx-16' || paletteId === 'zx-8') {
+  if (paletteId === 'zx' || paletteId === 'zx-16' || paletteId === 'zx-8') {
     return ZX_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'pico-8') {
+  if (paletteId === 'pico' || paletteId === 'pico-8') {
     return PICO_8_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'ega-16') {
+  if (paletteId === 'ega' || paletteId === 'ega-16') {
     return EGA_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'msx-16') {
+  if (paletteId === 'msx' || paletteId === 'msx-16') {
     return MSX_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'apple-ii-16') {
+  if (paletteId === 'apple-ii' || paletteId === 'apple-ii-16') {
     return APPLE_II_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'cga-cool-4' || paletteId === 'cga-4') {
+  if (paletteId === 'cga-cool' || paletteId === 'cga-cool-4' || paletteId === 'cga-4') {
     return CGA_COOL_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'cga-warm-4') {
+  if (paletteId === 'cga-warm' || paletteId === 'cga-warm-4') {
     return CGA_WARM_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'teletext-8') {
+  if (paletteId === 'teletext' || paletteId === 'teletext-8') {
     return TELETEXT_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'amiga-32') {
+  if (paletteId === 'amiga' || paletteId === 'amiga-32') {
     return AMIGA_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
-  if (paletteId === 'gameboy-4') {
+  if (paletteId === 'gameboy' || paletteId === 'gameboy-4') {
     return GAMEBOY_COLOR_NAMES[colorIndex] ?? `Color #${colorIndex}`;
   }
   return `Color #${colorIndex}`;

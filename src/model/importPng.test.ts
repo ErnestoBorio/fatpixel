@@ -43,7 +43,7 @@ describe('importPng module', () => {
     expect(sprite.depth).toBe(256);
     expect(sprite.bpp).toBe(8);
     expect(sprite.pixelAspectRatio).toBe('1:1');
-    expect(sprite.palette).toEqual({ kind: 'builtin', id: 'vga-256' });
+    expect(sprite.palette).toEqual({ kind: 'builtin', id: 'vga' });
     expect(sprite.transparentSlot).toBe(0);
 
     // [0,0] red -> VGA red index

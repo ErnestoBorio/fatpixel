@@ -17,7 +17,7 @@
   let charWidth = $state<number>(8);
   let charHeight = $state<number>(8);
   let aspect = $state<PixelAspectRatio>('1:1');
-  let paletteId = $state<string>('vga-256');
+  let paletteId = $state<string>('vga');
 
   // When imageInfo changes, pick smart defaults
   $effect(() => {
@@ -33,7 +33,7 @@
         mode = 'sprite';
       }
       aspect = (w === 160 && h === 200) ? '2:1' : '1:1';
-      paletteId = 'vga-256';
+      paletteId = 'vga';
     }
   });
 

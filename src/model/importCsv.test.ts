@@ -39,7 +39,7 @@ describe('importCsv', () => {
     expect(g.height).toBe(2);
     expect(g.bpp).toBe(8);
     expect(g.depth).toBe(256);
-    expect(g.palette.id).toBe('vga-256');
+    expect(g.palette.id).toBe('vga');
     expect(g.get(0, 0)).toBe(16);
     expect(g.get(2, 0)).toBe(250);
   });
@@ -52,7 +52,7 @@ describe('importCsv', () => {
     expect(sprite.bpp).toBe(8);
     expect(sprite.depth).toBe(256);
     expect(sprite.pixelAspectRatio).toBe('2:1');
-    expect(sprite.palette.id).toBe('vga-256');
+    expect(sprite.palette.id).toBe('vga');
     expect(sprite.pixels.length).toBe(160 * 200);
 
     // Verify key pixel indices
@@ -69,7 +69,7 @@ describe('importCsv', () => {
     expect(initialGraphic.height).toBe(200);
     expect(initialGraphic.bpp).toBe(8);
     expect(initialGraphic.pixelAspectRatio).toBe('2:1');
-    expect(initialGraphic.palette.id).toBe('vga-256');
+    expect(initialGraphic.palette.id).toBe('vga');
   });
 
   it('throws an error on empty CSV', () => {
@@ -87,7 +87,7 @@ describe('importCsv', () => {
 
   it('exports and imports a Charset with # Fatpixel header in sequential ROM order', () => {
     const charset = Graphic.newCharset('PETSCII', 8, 8, 256, 16);
-    charset.palette = { kind: 'builtin', id: 'drean-16' };
+    charset.palette = { kind: 'builtin', id: 'drean-64' };
     charset.pixelAspectRatio = '1:1';
     // Draw a pattern in Char 0
     charset.setCharPixel(0, 0, 0, 1);
@@ -120,7 +120,7 @@ describe('importCsv', () => {
     expect(imported.height).toBe(8);
     expect(imported.bpp).toBe(1);
     expect(imported.pixelAspectRatio).toBe('1:1');
-    expect(imported.palette.id).toBe('drean-16');
+    expect(imported.palette.id).toBe('drean-64');
     expect(imported.charsetInfo()?.charCount).toBe(256);
     expect(imported.getCharPixel(0, 0, 0)).toBe(1);
     expect(imported.getCharPixel(0, 7, 7)).toBe(1);

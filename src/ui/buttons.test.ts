@@ -70,7 +70,7 @@ describe('App Graphic actions and mode switching', () => {
 
     // Switch palette to VGA 256 so 8 bpp is enabled and active
     if (palSelect) {
-      palSelect.value = 'vga-256';
+      palSelect.value = 'vga';
       palSelect.dispatchEvent(new Event('change', { bubbles: true }));
       flushSync();
     }
@@ -474,7 +474,7 @@ describe('App Graphic actions and mode switching', () => {
 
     // Switch to Amiga 32
     if (palSelect) {
-      palSelect.value = 'amiga-32';
+      palSelect.value = 'amiga';
       palSelect.dispatchEvent(new Event('change', { bubbles: true }));
       flushSync();
     }
@@ -486,7 +486,7 @@ describe('App Graphic actions and mode switching', () => {
 
     // Switch to NES 64
     if (palSelect) {
-      palSelect.value = 'nes-64';
+      palSelect.value = 'nes';
       palSelect.dispatchEvent(new Event('change', { bubbles: true }));
       flushSync();
     }
@@ -497,7 +497,7 @@ describe('App Graphic actions and mode switching', () => {
 
     // Switch to SMS 64
     if (palSelect) {
-      palSelect.value = 'sms-64';
+      palSelect.value = 'sms';
       palSelect.dispatchEvent(new Event('change', { bubbles: true }));
       flushSync();
     }
@@ -510,19 +510,19 @@ describe('App Graphic actions and mode switching', () => {
 
     // Check palette names
     if (palSelect) {
-      const vgaOption = Array.from(palSelect.options).find((o) => o.value === 'vga-256');
+      const vgaOption = Array.from(palSelect.options).find((o) => o.value === 'vga');
       expect(vgaOption?.textContent).toBe('VGA');
 
-      const egaOption = Array.from(palSelect.options).find((o) => o.value === 'ega-16');
+      const egaOption = Array.from(palSelect.options).find((o) => o.value === 'ega');
       expect(egaOption?.textContent).toBe('EGA');
 
-      const msxOption = Array.from(palSelect.options).find((o) => o.value === 'msx-16');
+      const msxOption = Array.from(palSelect.options).find((o) => o.value === 'msx');
       expect(msxOption?.textContent).toBe('MSX');
 
-      const teletextOption = Array.from(palSelect.options).find((o) => o.value === 'teletext-8');
+      const teletextOption = Array.from(palSelect.options).find((o) => o.value === 'teletext');
       expect(teletextOption?.textContent).toBe('Teletext');
 
-      palSelect.value = 'vga-256';
+      palSelect.value = 'vga';
       palSelect.dispatchEvent(new Event('change', { bubbles: true }));
       flushSync();
     }
