@@ -73,8 +73,10 @@ describe('importCsv', () => {
     expect(() => parseCsvToGraphic('')).toThrow('empty');
   });
 
-  it('exports and imports a Charset in sequential ROM order (one value per pixel)', () => {
-    const charset = Graphic.newCharset('test_font', 8, 8, 256, 16);
+  it('exports and imports a Charset with # Fatpixel header in sequential ROM order', () => {
+    const charset = Graphic.newCharset('PETSCII', 8, 8, 256, 16);
+    charset.palette = { kind: 'builtin', id: 'drean-16' };
+    charset.pixelAspectRatio = '1:1';
     // Draw a pattern in Char 0
     charset.setCharPixel(0, 0, 0, 1);
     charset.setCharPixel(0, 7, 7, 1);
@@ -84,28 +86,62 @@ describe('importCsv', () => {
 
     const csv = exportGraphicToCsv(charset);
     const lines = csv.trim().split('\n');
-    expect(lines.length).toBe(256 * 8); // 2048 scanlines total
+    expect(lines.length).toBe(1 + 256 * 8); // 1 header line + 2048 scanlines
 
-    // Verify Char 0 scanline 0 (line 0)
-    expect(lines[0]).toBe('1,0,0,0,0,0,0,0');
-    // Verify Char 0 scanline 7 (line 7)
-    expect(lines[7]).toBe('0,0,0,0,0,0,0,1');
-    // Verify Char 1 scanline 3 (line 8 + 3 = 11)
-    expect(lines[11]).toBe('0,0,0,1,0,0,0,0');
-    // Verify Char 1 scanline 4 (line 8 + 4 = 12)
-    expect(lines[12]).toBe('0,0,0,0,1,0,0,0');
+    // Verify header line
+    expect(lines[0]).toBe('# Fatpixel; charset; PETSCII; 8x8; 1bpp; 1:1; Drean 64');
 
-    // Round-trip import
-    const imported = parseCsvToGraphic(csv, { name: 'reimported_font' });
+    // Verify Char 0 scanline 0 (line 1)
+    expect(lines[1]).toBe('1,0,0,0,0,0,0,0');
+    // Verify Char 0 scanline 7 (line 1 + 7 = 8)
+    expect(lines[8]).toBe('0,0,0,0,0,0,0,1');
+    // Verify Char 1 scanline 3 (line 1 + 8 + 3 = 12)
+    expect(lines[12]).toBe('0,0,0,1,0,0,0,0');
+    // Verify Char 1 scanline 4 (line 1 + 8 + 4 = 13)
+    expect(lines[13]).toBe('0,0,0,0,1,0,0,0');
+
+    // Round-trip import without passing options: all metadata should be inferred from header!
+    const imported = parseCsvToGraphic(csv);
     expect(imported.isCharset()).toBe(true);
+    expect(imported.name).toBe('PETSCII');
     expect(imported.width).toBe(8);
     expect(imported.height).toBe(8);
+    expect(imported.bpp).toBe(1);
+    expect(imported.pixelAspectRatio).toBe('1:1');
+    expect(imported.palette.id).toBe('drean-16');
     expect(imported.charsetInfo()?.charCount).toBe(256);
     expect(imported.getCharPixel(0, 0, 0)).toBe(1);
     expect(imported.getCharPixel(0, 7, 7)).toBe(1);
     expect(imported.getCharPixel(1, 3, 3)).toBe(1);
     expect(imported.getCharPixel(1, 4, 4)).toBe(1);
     expect(imported.getCharPixel(0, 1, 0)).toBe(0);
+  });
+
+  it('exports and imports a Sprite with # Fatpixel header', () => {
+    const sprite = Graphic.newSprite('Dragon', 24, 21, 4, 'wide'); // 2bpp, 2:1
+    sprite.palette = { kind: 'builtin', id: 'c64-pepto' };
+    sprite.set(0, 0, 1);
+    sprite.set(23, 20, 3);
+
+    const csv = exportGraphicToCsv(sprite);
+    const lines = csv.trim().split('\n');
+    expect(lines.length).toBe(1 + 21); // 1 header line + 21 rows
+
+    // Verify header line
+    expect(lines[0]).toBe('# Fatpixel; sprite; Dragon; 24x21; 2bpp; 2:1; Commodore 64');
+    expect(lines[1].split(',').length).toBe(24);
+
+    // Round-trip import without options
+    const imported = parseCsvToGraphic(csv);
+    expect(imported.isSprite()).toBe(true);
+    expect(imported.name).toBe('Dragon');
+    expect(imported.width).toBe(24);
+    expect(imported.height).toBe(21);
+    expect(imported.bpp).toBe(2);
+    expect(imported.pixelAspectRatio).toBe('2:1');
+    expect(imported.palette.id).toBe('c64-pepto');
+    expect(imported.get(0, 0)).toBe(1);
+    expect(imported.get(23, 20)).toBe(3);
   });
 
   it('imports petscii.hu packed 1bpp bytes CSV format (256 lines x 8 bytes)', () => {

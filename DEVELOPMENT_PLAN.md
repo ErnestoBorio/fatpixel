@@ -31,8 +31,8 @@ A lightweight, browser-based pixel art editor specifically built for retro graph
 - [x] **Current I/O**:
   - PNG Export (32bpp RGBA).
   - PNG Import (auto-adapts colors to 8bpp VGA sprite with nearest Euclidean RGB matching).
-  - CSV Export (decimal slot index per pixel; row-major for sprites; sequential ROM order by character for charsets: all scanlines for Char 0, then Char 1, etc.).
-  - CSV Import (automatic detection: standard 2D sprite grids, sequential ROM order charsets, and petscii.krissz.hu packed 1bpp byte charsets like arcade fonts).
+  - CSV Export (prefixed with metadata header `# Fatpixel; <kind>; <name>; <size>; <bpp>; <aspect>; <palette>`; decimal slot index per pixel; row-major for sprites; sequential ROM order by character for charsets: all scanlines for Char 0, then Char 1, etc.).
+  - CSV Import (reads `# Fatpixel; ...` header if present to auto-configure kind, name, size, bpp, aspect ratio, and palette; otherwise auto-detects standard 2D sprite grids, sequential ROM order charsets, and petscii.krissz.hu packed 1bpp byte charsets).
 
 ---
 

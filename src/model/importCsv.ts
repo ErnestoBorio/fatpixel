@@ -5,7 +5,7 @@ import {
   type PixelAspectRatio,
   type PixelMode,
 } from './graphic';
-import { DEFAULT_PALETTE_ID } from './palette';
+import { BUILTIN_PALETTES, DEFAULT_PALETTE_ID } from './palette';
 
 export interface CsvImportOptions {
   name?: string;
@@ -14,33 +14,106 @@ export interface CsvImportOptions {
   bpp?: Bpp;
 }
 
+export interface FatpixelCsvHeader {
+  kind: 'charset' | 'sprite';
+  name: string;
+  width: number;
+  height: number;
+  bpp: Bpp;
+  pixelAspectRatio: PixelAspectRatio;
+  paletteId: string;
+}
+
+/**
+ * Parses the `# Fatpixel; ...` metadata header line if present.
+ * Format:
+ * # Fatpixel; <kind>; <name>; <size>; <bpp>; <aspect_ratio>; <palette_name>
+ */
+export function parseFatpixelCsvHeader(line: string): FatpixelCsvHeader | null {
+  const trimmed = line.trim();
+  if (!trimmed.toLowerCase().startsWith('# fatpixel;')) {
+    return null;
+  }
+  const parts = trimmed.substring(1).split(';').map((s) => s.trim());
+  if (parts.length < 7) {
+    return null;
+  }
+
+  const kind = parts[1].toLowerCase() === 'charset' ? 'charset' : 'sprite';
+  const name = parts[2] || 'imported_graphic';
+
+  const sizeParts = parts[3].toLowerCase().split('x');
+  const width = parseInt(sizeParts[0], 10) || 8;
+  const height = parseInt(sizeParts[1], 10) || width;
+
+  const bppNum = parseInt(parts[4].replace(/bpp/i, ''), 10);
+  const bpp: Bpp = ([1, 2, 3, 4, 8].includes(bppNum) ? bppNum : 1) as Bpp;
+
+  const pixelAspectRatio: PixelAspectRatio = parts[5].trim() === '2:1' ? '2:1' : '1:1';
+
+  const palStr = parts[6].trim().toLowerCase();
+  const foundPal = BUILTIN_PALETTES.find(
+    (p) => p.name.toLowerCase() === palStr || p.id.toLowerCase() === palStr
+  );
+  const paletteId = foundPal ? foundPal.id : DEFAULT_PALETTE_ID;
+
+  return {
+    kind,
+    name,
+    width,
+    height,
+    bpp,
+    pixelAspectRatio,
+    paletteId,
+  };
+}
+
 /**
  * Parses comma-separated decimal pixel values into a Graphic (Sprite or Charset).
  *
- * Supports:
- * 1. Sequential ROM order Charsets (all scanlines for Char 0, then Char 1, ...,
- *    with 1 value per pixel, e.g. 2048 lines of 8 values for a 256-char 8x8 font).
- * 2. petscii.krissz.hu packed 1bpp byte format (e.g. 256 lines of 8 byte values).
- * 3. Standard 2D Sprite pixel grids (e.g. 160x200 or custom width x height).
+ * If the first line contains a `# Fatpixel; ...` header, it is used to determine
+ * the graphic kind (sprite/charset), name, dimensions, bpp, aspect ratio, and palette.
+ *
+ * If no header is present, it falls back to automatic detection:
+ * 1. petscii.krissz.hu packed 1bpp bytes (256 lines x 8 bytes).
+ * 2. Sequential ROM order Charsets (multiple of 8 scanlines with 8 columns).
+ * 3. Standard 2D Sprite pixel grids.
  */
 export function parseCsvToGraphic(
   csvText: string,
   options?: CsvImportOptions
 ): Graphic {
-  const lines = csvText
+  const allLines = csvText
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !l.startsWith('#'));
+    .filter((l) => l.length > 0);
 
-  if (lines.length === 0) {
+  if (allLines.length === 0) {
     throw new Error('CSV content is empty');
+  }
+
+  // Look for # Fatpixel header in comment lines
+  let header: FatpixelCsvHeader | null = null;
+  for (const line of allLines) {
+    if (line.startsWith('#')) {
+      header = parseFatpixelCsvHeader(line);
+      if (header) break;
+    } else {
+      break;
+    }
+  }
+
+  // Filter data lines (skipping comments)
+  const dataLines = allLines.filter((l) => !l.startsWith('#'));
+  if (dataLines.length === 0) {
+    throw new Error('CSV contains no data rows');
   }
 
   const rawRows: number[][] = [];
   let maxVal = 0;
 
-  for (let i = 0; i < lines.length; i++) {
-    const parts = lines[i]
+  for (let i = 0; i < dataLines.length; i++) {
+    const parts = dataLines[i]
       .split(',')
       .map((v) => v.trim())
       .filter((v) => v.length > 0);
@@ -61,10 +134,77 @@ export function parseCsvToGraphic(
 
   const numRows = rawRows.length;
   const numCols = rawRows[0].length;
+
+  // ----------------------------------------------------
+  // Path A: Use # Fatpixel header metadata if present
+  // ----------------------------------------------------
+  if (header) {
+    const name = options?.name ?? header.name;
+    const bpp = options?.bpp ?? header.bpp;
+    const depth = depthFromBpp(bpp);
+    const aspect = options?.pixelAspectRatio ?? header.pixelAspectRatio;
+    const paletteId = options?.paletteId ?? header.paletteId;
+    const slots = Array.from({ length: depth }, (_, i) => i);
+
+    if (header.kind === 'charset') {
+      const charWidth = header.width;
+      const charHeight = header.height;
+      const charCount = Math.max(1, Math.floor(numRows / charHeight));
+      const columns = 16;
+      const g = Graphic.newCharset(name, charWidth, charHeight, charCount, columns);
+      g.bpp = bpp;
+      g.depth = depth;
+      g.pixelAspectRatio = aspect;
+      g.palette = { kind: 'builtin', id: paletteId };
+      g.slots = slots;
+
+      for (let c = 0; c < charCount; c++) {
+        for (let ly = 0; ly < charHeight; ly++) {
+          const lineIdx = c * charHeight + ly;
+          const row = rawRows[lineIdx] ?? [];
+          for (let lx = 0; lx < charWidth; lx++) {
+            const val = lx < row.length ? row[lx] : 0;
+            g.setCharPixel(c, lx, ly, val);
+          }
+        }
+      }
+      return g;
+    } else {
+      // Sprite
+      const width = header.width;
+      const height = header.height;
+      const pixelMode: PixelMode = aspect === '2:1' ? 'wide' : 'hires';
+      const pixels = new Uint8Array(width * height);
+
+      for (let y = 0; y < Math.min(height, numRows); y++) {
+        const row = rawRows[y];
+        for (let x = 0; x < Math.min(width, numCols); x++) {
+          const v = x < row.length ? row[x] : 0;
+          pixels[y * width + x] = Math.max(0, Math.min(255, v));
+        }
+      }
+
+      return new Graphic(
+        name,
+        { kind: 'sprite' },
+        width,
+        height,
+        depth,
+        pixelMode,
+        { kind: 'builtin', id: paletteId },
+        slots,
+        0,
+        pixels
+      );
+    }
+  }
+
+  // ----------------------------------------------------
+  // Path B: Fallback heuristics when no header is present
+  // ----------------------------------------------------
   const name = options?.name ?? 'imported_graphic';
 
   // Detection 1: petscii.hu packed 1bpp bytes format (256 or 128 rows x 8 cols with byte values > 1)
-  // Each line is a character with 8 byte values (each byte packs 8 pixels MSB-first)
   if (numCols === 8 && (numRows === 256 || numRows === 128) && maxVal > 1) {
     const charCount = numRows;
     const charWidth = 8;
@@ -89,8 +229,7 @@ export function parseCsvToGraphic(
     return g;
   }
 
-  // Detection 2: Sequential unpacked Charset format (one value per pixel, sequence like ROMs: Char 0 row 0..ch-1, Char 1 row 0..ch-1, ...)
-  // Criteria: 8 columns wide and rows count is a multiple of 8, with at least 64 rows (8 characters)
+  // Detection 2: Sequential unpacked Charset format (8 columns wide and rows multiple of 8, >= 64 rows)
   if (numCols === 8 && numRows >= 64 && numRows % 8 === 0) {
     const charWidth = 8;
     const charHeight = 8;

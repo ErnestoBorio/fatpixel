@@ -337,7 +337,7 @@
                 <ul class="workflow-list">
                   <li><strong>Project (.pxp):</strong> Save complete projects (<kbd>{shortcuts.save}</kbd>) with all sprites, charsets, custom palettes, and configurations.</li>
                   <li><strong>PNG Export:</strong> Export high-resolution PNG images with pixel scaling and optional transparent backgrounds.</li>
-                  <li><strong>CSV Export & Import:</strong> Export or import pixel data in CSV format. Sprites export as 2D pixel grids; Charsets export in sequential ROM order (all scanlines for Char 0, then Char 1, etc., with one palette index per pixel). Also auto-detects and imports petscii.krissz.hu packed byte charsets.</li>
+                  <li><strong>CSV Export & Import:</strong> Export or import pixel data in CSV format with metadata header (<code># Fatpixel; &lt;kind&gt;; &lt;name&gt;; &lt;size&gt;; &lt;bpp&gt;; &lt;aspect&gt;; &lt;palette&gt;</code>). Sprites export as 2D pixel grids; Charsets export in sequential ROM order (all scanlines for Char 0, then Char 1, etc., with one palette index per pixel). Importing automatically reads this header or falls back to smart auto-detection (including petscii.krissz.hu arcade byte fonts).</li>
                 </ul>
               </div>
             </section>
