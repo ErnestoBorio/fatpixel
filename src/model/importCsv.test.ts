@@ -6,14 +6,15 @@ import { createDefaultSprite } from './defaultSprite';
 import { Project } from './project';
 
 describe('importCsv', () => {
-  it('parses basic CSV pixel grid into a Graphic sprite', () => {
+  it('parses basic CSV pixel grid with Fatpixel header into a Graphic sprite', () => {
     const csv = `
+# Fatpixel; sprite; test_cross; 3x3; 1bpp; 1:1; Commodore 64
 0, 1, 0
 1, 0, 1
 0, 1, 0
     `.trim();
 
-    const g = parseCsvToGraphic(csv, { name: 'test_cross' });
+    const g = parseCsvToGraphic(csv);
     expect(g.name).toBe('test_cross');
     expect(g.width).toBe(3);
     expect(g.height).toBe(3);
@@ -25,13 +26,15 @@ describe('importCsv', () => {
     expect(g.get(1, 1)).toBe(0);
   });
 
-  it('detects 8bpp and VGA-256 palette for high color indices', () => {
+  it('reads 8bpp and VGA palette from header', () => {
     const csv = `
+# Fatpixel; sprite; test_vga; 3x2; 8bpp; 1:1; VGA
 16, 15, 250
 14, 62, 111
     `.trim();
 
     const g = parseCsvToGraphic(csv);
+    expect(g.name).toBe('test_vga');
     expect(g.width).toBe(3);
     expect(g.height).toBe(2);
     expect(g.bpp).toBe(8);
@@ -71,6 +74,15 @@ describe('importCsv', () => {
 
   it('throws an error on empty CSV', () => {
     expect(() => parseCsvToGraphic('')).toThrow('empty');
+  });
+
+  it('throws a descriptive error when CSV lacks the # Fatpixel header', () => {
+    const headerlessCsv = `
+0, 1, 0
+1, 0, 1
+0, 1, 0
+    `.trim();
+    expect(() => parseCsvToGraphic(headerlessCsv)).toThrow(/Missing required FatPixel header/i);
   });
 
   it('exports and imports a Charset with # Fatpixel header in sequential ROM order', () => {
@@ -143,46 +155,4 @@ describe('importCsv', () => {
     expect(imported.get(0, 0)).toBe(1);
     expect(imported.get(23, 20)).toBe(3);
   });
-
-  it('imports petscii.hu packed 1bpp bytes CSV format (256 lines x 8 bytes)', () => {
-    // 256 lines of 8 packed bytes (simulating petscii.krissz.hu arcade.csv)
-    const lines: string[] = [];
-    for (let c = 0; c < 256; c++) {
-      if (c === 65) {
-        // Character 'A' on line 66 / index 65:
-        // 56, 108, 198, 198, 254, 198, 198, 0
-        lines.push(' 56,108,198,198,254,198,198,  0,');
-      } else {
-        lines.push('  0,  0,  0,  0,  0,  0,  0,  0,');
-      }
-    }
-    const csv = lines.join('\n');
-    const imported = parseCsvToGraphic(csv, { name: 'petscii_arcade' });
-    expect(imported.isCharset()).toBe(true);
-    expect(imported.width).toBe(8);
-    expect(imported.height).toBe(8);
-    expect(imported.charsetInfo()?.charCount).toBe(256);
-    expect(imported.bpp).toBe(1);
-
-    // Verify unpacked bits for Character 'A' (index 65)
-    // Row 0: 56 = 00111000
-    expect(imported.getCharPixel(65, 0, 0)).toBe(0);
-    expect(imported.getCharPixel(65, 1, 0)).toBe(0);
-    expect(imported.getCharPixel(65, 2, 0)).toBe(1);
-    expect(imported.getCharPixel(65, 3, 0)).toBe(1);
-    expect(imported.getCharPixel(65, 4, 0)).toBe(1);
-    expect(imported.getCharPixel(65, 5, 0)).toBe(0);
-
-    // Row 4: 254 = 11111110
-    for (let x = 0; x < 7; x++) {
-      expect(imported.getCharPixel(65, x, 4)).toBe(1);
-    }
-    expect(imported.getCharPixel(65, 7, 4)).toBe(0);
-
-    // Row 7: 0
-    for (let x = 0; x < 8; x++) {
-      expect(imported.getCharPixel(65, x, 7)).toBe(0);
-    }
-  });
 });
-

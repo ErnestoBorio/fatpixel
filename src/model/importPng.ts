@@ -1,4 +1,4 @@
-import { Graphic } from './graphic';
+import { Graphic, type PixelAspectRatio, type PixelMode } from './graphic';
 import { VGA_256_COLORS, type Rgb } from './palette';
 
 /**
@@ -35,14 +35,16 @@ export function findClosestVgaColorIndex(
 
 /**
  * Creates an 8bpp Graphic sprite from raw RGBA pixel data, adapting all colors
- * to the VGA 256 palette.
+ * to the specified palette (default VGA 256).
  */
 export function createGraphicFromRgba(
   name: string,
   width: number,
   height: number,
   rgbaData: Uint8ClampedArray | Uint8Array,
-  palette: Rgb[] = VGA_256_COLORS
+  palette: Rgb[] = VGA_256_COLORS,
+  paletteId = 'vga-256',
+  aspect: PixelAspectRatio = '1:1'
 ): Graphic {
   const totalPixels = width * height;
   const pixels = new Uint8Array(totalPixels);
@@ -71,14 +73,16 @@ export function createGraphicFromRgba(
     }
   }
 
+  const pixelMode: PixelMode = aspect === '2:1' ? 'wide' : 'hires';
+
   return new Graphic(
     name,
     { kind: 'sprite' },
     width,
     height,
     256, // 8bpp
-    'hires', // 1:1 aspect ratio
-    { kind: 'builtin', id: 'vga-256' },
+    pixelMode,
+    { kind: 'builtin', id: paletteId },
     [], // 8bpp uses empty slots (direct palette index)
     hasTransparency ? 0 : null,
     pixels
@@ -86,10 +90,80 @@ export function createGraphicFromRgba(
 }
 
 /**
- * Reads a PNG File in the browser, draws it to an offscreen canvas,
- * and creates an 8bpp VGA Graphic sprite.
+ * Slices a 2D sheet image into a Charset Graphic (e.g. 128x128 into 256 8x8 characters).
  */
-export function loadPngAsSprite(file: File): Promise<Graphic> {
+export function createCharsetFromRgbaSheet(
+  name: string,
+  sheetWidth: number,
+  sheetHeight: number,
+  charWidth: number,
+  charHeight: number,
+  rgbaData: Uint8ClampedArray | Uint8Array,
+  palette: Rgb[] = VGA_256_COLORS,
+  paletteId = 'vga-256',
+  aspect: PixelAspectRatio = '1:1'
+): Graphic {
+  const columns = Math.max(1, Math.floor(sheetWidth / charWidth));
+  const rows = Math.max(1, Math.floor(sheetHeight / charHeight));
+  const charCount = columns * rows;
+
+  const g = Graphic.newCharset(name, charWidth, charHeight, charCount, columns);
+  g.bpp = 8;
+  g.depth = 256;
+  g.pixelAspectRatio = aspect;
+  g.palette = { kind: 'builtin', id: paletteId };
+  g.slots = [];
+
+  const colorCache = new Map<number, number>();
+
+  for (let c = 0; c < charCount; c++) {
+    const tileCol = c % columns;
+    const tileRow = Math.floor(c / columns);
+    const originX = tileCol * charWidth;
+    const originY = tileRow * charHeight;
+
+    for (let ly = 0; ly < charHeight; ly++) {
+      for (let lx = 0; lx < charWidth; lx++) {
+        const sx = originX + lx;
+        const sy = originY + ly;
+        if (sx < sheetWidth && sy < sheetHeight) {
+          const offset = (sy * sheetWidth + sx) * 4;
+          const r = rgbaData[offset];
+          const gVal = rgbaData[offset + 1];
+          const b = rgbaData[offset + 2];
+          const a = rgbaData[offset + 3];
+
+          let vgaIdx = 0;
+          if (a >= 128) {
+            const key = (r << 16) | (gVal << 8) | b;
+            const cached = colorCache.get(key);
+            if (cached !== undefined) {
+              vgaIdx = cached;
+            } else {
+              vgaIdx = findClosestVgaColorIndex(r, gVal, b, palette);
+              colorCache.set(key, vgaIdx);
+            }
+          }
+          g.setCharPixel(c, lx, ly, vgaIdx);
+        }
+      }
+    }
+  }
+
+  return g;
+}
+
+export interface DecodedImage {
+  name: string;
+  width: number;
+  height: number;
+  rgbaData: Uint8ClampedArray;
+}
+
+/**
+ * Reads a File in the browser and returns raw decoded RGBA pixel data with dimensions.
+ */
+export function readImageRgba(file: File): Promise<DecodedImage> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -125,9 +199,13 @@ export function loadPngAsSprite(file: File): Promise<Graphic> {
           ctx.drawImage(img, 0, 0);
           const imgData = ctx.getImageData(0, 0, width, height);
 
-          const cleanName = file.name.replace(/\.[^/.]+$/, '').trim() || 'Imported Sprite';
-          const sprite = createGraphicFromRgba(cleanName, width, height, imgData.data);
-          resolve(sprite);
+          const cleanName = file.name.replace(/\.[^/.]+$/, '').trim() || 'Imported Graphic';
+          resolve({
+            name: cleanName,
+            width,
+            height,
+            rgbaData: imgData.data,
+          });
         } catch (err) {
           reject(err);
         }
@@ -138,4 +216,13 @@ export function loadPngAsSprite(file: File): Promise<Graphic> {
 
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Reads a PNG File in the browser, draws it to an offscreen canvas,
+ * and creates an 8bpp VGA Graphic sprite.
+ */
+export async function loadPngAsSprite(file: File): Promise<Graphic> {
+  const decoded = await readImageRgba(file);
+  return createGraphicFromRgba(decoded.name, decoded.width, decoded.height, decoded.rgbaData);
 }

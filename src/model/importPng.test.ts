@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createGraphicFromRgba, findClosestVgaColorIndex } from './importPng';
+import { createGraphicFromRgba, createCharsetFromRgbaSheet, findClosestVgaColorIndex } from './importPng';
 import { VGA_256_COLORS } from './palette';
 
 describe('importPng module', () => {
@@ -89,5 +89,45 @@ describe('importPng module', () => {
     expect(sprite.bpp).toBe(2);
     expect(sprite.depth).toBe(4);
     expect(sprite.slots.length).toBe(4);
+  });
+
+  it('slices a 2D sheet image into a Charset (2D sheet slicing)', () => {
+    // Create a 16x8 sheet containing 2 characters of 8x8 (Char 0 on left, Char 1 on right)
+    // 16 pixels wide x 8 pixels high = 128 pixels * 4 = 512 bytes
+    const sheetW = 16;
+    const sheetH = 8;
+    const rgba = new Uint8ClampedArray(sheetW * sheetH * 4);
+
+    // In Char 0 (x: 0..7, y: 0..7), draw a red pixel at (0, 0)
+    rgba[0] = 255;
+    rgba[1] = 0;
+    rgba[2] = 0;
+    rgba[3] = 255;
+
+    // In Char 1 (x: 8..15, y: 0..7), draw a green pixel at local (1, 2) -> global (9, 2)
+    const char1GlobalIdx = (2 * sheetW + 9) * 4;
+    rgba[char1GlobalIdx] = 0;
+    rgba[char1GlobalIdx + 1] = 255;
+    rgba[char1GlobalIdx + 2] = 0;
+    rgba[char1GlobalIdx + 3] = 255;
+
+    const charset = createCharsetFromRgbaSheet('test_charset', sheetW, sheetH, 8, 8, rgba);
+    expect(charset.isCharset()).toBe(true);
+    expect(charset.width).toBe(8);
+    expect(charset.height).toBe(8);
+    expect(charset.charsetInfo()?.charCount).toBe(2);
+    expect(charset.charsetInfo()?.columns).toBe(2);
+
+    // Check Char 0 pixel (0, 0)
+    const c0p0 = VGA_256_COLORS[charset.getCharPixel(0, 0, 0)!];
+    expect(c0p0.r).toBeGreaterThan(150);
+
+    // Check Char 1 pixel (1, 2)
+    const c1p1 = VGA_256_COLORS[charset.getCharPixel(1, 1, 2)!];
+    expect(c1p1.g).toBeGreaterThan(150);
+
+    // Check other pixels are 0
+    expect(charset.getCharPixel(0, 1, 0)).toBe(0);
+    expect(charset.getCharPixel(1, 0, 0)).toBe(0);
   });
 });

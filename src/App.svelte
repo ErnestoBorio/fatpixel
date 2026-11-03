@@ -25,10 +25,11 @@
     getMemoryClipboard,
   } from './model/clipboard';
   import { SYSTEM_PRESETS } from './model/presets';
-  import { loadPngAsSprite } from './model/importPng';
+  import { readImageRgba, type DecodedImage } from './model/importPng';
   import { loadCsvGraphic } from './model/importCsv';
   import { exportGraphicToCsv } from './model/exportCsv';
   import { isMac, getShortcuts } from './platform';
+  import ImportModal from './ui/ImportModal.svelte';
 
   let shortcuts = $derived(getShortcuts());
 
@@ -92,6 +93,8 @@
   let saveAsInputName = $state('');
   let showHelpModal = $state(false);
   let activeHelpTab = $state<HelpTab>('overview');
+  let showImportModal = $state(false);
+  let pendingImageInfo = $state<DecodedImage | null>(null);
 
   function openHelp(tab: HelpTab = 'overview') {
     activeHelpTab = tab;
@@ -398,17 +401,22 @@
     if (!file) return;
     input.value = '';
     try {
-      const sprite = await loadPngAsSprite(file);
-      pushHistorySnapshot();
-      project.graphics = [...project.graphics, sprite];
-      activeGraphicIndex = project.graphics.length - 1;
-      rightTab = 'graphics';
-      userPickedTab = true;
-      notifyGraphicChange();
-      canvasRef?.fitToWindow();
+      const decoded = await readImageRgba(file);
+      pendingImageInfo = decoded;
+      showImportModal = true;
     } catch (err) {
       alert(`Failed to import PNG: ${err}`);
     }
+  }
+
+  function handleImportConfirm(graphic: Graphic) {
+    pushHistorySnapshot();
+    project.graphics = [...project.graphics, graphic];
+    activeGraphicIndex = project.graphics.length - 1;
+    rightTab = 'graphics';
+    userPickedTab = true;
+    notifyGraphicChange();
+    canvasRef?.fitToWindow();
   }
 
   function importCsv() {
@@ -651,6 +659,15 @@
       if (e.key === 'Escape') {
         e.preventDefault();
         showHelpModal = false;
+      }
+      return;
+    }
+
+    if (showImportModal) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        showImportModal = false;
+        pendingImageInfo = null;
       }
       return;
     }
@@ -1206,6 +1223,16 @@
     open={showHelpModal}
     bind:activeTab={activeHelpTab}
     onClose={() => (showHelpModal = false)}
+  />
+
+  <ImportModal
+    open={showImportModal}
+    imageInfo={pendingImageInfo}
+    onImport={handleImportConfirm}
+    onClose={() => {
+      showImportModal = false;
+      pendingImageInfo = null;
+    }}
   />
 </div>
 

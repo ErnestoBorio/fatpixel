@@ -69,15 +69,10 @@ export function parseFatpixelCsvHeader(line: string): FatpixelCsvHeader | null {
 }
 
 /**
- * Parses comma-separated decimal pixel values into a Graphic (Sprite or Charset).
+ * Parses a FatPixel CSV file into a Graphic (Sprite or Charset).
  *
- * If the first line contains a `# Fatpixel; ...` header, it is used to determine
- * the graphic kind (sprite/charset), name, dimensions, bpp, aspect ratio, and palette.
- *
- * If no header is present, it falls back to automatic detection:
- * 1. petscii.krissz.hu packed 1bpp bytes (256 lines x 8 bytes).
- * 2. Sequential ROM order Charsets (multiple of 8 scanlines with 8 columns).
- * 3. Standard 2D Sprite pixel grids.
+ * Strictly requires the standard FatPixel metadata header:
+ * `# Fatpixel; <kind>; <name>; <size>; <bpp>; <aspect_ratio>; <palette_name>`
  */
 export function parseCsvToGraphic(
   csvText: string,
@@ -103,6 +98,12 @@ export function parseCsvToGraphic(
     }
   }
 
+  if (!header) {
+    throw new Error(
+      "Unsupported CSV format: Missing required FatPixel header. Expected first line: '# Fatpixel; <kind>; <name>; <size>; <bpp>; <aspect_ratio>; <palette>'"
+    );
+  }
+
   // Filter data lines (skipping comments)
   const dataLines = allLines.filter((l) => !l.startsWith('#'));
   if (dataLines.length === 0) {
@@ -110,8 +111,6 @@ export function parseCsvToGraphic(
   }
 
   const rawRows: number[][] = [];
-  let maxVal = 0;
-
   for (let i = 0; i < dataLines.length; i++) {
     const parts = dataLines[i]
       .split(',')
@@ -122,9 +121,6 @@ export function parseCsvToGraphic(
       const n = parseInt(v, 10);
       return isNaN(n) ? 0 : Math.max(0, n);
     });
-    for (const val of rowVals) {
-      if (val > maxVal) maxVal = val;
-    }
     rawRows.push(rowVals);
   }
 
@@ -135,129 +131,29 @@ export function parseCsvToGraphic(
   const numRows = rawRows.length;
   const numCols = rawRows[0].length;
 
-  // ----------------------------------------------------
-  // Path A: Use # Fatpixel header metadata if present
-  // ----------------------------------------------------
-  if (header) {
-    const name = options?.name ?? header.name;
-    const bpp = options?.bpp ?? header.bpp;
-    const depth = depthFromBpp(bpp);
-    const aspect = options?.pixelAspectRatio ?? header.pixelAspectRatio;
-    const paletteId = options?.paletteId ?? header.paletteId;
-    const slots = Array.from({ length: depth }, (_, i) => i);
+  const name = options?.name ?? header.name;
+  const bpp = options?.bpp ?? header.bpp;
+  const depth = depthFromBpp(bpp);
+  const aspect = options?.pixelAspectRatio ?? header.pixelAspectRatio;
+  const paletteId = options?.paletteId ?? header.paletteId;
+  const slots = Array.from({ length: depth }, (_, i) => i);
 
-    if (header.kind === 'charset') {
-      const charWidth = header.width;
-      const charHeight = header.height;
-      const charCount = Math.max(1, Math.floor(numRows / charHeight));
-      const columns = 16;
-      const g = Graphic.newCharset(name, charWidth, charHeight, charCount, columns);
-      g.bpp = bpp;
-      g.depth = depth;
-      g.pixelAspectRatio = aspect;
-      g.palette = { kind: 'builtin', id: paletteId };
-      g.slots = slots;
-
-      for (let c = 0; c < charCount; c++) {
-        for (let ly = 0; ly < charHeight; ly++) {
-          const lineIdx = c * charHeight + ly;
-          const row = rawRows[lineIdx] ?? [];
-          for (let lx = 0; lx < charWidth; lx++) {
-            const val = lx < row.length ? row[lx] : 0;
-            g.setCharPixel(c, lx, ly, val);
-          }
-        }
-      }
-      return g;
-    } else {
-      // Sprite
-      const width = header.width;
-      const height = header.height;
-      const pixelMode: PixelMode = aspect === '2:1' ? 'wide' : 'hires';
-      const pixels = new Uint8Array(width * height);
-
-      for (let y = 0; y < Math.min(height, numRows); y++) {
-        const row = rawRows[y];
-        for (let x = 0; x < Math.min(width, numCols); x++) {
-          const v = x < row.length ? row[x] : 0;
-          pixels[y * width + x] = Math.max(0, Math.min(255, v));
-        }
-      }
-
-      return new Graphic(
-        name,
-        { kind: 'sprite' },
-        width,
-        height,
-        depth,
-        pixelMode,
-        { kind: 'builtin', id: paletteId },
-        slots,
-        0,
-        pixels
-      );
-    }
-  }
-
-  // ----------------------------------------------------
-  // Path B: Fallback heuristics when no header is present
-  // ----------------------------------------------------
-  const name = options?.name ?? 'imported_graphic';
-
-  // Detection 1: petscii.hu packed 1bpp bytes format (256 or 128 rows x 8 cols with byte values > 1)
-  if (numCols === 8 && (numRows === 256 || numRows === 128) && maxVal > 1) {
-    const charCount = numRows;
-    const charWidth = 8;
-    const charHeight = 8;
+  if (header.kind === 'charset') {
+    const charWidth = header.width;
+    const charHeight = header.height;
+    const charCount = Math.max(1, Math.floor(numRows / charHeight));
     const columns = 16;
     const g = Graphic.newCharset(name, charWidth, charHeight, charCount, columns);
-    g.bpp = 1;
-    g.depth = 2;
-    g.palette = { kind: 'builtin', id: options?.paletteId ?? DEFAULT_PALETTE_ID };
-    g.slots = [0, 1];
-
-    for (let c = 0; c < charCount; c++) {
-      const row = rawRows[c];
-      for (let ly = 0; ly < 8; ly++) {
-        const byteVal = ly < row.length ? row[ly] : 0;
-        for (let lx = 0; lx < 8; lx++) {
-          const bit = (byteVal >> (7 - lx)) & 1;
-          g.setCharPixel(c, lx, ly, bit);
-        }
-      }
-    }
-    return g;
-  }
-
-  // Detection 2: Sequential unpacked Charset format (8 columns wide and rows multiple of 8, >= 64 rows)
-  if (numCols === 8 && numRows >= 64 && numRows % 8 === 0) {
-    const charWidth = 8;
-    const charHeight = 8;
-    const charCount = numRows / 8;
-    const columns = 16;
-    const g = Graphic.newCharset(name, charWidth, charHeight, charCount, columns);
-
-    let bpp: Bpp = options?.bpp ?? 1;
-    if (!options?.bpp) {
-      if (maxVal > 15) bpp = 8;
-      else if (maxVal > 7) bpp = 4;
-      else if (maxVal > 3) bpp = 3;
-      else if (maxVal > 1) bpp = 2;
-      else bpp = 1;
-    }
-    const depth = depthFromBpp(bpp);
-    const paletteId =
-      options?.paletteId ?? (bpp === 8 || maxVal > 16 ? 'vga-256' : DEFAULT_PALETTE_ID);
-
     g.bpp = bpp;
     g.depth = depth;
+    g.pixelAspectRatio = aspect;
     g.palette = { kind: 'builtin', id: paletteId };
-    g.slots = Array.from({ length: depth }, (_, i) => i);
+    g.slots = slots;
 
     for (let c = 0; c < charCount; c++) {
       for (let ly = 0; ly < charHeight; ly++) {
         const lineIdx = c * charHeight + ly;
-        const row = rawRows[lineIdx];
+        const row = rawRows[lineIdx] ?? [];
         for (let lx = 0; lx < charWidth; lx++) {
           const val = lx < row.length ? row[lx] : 0;
           g.setCharPixel(c, lx, ly, val);
@@ -265,54 +161,34 @@ export function parseCsvToGraphic(
       }
     }
     return g;
-  }
+  } else {
+    // Sprite
+    const width = header.width;
+    const height = header.height;
+    const pixelMode: PixelMode = aspect === '2:1' ? 'wide' : 'hires';
+    const pixels = new Uint8Array(width * height);
 
-  // Detection 3: Standard Sprite (2D pixel grid)
-  const width = numCols;
-  const height = numRows;
-  const totalPixels = width * height;
-  const pixels = new Uint8Array(totalPixels);
-
-  for (let y = 0; y < height; y++) {
-    const row = rawRows[y];
-    for (let x = 0; x < width; x++) {
-      const v = x < row.length ? row[x] : 0;
-      pixels[y * width + x] = Math.max(0, Math.min(255, v));
+    for (let y = 0; y < Math.min(height, numRows); y++) {
+      const row = rawRows[y];
+      for (let x = 0; x < Math.min(width, numCols); x++) {
+        const v = x < row.length ? row[x] : 0;
+        pixels[y * width + x] = Math.max(0, Math.min(255, v));
+      }
     }
+
+    return new Graphic(
+      name,
+      { kind: 'sprite' },
+      width,
+      height,
+      depth,
+      pixelMode,
+      { kind: 'builtin', id: paletteId },
+      slots,
+      0,
+      pixels
+    );
   }
-
-  let bpp: Bpp = options?.bpp ?? 1;
-  if (!options?.bpp) {
-    if (maxVal > 15) bpp = 8;
-    else if (maxVal > 7) bpp = 4;
-    else if (maxVal > 3) bpp = 3;
-    else if (maxVal > 1) bpp = 2;
-    else bpp = 1;
-  }
-  const depth = depthFromBpp(bpp);
-
-  let aspect: PixelAspectRatio = options?.pixelAspectRatio ?? '1:1';
-  if (!options?.pixelAspectRatio && width === 160 && height === 200) {
-    aspect = '2:1';
-  }
-  const pixelMode: PixelMode = aspect === '2:1' ? 'wide' : 'hires';
-  const paletteId =
-    options?.paletteId ?? (bpp === 8 || maxVal > 16 ? 'vga-256' : DEFAULT_PALETTE_ID);
-
-  const slots = Array.from({ length: depth }, (_, i) => i);
-
-  return new Graphic(
-    name,
-    { kind: 'sprite' },
-    width,
-    height,
-    depth,
-    pixelMode,
-    { kind: 'builtin', id: paletteId },
-    slots,
-    0,
-    pixels
-  );
 }
 
 /**
@@ -327,5 +203,4 @@ export async function loadCsvGraphic(
   return parseCsvToGraphic(text, { ...options, name });
 }
 
-// Backward-compatible alias
 export const loadCsvAsSprite = loadCsvGraphic;
