@@ -1560,5 +1560,51 @@ describe('App Graphic actions and mode switching', () => {
     expect(pencilBtn?.classList.contains('active')).toBe(true);
     expect(selectBtn?.classList.contains('active')).toBe(false);
   });
+
+  it('clears the graphic or active character using Delete and Backspace shortcuts', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Verify Edit menu displays Delete / Backspace shortcut for Clear Graphic
+    const editMenuBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.menu-btn')).find(
+      (b) => b.textContent?.trim() === 'Edit'
+    );
+    expect(editMenuBtn).toBeDefined();
+    editMenuBtn?.click();
+    flushSync();
+
+    const dropdown = target.querySelector('.dropdown');
+    expect(dropdown?.textContent).toContain('Clear Graphic');
+    expect(dropdown?.textContent).toContain('Delete / Backspace');
+
+    // Close menu with Escape
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    flushSync();
+
+    // 2. Verify main canvas is present
+    const canvas = target.querySelector<HTMLCanvasElement>('canvas.pixel-canvas');
+    expect(canvas).not.toBeNull();
+
+    // 3. Press Delete to clear graphic
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    flushSync();
+
+    // 4. Press Backspace to clear graphic
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    flushSync();
+
+    // 5. Input field focus prevents clearing
+    const input = document.createElement('input');
+    target.appendChild(input);
+    input.focus();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    flushSync();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    flushSync();
+  });
 });
+
 

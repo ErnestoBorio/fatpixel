@@ -26,7 +26,7 @@ describe('platform detection and shortcuts', () => {
     expect(shortcuts.redo).toBe('⇧⌘Z');
     expect(shortcuts.copy).toBe('⌘C');
     expect(shortcuts.paste).toBe('⌘V');
-    expect(shortcuts.clear).toBe('⌘K');
+    expect(shortcuts.clear).toBe('Delete / Backspace');
     expect(shortcuts.invert).toBe('⌘I');
     expect(shortcuts.toggleTools).toBe('⌥1');
     expect(shortcuts.toggleProperties).toBe('⌥2');
@@ -43,7 +43,7 @@ describe('platform detection and shortcuts', () => {
     expect(shortcuts.redo).toBe('Ctrl+Y');
     expect(shortcuts.copy).toBe('Ctrl+C');
     expect(shortcuts.paste).toBe('Ctrl+V');
-    expect(shortcuts.clear).toBe('Ctrl+K');
+    expect(shortcuts.clear).toBe('Delete / Backspace');
     expect(shortcuts.invert).toBe('Ctrl+I');
     expect(shortcuts.toggleTools).toBe('Alt+1');
     expect(shortcuts.toggleProperties).toBe('Alt+2');

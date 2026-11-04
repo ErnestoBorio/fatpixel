@@ -136,7 +136,7 @@
     <button
       class="action-btn"
       onclick={() => onClear?.()}
-      title="Delete / Clear entire graphic (fill with background)"
+      title="Clear entire graphic (Delete / Backspace)"
     >
       🗑 Clear Graphic
     </button>

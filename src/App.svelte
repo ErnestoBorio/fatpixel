@@ -530,6 +530,7 @@
 
   function handleClear() {
     canvasRef?.commitFloatingPaste();
+    canvasRef?.deselect();
     pushHistorySnapshot();
     if (activeGraphic.isCharset()) {
       activeGraphic.clearChar(activeCharIndex);
@@ -661,6 +662,8 @@
       return;
     }
 
+    if (e.defaultPrevented) return;
+
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
 
     if (e.key === 'Escape' || e.code === 'Escape') {
@@ -682,6 +685,9 @@
         canvasRef.deleteSelection();
         return;
       }
+      e.preventDefault();
+      handleClear();
+      return;
     }
 
     if (e.key === 'F1') {
@@ -1038,6 +1044,7 @@
           saveNow();
         }}
         onHoverChange={(pt) => (hoverPt = pt)}
+        onClear={handleClear}
       />
     </main>
 

@@ -36,6 +36,7 @@
     onPixelChange,
     onStrokeEnd,
     onHoverChange,
+    onClear,
   } = $props<{
     graphic: Graphic;
     palette: Palette;
@@ -55,6 +56,7 @@
     onPixelChange?: () => void;
     onStrokeEnd?: () => void;
     onHoverChange?: (hover: { x: number; y: number } | null) => void;
+    onClear?: () => void;
   }>();
 
 
@@ -1195,6 +1197,11 @@
       if (selectionRect) {
         e.preventDefault();
         deleteSelection();
+        return;
+      }
+      if (onClear) {
+        e.preventDefault();
+        onClear();
         return;
       }
     }
