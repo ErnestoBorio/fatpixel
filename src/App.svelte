@@ -12,8 +12,7 @@
   import MenuBar from './ui/MenuBar.svelte';
   import StatusBar from './ui/StatusBar.svelte';
   import HelpModal, { type HelpTab } from './ui/HelpModal.svelte';
-  import { defaultPalette, rgbToHexStr } from './model/palette';
-  import { slotColor } from './model/render';
+  import { defaultPalette } from './model/palette';
   import {
     saveAllToStorage,
     loadAllFromStorage,
@@ -105,21 +104,7 @@
   let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1400);
   let showLeftPanel = $state(true);
   let showRightPanel = $state(true);
-  let isCompactHeight = $derived(windowHeight < 780);
-  let userPickedTab = $state(false);
-  let rightTab = $state<'palette' | 'graphics' | 'both'>('both');
 
-  $effect(() => {
-    if (!userPickedTab) {
-      rightTab = isCompactHeight ? 'palette' : 'both';
-    }
-  });
-
-  let activePrimaryHex = $derived.by(() => {
-    stateVersion;
-    const col = slotColor(activeGraphic, activePalette, primary);
-    return rgbToHexStr(col);
-  });
 
   let canvasRef: any = $state();
   let fileInputRef: HTMLInputElement;
@@ -413,8 +398,6 @@
     pushHistorySnapshot();
     project.graphics = [...project.graphics, graphic];
     activeGraphicIndex = project.graphics.length - 1;
-    rightTab = 'graphics';
-    userPickedTab = true;
     notifyGraphicChange();
     canvasRef?.fitToWindow();
   }
@@ -433,8 +416,6 @@
       pushHistorySnapshot();
       project.graphics = [...project.graphics, graphic];
       activeGraphicIndex = project.graphics.length - 1;
-      rightTab = 'graphics';
-      userPickedTab = true;
       notifyGraphicChange();
       canvasRef?.fitToWindow();
     } catch (err) {
@@ -977,16 +958,8 @@
     onDeselect={handleDeselect}
     onClear={handleClear}
     onInvert={handleInvert}
-    onNewSprite={() => {
-      rightTab = 'graphics';
-      userPickedTab = true;
-      addSprite();
-    }}
-    onNewCharset={() => {
-      rightTab = 'graphics';
-      userPickedTab = true;
-      addCharset();
-    }}
+    onNewSprite={addSprite}
+    onNewCharset={addCharset}
     onApplyPreset={handleApplyPreset}
     onZoomIn={() => canvasRef?.zoomIn()}
     onZoomOut={() => canvasRef?.zoomOut()}
@@ -1083,39 +1056,11 @@
 
     <!-- Right Side Panels (Palette & Graphics) -->
     <aside class="panel right-panel" class:collapsed={!showRightPanel}>
-      <div class="right-panel-tabs">
+      <div class="panel-header-compact">
+        <span class="panel-header-title">Properties</span>
         <button
           type="button"
-          class="tab-btn {rightTab === 'palette' ? 'active' : ''}"
-          onclick={() => { rightTab = 'palette'; userPickedTab = true; }}
-          title="Show Palette Panel"
-        >
-          <span class="tab-icon">🎨</span>
-          <span class="tab-text">Palette</span>
-          <span class="tab-dot" style="background-color: {activePrimaryHex};"></span>
-        </button>
-        <button
-          type="button"
-          class="tab-btn {rightTab === 'graphics' ? 'active' : ''}"
-          onclick={() => { rightTab = 'graphics'; userPickedTab = true; }}
-          title="Show Graphics & Sprites List"
-        >
-          <span class="tab-icon">🖼</span>
-          <span class="tab-text">Graphics</span>
-          <span class="tab-badge">{project.graphics.length}</span>
-        </button>
-        <button
-          type="button"
-          class="tab-btn tab-both {rightTab === 'both' ? 'active' : ''}"
-          onclick={() => { rightTab = 'both'; userPickedTab = true; }}
-          title="Split View: Show Both Palette & Graphics"
-        >
-          <span class="tab-icon">↕</span>
-          <span class="tab-text">Both</span>
-        </button>
-        <button
-          type="button"
-          class="tab-collapse-btn"
+          class="panel-collapse-btn"
           onclick={() => (showRightPanel = false)}
           title="Collapse Properties ({shortcuts.toggleProperties})"
           aria-label="Collapse Properties"
@@ -1125,43 +1070,29 @@
       </div>
 
       <div class="right-panel-content">
-        <div class="panel-view {rightTab === 'palette' || rightTab === 'both' ? '' : 'is-hidden'} {rightTab === 'both' ? 'is-split' : 'is-full'}">
-          <PalettePanel
-            graphic={activeGraphic}
-            palette={activePalette}
-            projectRevision={stateVersion}
-            bind:primary
-            bind:secondary
-            onBeforeChange={pushHistorySnapshot}
-            onColorChange={notifyGraphicChange}
-            onPaletteSelect={handlePaletteSelect}
-          />
-        </div>
-        {#if rightTab === 'both'}
-          <div class="panel-divider"></div>
-        {/if}
-        <div class="panel-view {rightTab === 'graphics' || rightTab === 'both' ? '' : 'is-hidden'} {rightTab === 'both' ? 'is-split' : 'is-full'}">
-          <GraphicsPanel
-            {project}
-            projectRevision={stateVersion}
-            bind:active={activeGraphicIndex}
-            onBeforeChange={pushHistorySnapshot}
-            onGraphicChange={notifyGraphicChange}
-            onAddSprite={() => {
-              rightTab = 'graphics';
-              userPickedTab = true;
-              addSprite();
-            }}
-            onAddCharset={() => {
-              rightTab = 'graphics';
-              userPickedTab = true;
-              addCharset();
-            }}
-            onDuplicateGraphic={duplicateGraphic}
-            onDeleteGraphic={deleteGraphic}
-            onReorderGraphics={reorderGraphics}
-          />
-        </div>
+        <PalettePanel
+          graphic={activeGraphic}
+          palette={activePalette}
+          projectRevision={stateVersion}
+          bind:primary
+          bind:secondary
+          onBeforeChange={pushHistorySnapshot}
+          onColorChange={notifyGraphicChange}
+          onPaletteSelect={handlePaletteSelect}
+        />
+        <div class="panel-divider"></div>
+        <GraphicsPanel
+          {project}
+          projectRevision={stateVersion}
+          bind:active={activeGraphicIndex}
+          onBeforeChange={pushHistorySnapshot}
+          onGraphicChange={notifyGraphicChange}
+          onAddSprite={addSprite}
+          onAddCharset={addCharset}
+          onDuplicateGraphic={duplicateGraphic}
+          onDeleteGraphic={deleteGraphic}
+          onReorderGraphics={reorderGraphics}
+        />
       </div>
     </aside>
   </div>
@@ -1291,89 +1222,7 @@
     margin: 2px 0;
     flex-shrink: 0;
   }
-  .right-panel-tabs {
-    display: flex;
-    align-items: center;
-    background: rgba(18, 18, 22, 0.95);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 5px 6px;
-    gap: 3px;
-    flex-shrink: 0;
-  }
-  .tab-btn {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 5px 6px;
-    background: transparent;
-    border: 1px solid transparent;
-    color: #a1a1a6;
-    font-size: 11px;
-    font-weight: 500;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.12s ease;
-    white-space: nowrap;
-  }
-  .tab-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f5f7;
-  }
-  .tab-btn.active {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: rgba(255, 255, 255, 0.14);
-    color: #ffffff;
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.2);
-  }
-  .tab-icon {
-    font-size: 11px;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  .tab-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    display: inline-block;
-    flex-shrink: 0;
-  }
-  .tab-badge {
-    background: rgba(255, 255, 255, 0.12);
-    color: #d1d1d6;
-    font-size: 9px;
-    padding: 0 5px;
-    border-radius: 999px;
-    font-family: ui-monospace, monospace;
-    line-height: 13px;
-    flex-shrink: 0;
-  }
-  .tab-btn.active .tab-badge {
-    background: #0a84ff;
-    color: #ffffff;
-  }
-  .tab-collapse-btn {
-    background: transparent;
-    border: none;
-    color: #8e8e93;
-    padding: 4px 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.12s ease;
-    flex-shrink: 0;
-  }
-  .tab-collapse-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-  }
+
   .panel-header-compact {
     display: flex;
     align-items: center;
@@ -1445,22 +1294,7 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
   }
-  .panel-view.is-hidden {
-    display: none !important;
-  }
-  .panel-view.is-full {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow-y: auto;
-  }
-  .panel-view.is-split {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow-y: auto;
-  }
+
   .canvas-area {
     flex: 1;
     position: relative;

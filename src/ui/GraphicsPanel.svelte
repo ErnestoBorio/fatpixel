@@ -401,9 +401,6 @@
     padding: 8px;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
     gap: 8px;
     color: #e5e5ea;
     font-size: 12px;
@@ -429,10 +426,7 @@
   .graphics-view-section {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
     gap: 6px;
-    overflow: hidden;
   }
   .header {
     display: flex;
@@ -483,8 +477,6 @@
   }
   /* macOS Frame / Sidebar List */
   .graphics-frame {
-    flex: 1;
-    min-height: 80px;
     display: flex;
     flex-direction: column;
     background: rgba(0, 0, 0, 0.25);
@@ -493,13 +485,8 @@
     overflow: hidden;
   }
   .graphics-list {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
     padding: 3px 0;
   }
   .graphic-item {

@@ -796,12 +796,7 @@ describe('App Graphic actions and mode switching', () => {
     mount(App, { target });
     flushSync();
 
-    // Switch to Graphics tab
-    const graphicsTabBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tab-btn')).find((b) =>
-      b.textContent?.includes('Graphics')
-    );
-    graphicsTabBtn?.click();
-    flushSync();
+    // Check graphic items in the list (sidebar shows all panels always)
 
     // Check graphic items in the list
     const graphicItems = target.querySelectorAll('.graphic-item');
@@ -817,6 +812,38 @@ describe('App Graphic actions and mode switching', () => {
     }
   });
 
+  it('renders all panels simultaneously in the right sidebar without tab switcher', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Verify right sidebar has both Palette and Graphics panels visible at once
+    const rightPanel = target.querySelector('.right-panel');
+    expect(rightPanel).not.toBeNull();
+    expect(rightPanel?.querySelector('.palette-panel')).not.toBeNull();
+    expect(rightPanel?.querySelector('.graphics-panel')).not.toBeNull();
+
+    // Verify right panel tabs (Palette / Graphics / Both) are not present
+    expect(rightPanel?.querySelector('.right-panel-tabs')).toBeNull();
+    expect(rightPanel?.querySelector('.tab-btn')).toBeNull();
+
+    // Verify right panel content is present
+    const rightContent = rightPanel?.querySelector('.right-panel-content');
+    expect(rightContent).not.toBeNull();
+
+    // Add multiple graphics and verify all items are in the DOM full
+    const addSpriteBtn = rightPanel?.querySelector<HTMLButtonElement>('.add-btn[title*="Sprite"]');
+    addSpriteBtn?.click();
+    flushSync();
+    addSpriteBtn?.click();
+    flushSync();
+
+    const items = rightPanel?.querySelectorAll('.graphic-item');
+    expect(items?.length).toBe(3);
+  });
+
   it('verifies palette names and palette panel titles do not state the color count', async () => {
     const target = document.createElement('div');
     document.body.appendChild(target);
@@ -824,12 +851,7 @@ describe('App Graphic actions and mode switching', () => {
     mount(App, { target });
     flushSync();
 
-    // Switch to Palette tab
-    const paletteTabBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tab-btn')).find((b) =>
-      b.textContent?.includes('Palette')
-    );
-    paletteTabBtn?.click();
-    flushSync();
+
 
     // Verify all options in the palette select do NOT contain (16), (32), (64), (4), (2)
     const palSelect = target.querySelector<HTMLSelectElement>('.palette-select');
@@ -873,12 +895,7 @@ describe('App Graphic actions and mode switching', () => {
     mount(App, { target });
     flushSync();
 
-    // Switch to Graphics tab
-    const graphicsTabBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tab-btn')).find((b) =>
-      b.textContent?.includes('Graphics')
-    );
-    graphicsTabBtn?.click();
-    flushSync();
+
 
     // Add a charset
     const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
