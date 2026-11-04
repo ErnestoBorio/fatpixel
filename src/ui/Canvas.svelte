@@ -105,6 +105,22 @@
   let dragPasteStartPt: Point | null = null;
   let origPasteX = 0;
   let origPasteY = 0;
+  let toolBeforePaste = $state<ToolType | null>(null);
+  let lastDrawingTool = $state<ToolType>(tool === 'select' ? 'pencil' : tool);
+  let prevTool = tool;
+
+  $effect(() => {
+    if (tool !== 'select') {
+      lastDrawingTool = tool;
+    }
+    if (tool !== prevTool) {
+      if (floatingPaste) {
+        toolBeforePaste = null;
+        commitFloatingPaste();
+      }
+      prevTool = tool;
+    }
+  });
 
   let marchOffset = $state(0);
   let animFrameId: number | null = null;
@@ -209,6 +225,18 @@
       }
     }
     floatingPaste = null;
+    isMovingPaste = false;
+    dragPasteStartPt = null;
+
+    if (toolBeforePaste !== null) {
+      if (toolBeforePaste === 'select') {
+        tool = lastDrawingTool;
+      } else {
+        tool = toolBeforePaste;
+      }
+      toolBeforePaste = null;
+    }
+
     if (changed) {
       onPixelChange?.();
     }
@@ -219,6 +247,7 @@
   export function startFloatingPaste(item: ClipboardItem): void {
     commitFloatingPaste();
     selectionRect = null;
+    toolBeforePaste = tool;
     const targetW = drawWidth;
     const targetH = drawHeight;
     const startX = Math.floor((targetW - item.width) / 2);
@@ -233,7 +262,6 @@
       height: item.height,
       pixels: convertedPixels,
     };
-    tool = 'select';
     redraw();
   }
 
@@ -242,6 +270,16 @@
     floatingPaste = null;
     isMovingPaste = false;
     dragPasteStartPt = null;
+
+    if (toolBeforePaste !== null) {
+      if (toolBeforePaste === 'select') {
+        tool = lastDrawingTool;
+      } else {
+        tool = toolBeforePaste;
+      }
+      toolBeforePaste = null;
+    }
+
     redraw();
     return true;
   }
@@ -850,27 +888,29 @@
       return;
     }
 
-    if (effectiveTool === 'select') {
-      if (floatingPaste) {
-        if (isInsideRect(pt, floatingPaste)) {
-          // Clicked inside the floating paste layer -> start dragging to move it
-          isMovingPaste = true;
-          dragPasteStartPt = pt;
-          origPasteX = floatingPaste.x;
-          origPasteY = floatingPaste.y;
-          return;
-        } else {
-          // Clicked outside floating paste layer -> commit/merge it
-          commitFloatingPaste();
+    if (floatingPaste) {
+      if (isInsideRect(pt, floatingPaste)) {
+        // Clicked inside the floating paste layer -> start dragging to move it
+        isMovingPaste = true;
+        dragPasteStartPt = pt;
+        origPasteX = floatingPaste.x;
+        origPasteY = floatingPaste.y;
+        return;
+      } else {
+        // Clicked outside floating paste layer -> commit/merge it
+        commitFloatingPaste();
+        if (effectiveTool === 'select') {
           isSelecting = true;
           selectionStartPt = pt;
           hasDraggedSelection = false;
           selectionRect = null;
           redraw();
-          return;
         }
+        return;
       }
+    }
 
+    if (effectiveTool === 'select') {
       // No floating paste: start dragging selection
       isSelecting = true;
       selectionStartPt = pt;
@@ -878,11 +918,6 @@
       selectionRect = null;
       redraw();
       return;
-    }
-
-    // Navigating to any other tool commits floating paste
-    if (floatingPaste) {
-      commitFloatingPaste();
     }
 
     if (effectiveTool === 'eyedropper') {
@@ -1296,7 +1331,7 @@
 
 <div
   bind:this={containerElem}
-  class="canvas-container {effectiveTool === 'pan' || isPanning ? 'tool-pan' : ''} {effectiveTool === 'pan' && !isPanning && hoverPt === null ? 'pan-outside' : ''} {effectiveTool === 'select' && floatingPaste !== null ? 'tool-select-move' : ''}"
+  class="canvas-container {effectiveTool === 'pan' || isPanning ? 'tool-pan' : ''} {effectiveTool === 'pan' && !isPanning && hoverPt === null ? 'pan-outside' : ''} {floatingPaste !== null ? 'tool-select-move' : ''}"
   role="region"
   aria-label="Pixel Drawing Canvas"
   oncontextmenu={(e) => e.preventDefault()}

@@ -330,7 +330,7 @@ describe('App Graphic actions and mode switching', () => {
     expect(charNavBar?.textContent).not.toContain('Clear');
     expect(charNavBar?.textContent).not.toContain('Invert');
 
-    // Pasting into charset creates floating paste layer and switches to select tool
+    // Pasting into charset creates floating paste layer (without switching away from current tool)
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
     flushSync();
 
@@ -1501,4 +1501,64 @@ describe('App Graphic actions and mode switching', () => {
     flushSync();
     expect(canvasContainer?.classList.contains('tool-select-move')).toBe(false);
   });
+
+  it('preserves the active tool on copy, paste, and paste confirmation without switching to select', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    const pencilBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tool-btn')).find((b) =>
+      b.textContent?.includes('Pencil')
+    );
+    const selectBtn = Array.from(target.querySelectorAll<HTMLButtonElement>('.tool-btn')).find((b) =>
+      b.textContent?.includes('Select')
+    );
+    expect(pencilBtn?.classList.contains('active')).toBe(true);
+    expect(selectBtn?.classList.contains('active')).toBe(false);
+
+    // 1. Copy full graphic with Pencil active
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }));
+    flushSync();
+
+    // 2. Paste graphic -> creates floating paste
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
+    flushSync();
+
+    // Verify pencil is STILL the active tool, NOT select
+    expect(pencilBtn?.classList.contains('active')).toBe(true);
+    expect(selectBtn?.classList.contains('active')).toBe(false);
+
+    // Canvas container has move cursor class
+    const canvasContainer = target.querySelector('.canvas-container');
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(true);
+
+    // 3. Confirm paste with Enter
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    flushSync();
+
+    // Verify pencil is STILL active, NOT select
+    expect(pencilBtn?.classList.contains('active')).toBe(true);
+    expect(selectBtn?.classList.contains('active')).toBe(false);
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(false);
+
+    // 4. Test selecting with Select tool, copying, pasting, and confirming restores drawing tool (Pencil)
+    selectBtn?.click();
+    flushSync();
+    expect(selectBtn?.classList.contains('active')).toBe(true);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }));
+    flushSync();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
+    flushSync();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    flushSync();
+
+    // Confirming paste when select was used restores drawing tool
+    expect(pencilBtn?.classList.contains('active')).toBe(true);
+    expect(selectBtn?.classList.contains('active')).toBe(false);
+  });
 });
+
