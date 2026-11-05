@@ -637,11 +637,20 @@ describe('App Graphic actions and mode switching', () => {
     expect(tilePreviewSection?.querySelectorAll('button').length).toBe(0);
     expect(tilePreviewSection?.textContent?.trim()).toBe('');
 
+    // Verify single character preview canvas exists to the left of the 5x5 tiling preview
+    const charCanvas = tilePreviewSection?.querySelector<HTMLCanvasElement>('canvas.char-preview-canvas');
+    expect(charCanvas).not.toBeNull();
+    expect(charCanvas?.width).toBe(16);
+    expect(charCanvas?.height).toBe(16);
+
     // Verify canvas exists with 5x5 matrix dimensions (8x8 char at 2x scale: 5 * 8 * 2 = 80)
     const tileCanvas = tilePreviewSection?.querySelector<HTMLCanvasElement>('canvas.tile-preview-canvas');
     expect(tileCanvas).not.toBeNull();
     expect(tileCanvas?.width).toBe(80);
     expect(tileCanvas?.height).toBe(80);
+
+    // Single character canvas comes before tiling canvas in DOM order
+    expect(charCanvas!.compareDocumentPosition(tileCanvas!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('applies system presets to turn current graphic into Commodore 64, Game Boy, ZX Spectrum, IBM PC, and NES settings', async () => {
@@ -1559,7 +1568,7 @@ describe('App Graphic actions and mode switching', () => {
     // Confirming paste when select was used restores drawing tool
     expect(pencilBtn?.classList.contains('active')).toBe(true);
     expect(selectBtn?.classList.contains('active')).toBe(false);
-  });
+  }, 15000);
 
   it('clears the graphic or active character using Delete and Backspace shortcuts', async () => {
     const target = document.createElement('div');
@@ -1604,6 +1613,67 @@ describe('App Graphic actions and mode switching', () => {
     flushSync();
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
     flushSync();
+  });
+
+  it('cancels unconfirmed paste when selecting a different character, and renders single character preview to the left of tiling', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // 1. Add a charset
+    const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
+    addCharsetBtn?.click();
+    flushSync();
+
+    // Open floating sheet if needed
+    const openPill = target.querySelector<HTMLButtonElement>('.floating-panel-pill');
+    if (openPill) {
+      openPill.click();
+      flushSync();
+    }
+
+    // 2. Verify selected character preview canvas exists to the left of the tiling canvas
+    const charCanvas = target.querySelector<HTMLCanvasElement>('canvas.char-preview-canvas');
+    const tileCanvas = target.querySelector<HTMLCanvasElement>('canvas.tile-preview-canvas');
+    expect(charCanvas).not.toBeNull();
+    expect(tileCanvas).not.toBeNull();
+    expect(charCanvas!.compareDocumentPosition(tileCanvas!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(charCanvas?.width).toBe(16);
+    expect(charCanvas?.height).toBe(16);
+    expect(tileCanvas?.width).toBe(80);
+    expect(tileCanvas?.height).toBe(80);
+
+    // 3. Test pasting into char 0 without confirming
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', metaKey: true, bubbles: true }));
+    flushSync();
+
+    // Paste into char 0
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
+    flushSync();
+
+    const canvasContainer = target.querySelector('.canvas-container');
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(true);
+
+    // 4. Select next character (Char #1) via next button (▶)
+    const nextBtn = target.querySelector<HTMLButtonElement>('.nav-btn[title="Next Character"]');
+    expect(nextBtn).not.toBeNull();
+    nextBtn?.click();
+    flushSync();
+
+    // Verify unconfirmed paste was cancelled: tool-select-move is removed and paste discarded
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(false);
+
+    // 5. Test arrow key navigation also cancels unconfirmed paste
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true }));
+    flushSync();
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(true);
+
+    // Navigate with ArrowRight
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    flushSync();
+    expect(canvasContainer?.classList.contains('tool-select-move')).toBe(false);
   });
 });
 

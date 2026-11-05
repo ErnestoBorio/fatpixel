@@ -612,6 +612,9 @@
 
   function navigateCharset(dCol: number, dRow: number) {
     if (!activeGraphic.isCharset()) return;
+    if (canvasRef?.hasFloatingPaste()) {
+      canvasRef.cancelFloatingPaste();
+    }
     const info = activeGraphic.charsetInfo();
     if (!info) return;
     const { columns, charCount } = info;

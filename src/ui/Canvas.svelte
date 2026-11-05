@@ -64,6 +64,7 @@
   let canvasElem: HTMLCanvasElement;
   let containerElem: HTMLDivElement;
   let sheetCanvasElem: HTMLCanvasElement | null = $state(null);
+  let charCanvasElem: HTMLCanvasElement | null = $state(null);
   let tileCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview1xCanvasElem: HTMLCanvasElement | null = $state(null);
   let preview2xCanvasElem: HTMLCanvasElement | null = $state(null);
@@ -122,6 +123,22 @@
       }
       prevTool = tool;
     }
+  });
+
+  let prevCharIndex: number | undefined;
+  let prevGraphic: Graphic | undefined;
+
+  $effect(() => {
+    if (
+      (prevCharIndex !== undefined && activeCharIndex !== prevCharIndex) ||
+      (prevGraphic !== undefined && graphic !== prevGraphic)
+    ) {
+      if (floatingPaste) {
+        cancelFloatingPaste();
+      }
+    }
+    prevCharIndex = activeCharIndex;
+    prevGraphic = graphic;
   });
 
   let marchOffset = $state(0);
@@ -672,36 +689,24 @@
     }
   }
 
+  function initCharCanvas(node: HTMLCanvasElement) {
+    charCanvasElem = node;
+    redrawTilePreview();
+  }
+
   function initTileCanvas(node: HTMLCanvasElement) {
     tileCanvasElem = node;
     redrawTilePreview();
   }
 
   function redrawTilePreview() {
-    if (!tileCanvasElem || !isCharset || !charsetInfo) return;
+    if (!isCharset || !charsetInfo) return;
 
     const { charWidth, charHeight } = charsetInfo;
     const aspect = isWide ? 2 : 1;
-    const matrixCols = 5;
-    const matrixRows = 5;
     const tileScale = 2;
 
-    const tileW = charWidth * aspect * tileScale;
-    const tileH = charHeight * tileScale;
-    const totalW = matrixCols * tileW;
-    const totalH = matrixRows * tileH;
-
-    if (tileCanvasElem.width !== totalW || tileCanvasElem.height !== totalH) {
-      tileCanvasElem.width = totalW;
-      tileCanvasElem.height = totalH;
-    }
-
-    const ctx = tileCanvasElem.getContext('2d');
-    if (!ctx) return;
-
     const bg = slotColor(graphic, palette, 0);
-    ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
-    ctx.fillRect(0, 0, totalW, totalH);
 
     // Cache current character's pixels
     const charPixels = new Array(charWidth * charHeight);
@@ -723,24 +728,75 @@
       }
     }
 
-    // Render 4x4 matrix of activeCharIndex
-    for (let tr = 0; tr < matrixRows; tr++) {
-      for (let tc = 0; tc < matrixCols; tc++) {
-        const originX = tc * tileW;
-        const originY = tr * tileH;
+    // 1. Single character preview (to the left of the tiling view)
+    if (charCanvasElem) {
+      const charW = charWidth * aspect * tileScale;
+      const charH = charHeight * tileScale;
+      if (charCanvasElem.width !== charW || charCanvasElem.height !== charH) {
+        charCanvasElem.width = charW;
+        charCanvasElem.height = charH;
+      }
+      const charCtx = charCanvasElem.getContext('2d');
+      if (charCtx) {
+        charCtx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
+        charCtx.fillRect(0, 0, charW, charH);
 
         for (let ly = 0; ly < charHeight; ly++) {
           for (let lx = 0; lx < charWidth; lx++) {
             const val = charPixels[ly * charWidth + lx];
             if (val === null || val === 0 || graphic.transparentSlot === val) continue;
             const col = slotColor(graphic, palette, val);
-            ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
-            ctx.fillRect(
-              originX + lx * aspect * tileScale,
-              originY + ly * tileScale,
+            charCtx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+            charCtx.fillRect(
+              lx * aspect * tileScale,
+              ly * tileScale,
               aspect * tileScale,
               tileScale
             );
+          }
+        }
+      }
+    }
+
+    // 2. 5x5 Tiling preview (to the right)
+    if (tileCanvasElem) {
+      const matrixCols = 5;
+      const matrixRows = 5;
+      const tileW = charWidth * aspect * tileScale;
+      const tileH = charHeight * tileScale;
+      const totalW = matrixCols * tileW;
+      const totalH = matrixRows * tileH;
+
+      if (tileCanvasElem.width !== totalW || tileCanvasElem.height !== totalH) {
+        tileCanvasElem.width = totalW;
+        tileCanvasElem.height = totalH;
+      }
+
+      const ctx = tileCanvasElem.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = `rgb(${bg.r},${bg.g},${bg.b})`;
+        ctx.fillRect(0, 0, totalW, totalH);
+
+        // Render 5x5 matrix of activeCharIndex
+        for (let tr = 0; tr < matrixRows; tr++) {
+          for (let tc = 0; tc < matrixCols; tc++) {
+            const originX = tc * tileW;
+            const originY = tr * tileH;
+
+            for (let ly = 0; ly < charHeight; ly++) {
+              for (let lx = 0; lx < charWidth; lx++) {
+                const val = charPixels[ly * charWidth + lx];
+                if (val === null || val === 0 || graphic.transparentSlot === val) continue;
+                const col = slotColor(graphic, palette, val);
+                ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+                ctx.fillRect(
+                  originX + lx * aspect * tileScale,
+                  originY + ly * tileScale,
+                  aspect * tileScale,
+                  tileScale
+                );
+              }
+            }
           }
         }
       }
@@ -1137,6 +1193,9 @@
     if (col >= 0 && col < sheetCols) {
       const idx = row * sheetCols + col;
       if (idx >= 0 && idx < charCount) {
+        if (idx !== activeCharIndex && floatingPaste) {
+          cancelFloatingPaste();
+        }
         activeCharIndex = idx;
         redraw();
       }
@@ -1262,6 +1321,9 @@
 
   function prevChar() {
     if (activeCharIndex > 0) {
+      if (floatingPaste) {
+        cancelFloatingPaste();
+      }
       activeCharIndex--;
       redraw();
     }
@@ -1269,6 +1331,9 @@
 
   function nextChar() {
     if (activeCharIndex < (charsetInfo?.charCount ?? 256) - 1) {
+      if (floatingPaste) {
+        cancelFloatingPaste();
+      }
       activeCharIndex++;
       redraw();
     }
@@ -1300,6 +1365,7 @@
     preview1xCanvasElem;
     preview2xCanvasElem;
     preview3xCanvasElem;
+    charCanvasElem;
     tileCanvasElem;
     showFloatingPanel;
     recalculateOffsets();
@@ -1399,13 +1465,20 @@
           ></canvas>
         </div>
 
-        <!-- 5x5 Tiling Preview (pure graphical preview) -->
+        <!-- Charset Preview: Single Selected Char (left) and Tiling (right) -->
         <div class="tile-preview-section">
           <div class="tile-preview-viewport">
+            <canvas
+              bind:this={charCanvasElem}
+              use:initCharCanvas
+              class="char-preview-canvas"
+              title="Selected character"
+            ></canvas>
             <canvas
               bind:this={tileCanvasElem}
               use:initTileCanvas
               class="tile-preview-canvas"
+              title="Tiling preview"
             ></canvas>
           </div>
         </div>
@@ -1728,10 +1801,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 16px;
     padding: 10px;
     background: #0d0d12;
     overflow: auto;
   }
+  .char-preview-canvas,
   .tile-preview-canvas {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.12);
