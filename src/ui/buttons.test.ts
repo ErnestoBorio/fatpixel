@@ -127,6 +127,82 @@ describe('App Graphic actions and mode switching', () => {
     expect(statusDim?.textContent).toContain('16 × 16');
   });
 
+  it('resizes charset character dimensions via size inputs and supports undo/redo', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    mount(App, { target });
+    flushSync();
+
+    // Add a charset
+    const addCharsetBtn = target.querySelector<HTMLButtonElement>('.add-btn[title*="Charset"]');
+    addCharsetBtn?.click();
+    flushSync();
+
+    // Find the Char: field row in the properties panel
+    const propsSection = target.querySelector('.properties-section');
+    const charRow = Array.from(propsSection?.querySelectorAll('.field-row') ?? []).find((r) =>
+      r.textContent?.includes('Char:')
+    );
+    expect(charRow).toBeDefined();
+
+    const inputs = charRow?.querySelectorAll<HTMLInputElement>('input.num-input');
+    expect(inputs?.length).toBe(2);
+
+    const wInput = inputs![0];
+    const hInput = inputs![1];
+
+    expect(wInput.disabled).toBe(false);
+    expect(hInput.disabled).toBe(false);
+    expect(wInput.value).toBe('8');
+    expect(hInput.value).toBe('8');
+
+    // Resize character width to 16
+    wInput.value = '16';
+    wInput.dispatchEvent(new Event('change', { bubbles: true }));
+    flushSync();
+
+    // Resize character height to 12
+    hInput.value = '12';
+    hInput.dispatchEvent(new Event('change', { bubbles: true }));
+    flushSync();
+
+    expect(wInput.value).toBe('16');
+    expect(hInput.value).toBe('12');
+
+    // Status bar reflects 16 × 12
+    const statusDim = target.querySelector<HTMLElement>('.status-bar .dim-text');
+    expect(statusDim?.textContent).toContain('16 × 12');
+
+    // First Undo restores height to 8 (16 × 8)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }));
+    flushSync();
+    expect(wInput.value).toBe('16');
+    expect(hInput.value).toBe('8');
+    expect(statusDim?.textContent).toContain('16 × 8');
+
+    // Second Undo restores width to 8 (8 × 8)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true }));
+    flushSync();
+    expect(wInput.value).toBe('8');
+    expect(hInput.value).toBe('8');
+    expect(statusDim?.textContent).toContain('8 × 8');
+
+    // Redo restores to 16 × 8
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, shiftKey: true, bubbles: true }));
+    flushSync();
+    expect(wInput.value).toBe('16');
+    expect(hInput.value).toBe('8');
+    expect(statusDim?.textContent).toContain('16 × 8');
+
+    // Second Redo restores to 16 × 12
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, shiftKey: true, bubbles: true }));
+    flushSync();
+    expect(wInput.value).toBe('16');
+    expect(hInput.value).toBe('12');
+    expect(statusDim?.textContent).toContain('16 × 12');
+  });
+
   it('duplicates and deletes graphics', async () => {
     const target = document.createElement('div');
     document.body.appendChild(target);

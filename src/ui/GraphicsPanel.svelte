@@ -261,6 +261,9 @@
                   onGraphicChange?.();
                 }
               }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
             />
             <span>H:</span>
             <input
@@ -278,6 +281,9 @@
                   onGraphicChange?.();
                 }
               }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
             />
           </div>
         </div>
@@ -294,18 +300,44 @@
               <span>W:</span>
               <input
                 type="number"
-                value={info.charWidth}
+                min="1"
+                max="256"
+                value={activeWidth}
                 class="num-input"
-                disabled
-                title="Character width: 8px"
+                title="Character width"
+                onchange={(e) => {
+                  const input = e.target as HTMLInputElement;
+                  const val = parseInt(input.value, 10);
+                  if (val > 0 && val !== info.charWidth) {
+                    onBeforeChange?.();
+                    activeGraphic.resizeCharset(val, info.charHeight);
+                    onGraphicChange?.();
+                  }
+                }}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
               />
               <span>H:</span>
               <input
                 type="number"
-                value={info.charHeight}
+                min="1"
+                max="256"
+                value={activeHeight}
                 class="num-input"
-                disabled
-                title="Character height: 8px"
+                title="Character height"
+                onchange={(e) => {
+                  const input = e.target as HTMLInputElement;
+                  const val = parseInt(input.value, 10);
+                  if (val > 0 && val !== info.charHeight) {
+                    onBeforeChange?.();
+                    activeGraphic.resizeCharset(info.charWidth, val);
+                    onGraphicChange?.();
+                  }
+                }}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
               />
             </div>
           </div>
