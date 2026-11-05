@@ -269,7 +269,11 @@ describe('App Graphic actions and mode switching', () => {
     // Select charset
     selectCharsetBtn?.click();
     flushSync();
-    expect(propsSection?.querySelector('.readonly-badge')).not.toBeNull();
+    expect(propsSection?.querySelector('.readonly-badge')).toBeNull();
+    const typeRow = Array.from(propsSection?.querySelectorAll('.field-row') ?? []).find((r) =>
+      r.textContent?.includes('Type:')
+    );
+    expect(typeRow).toBeUndefined();
     const charRow = Array.from(propsSection?.querySelectorAll('.field-row') ?? []).find((r) =>
       r.textContent?.includes('Char:')
     );

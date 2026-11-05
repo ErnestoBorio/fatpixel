@@ -291,10 +291,6 @@
         {@const info = activeGraphic.charsetInfo()}
         {#if info}
           <div class="field-row">
-            <span class="label">Type:</span>
-            <div class="readonly-badge">Charset ({info.charCount} chars)</div>
-          </div>
-          <div class="field-row">
             <span class="label">Char:</span>
             <div class="dim-inputs">
               <span>W:</span>
@@ -738,19 +734,6 @@
   .num-input:focus {
     border-color: #0a84ff;
     box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
-  }
-  .readonly-badge {
-    flex: 1;
-    padding: 4px 7px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #8e8e93;
-    border-radius: 6px;
-    font-size: 10px;
-    line-height: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   .num-input:disabled {
     opacity: 0.5;
