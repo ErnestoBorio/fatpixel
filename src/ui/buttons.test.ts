@@ -719,12 +719,12 @@ describe('App Graphic actions and mode switching', () => {
     // Verify charset codes panel exists with ASCII, PETSCII, and C64 screen code
     const codesPanel = tilePreviewSection?.querySelector('.charset-codes-panel');
     expect(codesPanel).not.toBeNull();
-    expect(codesPanel?.textContent).toContain('ASCII code:');
-    expect(codesPanel?.textContent).toContain('PETSCII code:');
+    expect(codesPanel?.textContent).toContain('ASCII:');
+    expect(codesPanel?.textContent).toContain('PETSCII:');
     expect(codesPanel?.textContent).toContain('C64 screen code:');
-    expect(codesPanel?.textContent).toContain('64 (0x40)');
-    expect(codesPanel?.textContent).toContain('64');
+    expect(codesPanel?.textContent).toContain('—');
     expect(codesPanel?.textContent).toContain('0');
+    expect(codesPanel?.textContent).toContain('128');
 
     // Verify single character preview canvas exists to the left of the 5x5 tiling preview
     const charCanvas = tilePreviewSection?.querySelector<HTMLCanvasElement>('canvas.char-preview-canvas');

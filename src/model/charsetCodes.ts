@@ -1,6 +1,19 @@
 /**
  * Utility functions for mapping Commodore 64 character set codes
  * across C64 Screen Codes, PETSCII, and ASCII encodings.
+ *
+ * In FatPixel and Commodore 64 character sets, characters are indexed
+ * in standard PETSCII order (0..255):
+ * - 0..31: PETSCII Control codes (Screen Codes 128..159, no ASCII)
+ * - 32..63: Space, punctuation, digits 0..9 (Screen Codes 32..63, ASCII 32..63)
+ * - 64: '@' (Screen Code 0, ASCII 64 / 0x40)
+ * - 65..90: 'A'..'Z' (Screen Codes 1..26, ASCII 65..90 / 0x41..0x5A)
+ * - 91..95: '[', '£', ']', '↑', '←' (Screen Codes 27..31; ASCII 91, 93, 94, 95)
+ * - 96..127: C64 semigraphics (Screen Codes 64..95, no ASCII)
+ * - 128..159: PETSCII Control / color codes (Screen Codes 192..223, no ASCII)
+ * - 160..191: Shifted space & C64 graphics (Screen Codes 96..127, no ASCII)
+ * - 192..254: Shifted graphics / characters (Screen Codes 64..126, no ASCII)
+ * - 255: Pi (π) (Screen Code 94, no ASCII)
  */
 
 export interface CharsetCodeInfo {
@@ -13,53 +26,41 @@ export interface CharsetCodeInfo {
   screenCodeDec: number;
 }
 
-/**
- * Returns encoding representations for a given C64 screen code (0..255).
- *
- * In Commodore 64 charsets (stored in sequential ROM order), character index
- * 0..255 corresponds to C64 Screen Code 0..255:
- * - Screen Code 0: '@' (PETSCII 64, ASCII 64 / 0x40)
- * - Screen Codes 1..26: 'A'..'Z' (PETSCII 65..90, ASCII 65..90 / 0x41..0x5A)
- * - Screen Codes 27..31: '[', '£'/'\', ']', '↑'/'^', '←'/'_' (PETSCII 91..95, ASCII 91..95 / 0x5B..0x5F)
- * - Screen Codes 32..63: Space, punctuation, digits 0..9 (PETSCII 32..63, ASCII 32..63 / 0x20..0x3F)
- * - Screen Codes 64..127: C64 semigraphics (PETSCII 96..127 and 160..191; no standard ASCII)
- * - Screen Codes 128..255: Reverse-video variants of 0..127
- */
-export function getCharsetCodeInfo(sc: number): CharsetCodeInfo {
-  const safeSc = Math.max(0, Math.min(255, Math.floor(sc)));
-  const screenCodeDec = safeSc;
-  const screenCode = safeSc.toString();
-  const base = safeSc & 0x7f; // 0..127 (base glyph ignoring reverse video)
+export function getCharsetCodeInfo(charIndex: number): CharsetCodeInfo {
+  const p = Math.max(0, Math.min(255, Math.floor(charIndex)));
+  const petsciiDec = p;
+  const petscii = p.toString();
 
-  // 1. PETSCII code decimal
-  let petsciiDec: number;
-  if (base === 0) {
-    petsciiDec = 64;
-  } else if (base >= 1 && base <= 31) {
-    petsciiDec = base + 64; // 65..95
-  } else if (base >= 32 && base <= 63) {
-    petsciiDec = base; // 32..63
-  } else if (base >= 64 && base <= 93) {
-    petsciiDec = base + 32; // 96..125
-  } else if (base === 94) {
-    petsciiDec = 255; // Pi (π) in Commodore BASIC CHR$(255)
-  } else if (base === 95) {
-    petsciiDec = 127;
+  // Convert PETSCII code to C64 Screen Code using standard KERNAL rules
+  let sc: number;
+  if (p <= 31) {
+    sc = p + 128; // 0..31 -> 128..159
+  } else if (p <= 63) {
+    sc = p; // 32..63 -> 32..63 (space, punctuation, digits)
+  } else if (p <= 95) {
+    sc = p - 64; // 64..95 -> 0..31 (@, A..Z, [, £, ], ↑, ←)
+  } else if (p <= 127) {
+    sc = p - 32; // 96..127 -> 64..95 (semigraphics)
+  } else if (p <= 159) {
+    sc = p + 64; // 128..159 -> 192..223 (control/color codes)
+  } else if (p <= 191) {
+    sc = p - 64; // 160..191 -> 96..127 (shifted space & graphics)
+  } else if (p <= 254) {
+    sc = p - 128; // 192..254 -> 64..126 (shifted graphics)
   } else {
-    // 96..127
-    petsciiDec = base + 64; // 160..191
+    sc = 94; // 255 -> Pi symbol (Screen Code 94)
   }
-  const petscii = petsciiDec.toString();
 
-  // 2. ASCII code decimal and hexadecimal
+  const screenCodeDec = sc;
+  const screenCode = sc.toString();
+
+  // Convert PETSCII code to ASCII code (decimal and hex) when valid
   let asciiDec: number | null = null;
   let asciiHex: string | null = null;
-  if (base === 0) {
-    asciiDec = 64;
-  } else if (base >= 1 && base <= 31) {
-    asciiDec = base + 64; // 65..95 ('A'..'Z', '[', '\', ']', '^', '_')
-  } else if (base >= 32 && base <= 63) {
-    asciiDec = base; // 32..63 (' '..'?')
+  if (p >= 32 && p <= 91) {
+    asciiDec = p; // 32..91 (' '..'Z', '[')
+  } else if (p === 93 || p === 94 || p === 95) {
+    asciiDec = p; // ']', '^' / '↑', '_' / '←'
   }
 
   let ascii: string;

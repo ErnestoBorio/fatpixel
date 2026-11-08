@@ -1488,11 +1488,11 @@
           </div>
           <div class="charset-codes-panel">
             <div class="code-row">
-              <span class="code-label">ASCII code:</span>
+              <span class="code-label">ASCII:</span>
               <span class="code-value">{charCodes.ascii}</span>
             </div>
             <div class="code-row">
-              <span class="code-label">PETSCII code:</span>
+              <span class="code-label">PETSCII:</span>
               <span class="code-value">{charCodes.petscii}</span>
             </div>
             <div class="code-row">
@@ -1841,8 +1841,9 @@
   }
   .code-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
+    gap: 8px;
     font-size: 11px;
     line-height: 1.4;
   }
