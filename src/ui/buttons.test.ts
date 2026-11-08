@@ -711,11 +711,20 @@ describe('App Graphic actions and mode switching', () => {
     const sheetPanel = target.querySelector('.charset-sheet-panel');
     expect(sheetPanel).not.toBeNull();
 
-    // Verify 5x5 tiling preview exists at the bottom with NO buttons and NO title text
+    // Verify 5x5 tiling preview exists at the bottom with NO buttons
     const tilePreviewSection = sheetPanel?.querySelector('.tile-preview-section');
     expect(tilePreviewSection).not.toBeNull();
     expect(tilePreviewSection?.querySelectorAll('button').length).toBe(0);
-    expect(tilePreviewSection?.textContent?.trim()).toBe('');
+
+    // Verify charset codes panel exists with ASCII, PETSCII, and C64 screen code
+    const codesPanel = tilePreviewSection?.querySelector('.charset-codes-panel');
+    expect(codesPanel).not.toBeNull();
+    expect(codesPanel?.textContent).toContain('ASCII code:');
+    expect(codesPanel?.textContent).toContain('PETSCII code:');
+    expect(codesPanel?.textContent).toContain('C64 screen code:');
+    expect(codesPanel?.textContent).toContain('64 (0x40)');
+    expect(codesPanel?.textContent).toContain('64');
+    expect(codesPanel?.textContent).toContain('0');
 
     // Verify single character preview canvas exists to the left of the 5x5 tiling preview
     const charCanvas = tilePreviewSection?.querySelector<HTMLCanvasElement>('canvas.char-preview-canvas');

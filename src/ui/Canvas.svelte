@@ -16,6 +16,7 @@
   } from '../raster';
   import { slotColor } from '../model/render';
   import { convertClipboardPixels, type ClipboardItem } from '../model/clipboard';
+  import { getCharsetCodeInfo } from '../model/charsetCodes';
 
   let {
     graphic,
@@ -188,6 +189,10 @@
 
   let isCharset = $derived(graphic.isCharset());
   let charsetInfo = $derived(graphic.charsetInfo());
+  let inspectedCharIndex = $derived(
+    sheetHoverChar !== null ? sheetHoverChar : activeCharIndex
+  );
+  let charCodes = $derived(getCharsetCodeInfo(inspectedCharIndex));
 
   // Active draw bounds: 8x8 for character editing, graphic.width x graphic.height for sprite
   let drawWidth = $derived(isCharset ? (charsetInfo?.charWidth ?? 8) : graphicWidth);
@@ -1465,7 +1470,7 @@
           ></canvas>
         </div>
 
-        <!-- Charset Preview: Single Selected Char (left) and Tiling (right) -->
+        <!-- Charset Preview: Single Selected Char (left), Tiling (right), and Codes Panel -->
         <div class="tile-preview-section">
           <div class="tile-preview-viewport">
             <canvas
@@ -1480,6 +1485,20 @@
               class="tile-preview-canvas"
               title="Tiling preview"
             ></canvas>
+          </div>
+          <div class="charset-codes-panel">
+            <div class="code-row">
+              <span class="code-label">ASCII code:</span>
+              <span class="code-value">{charCodes.ascii}</span>
+            </div>
+            <div class="code-row">
+              <span class="code-label">PETSCII code:</span>
+              <span class="code-value">{charCodes.petscii}</span>
+            </div>
+            <div class="code-row">
+              <span class="code-label">C64 screen code:</span>
+              <span class="code-value">{charCodes.screenCode}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1811,6 +1830,33 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.12);
     image-rendering: pixelated;
+  }
+  .charset-codes-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 12px;
+    background: #111116;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .code-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .code-label {
+    color: #8e8e93;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .code-value {
+    color: #f5f5f7;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
   }
   .sprite-preview-panel {
     position: absolute;
