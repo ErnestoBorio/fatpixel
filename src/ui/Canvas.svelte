@@ -1436,7 +1436,7 @@
       <button class="nav-btn" onclick={prevChar} disabled={activeCharIndex === 0} title="Previous Character">◀</button>
       <div class="char-info">
         <span class="char-title">Char #{activeCharIndex}</span>
-        <span class="char-hex">(0x{activeCharIndex.toString(16).toUpperCase().padStart(2, '0')})</span>
+        <span class="char-hex">(${activeCharIndex.toString(16).toUpperCase().padStart(2, '0')})</span>
       </div>
       <button class="nav-btn" onclick={nextChar} disabled={activeCharIndex >= (charsetInfo?.charCount ?? 256) - 1} title="Next Character">▶</button>
     </div>
@@ -1447,9 +1447,6 @@
         <div class="sheet-header">
           <span class="sheet-title">256-Char Sheet</span>
           <div class="sheet-actions">
-            <span class="sheet-meta">
-              {sheetHoverChar !== null ? `Char #${sheetHoverChar} (0x${sheetHoverChar.toString(16).toUpperCase().padStart(2, '0')})` : '1px grid'}
-            </span>
             <button
               type="button"
               class="sheet-minimize-btn"
@@ -1490,14 +1487,6 @@
             <div class="code-row">
               <span class="code-label">ASCII:</span>
               <span class="code-value">{charCodes.ascii}</span>
-            </div>
-            <div class="code-row">
-              <span class="code-label">PETSCII:</span>
-              <span class="code-value">{charCodes.petscii}</span>
-            </div>
-            <div class="code-row">
-              <span class="code-label">C64 screen code:</span>
-              <span class="code-value">{charCodes.screenCode}</span>
             </div>
           </div>
         </div>
